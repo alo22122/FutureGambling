@@ -1,0 +1,121 @@
+
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#090914">
+  <title>Future Gambling</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="logo" href="#">FUTURE <span>GAMBLING</span></a>
+    <div id="accountStatus">Nicht angemeldet</div>
+  </header>
+
+  <main>
+    <section id="authSection" class="panel auth">
+      <h1>Willkommen in der Zukunft.</h1>
+      <p>Erstelle deinen Account oder melde dich an.</p>
+      <input id="username" placeholder="Benutzername" maxlength="20">
+      <input id="email" type="email" placeholder="E-Mail-Adresse">
+      <input id="password" type="password" placeholder="Passwort" minlength="8">
+      <div class="actions">
+        <button id="registerBtn">Registrieren</button>
+        <button id="loginBtn" class="secondary">Login</button>
+      </div>
+      <p id="authMessage" class="message"></p>
+    </section>
+
+    <section id="appSection" hidden>
+      <nav class="navigation">
+        <button data-page="home" class="nav-button active">Dashboard</button>
+        <button data-page="games" class="nav-button">Spiele</button>
+        <button data-page="freecoins" class="nav-button">Free Coins</button>
+        <button data-page="leaderboard" class="nav-button">Leaderboard</button>
+        <button data-page="profile" class="nav-button">Profil</button>
+        <button data-page="admin" class="nav-button" id="adminNav" hidden>Admin</button>
+      </nav>
+
+      <section id="page-home" class="page">
+        <div class="hero panel">
+          <div>
+            <p class="eyebrow">DEIN ARCADE-KONTO</p>
+            <h1>Willkommen, <span id="displayName">Player</span></h1>
+            <p>Sammle Coins, spiele Minigames und steige im Level auf.</p>
+          </div>
+          <div class="balance">
+            <small>DEINE COINS</small>
+            <strong id="coinBalance">0</strong>
+          </div>
+        </div>
+        <div class="stats-grid">
+          <article class="panel stat"><small>LEVEL</small><strong id="levelValue">1</strong></article>
+          <article class="panel stat"><small>XP</small><strong id="xpValue">0</strong></article>
+          <article class="panel stat"><small>GESPIELT</small><strong id="gamesValue">0</strong></article>
+        </div>
+        <article class="panel">
+          <h2>Tägliche Belohnung</h2>
+          <p>Hole deinen kostenlosen Tagesbonus ab.</p>
+          <button id="dailyBtn">+100 Coins abholen</button>
+          <p id="dailyMessage" class="message"></p>
+        </article>
+      </section>
+
+      <section id="page-games" class="page" hidden>
+        <h1>Arcade Games</h1>
+        <p>Spiele ohne Einsatz und ohne Coin-Verlust. Erhalte kleine Belohnungen.</p>
+        <div class="games-grid">
+          <button class="game-card" data-game="roulette">🎡<b>Roulette-Show</b><small>Kostenloses Glücksrad</small></button>
+          <button class="game-card" data-game="blackjack">🃏<b>Blackjack-Trainer</b><small>Karten-Übung</small></button>
+          <button class="game-card" data-game="slots">🎰<b>Slot-Show</b><small>Symbol-Puzzle</small></button>
+          <button class="game-card" data-game="plinko">🔵<b>Plinko</b><small>Physik-Spiel</small></button>
+          <button class="game-card" data-game="mines">💎<b>Mines-Suche</b><small>Logik-Puzzle</small></button>
+          <button class="game-card" data-game="crash">🚀<b>Rocket Challenge</b><small>Reaktionsspiel</small></button>
+        </div>
+        <div id="gameArea" class="panel" hidden></div>
+      </section>
+
+      <section id="page-freecoins" class="page" hidden>
+        <h1>Free Coins</h1>
+        <p>Verdiene Coins mit kleinen Aufgaben und Geschicklichkeitsspielen.</p>
+        <div class="games-grid">
+          <button class="game-card" data-mini="reaction">⚡<b>Reaktionstest</b><small>Bis zu 20 Coins</small></button>
+          <button class="game-card" data-mini="quiz">🧠<b>Wissensquiz</b><small>Bis zu 20 Coins</small></button>
+          <button class="game-card" data-mini="memory">🧩<b>Memory</b><small>Bis zu 20 Coins</small></button>
+        </div>
+        <div id="miniArea" class="panel" hidden></div>
+      </section>
+
+      <section id="page-leaderboard" class="page" hidden>
+        <h1>Leaderboard</h1>
+        <p>Die aktivsten Spieler der Community.</p>
+        <div id="leaderboardList" class="panel">Lade Rangliste …</div>
+      </section>
+
+      <section id="page-profile" class="page" hidden>
+        <h1>Dein Profil</h1>
+        <div class="panel">
+          <label>Benutzername</label>
+          <input id="newUsername" maxlength="20">
+          <button id="saveProfileBtn">Profil speichern</button>
+          <p id="profileMessage" class="message"></p>
+          <button id="logoutBtn" class="danger">Abmelden</button>
+        </div>
+      </section>
+
+      <section id="page-admin" class="page" hidden>
+        <h1>Administration</h1>
+        <div class="panel">
+          <p>Admin-Funktionen werden nur für Konten mit serverseitiger Admin-Rolle angezeigt.</p>
+          <div id="adminContent">Keine Admin-Daten geladen.</div>
+        </div>
+      </section>
+    </section>
+    <div id="toast" role="status" aria-live="polite"></div>
+  </main>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
