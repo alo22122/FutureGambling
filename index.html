@@ -1,229 +1,331 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Future Gambling</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-  <style>
-    body {
-      font-family: system-ui, -apple-system, sans-serif;
-      background: #09090b;
-      color: white;
-      margin: 0;
-    }
-    .glass {
-      background: rgba(24, 24, 27, 0.85);
-      border: 1px solid #3f3f46;
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Future Gambling</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<style>
+  body{font-family:system-ui,-apple-system,sans-serif;background:radial-gradient(1200px 600px at 80% -10%,rgba(34,211,238,.12),transparent),#09090b;color:#fff;margin:0}
+  .glass{background:rgba(24,24,27,.85);border:1px solid #3f3f46;backdrop-filter:blur(8px)}
+  .grad{background:linear-gradient(135deg,#22d3ee,#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+  .btn{padding:.75rem 1rem;border-radius:.75rem;font-weight:600;transition:.15s;width:100%}
+  .btn:hover{filter:brightness(1.15)} .btn:active{transform:scale(.97)} .btn:disabled{opacity:.5;cursor:not-allowed}
+  .nav{display:flex;align-items:center;gap:.75rem;width:100%;padding:.7rem .9rem;border-radius:.75rem;color:#a1a1aa;text-align:left;transition:.15s;border:1px solid transparent}
+  .nav:hover{background:#27272a;color:#fff} .nav.on{background:linear-gradient(135deg,rgba(34,211,238,.2),rgba(52,211,153,.2));color:#fff;border-color:#0e7490}
+  .inp{background:#18181b;border:1px solid #3f3f46;border-radius:.75rem;padding:.75rem 1rem;outline:none;color:#fff}
+  .inp:focus{border-color:#22d3ee}
+  .reel{width:5rem;height:6rem;display:flex;align-items:center;justify-content:center;font-size:3rem;background:#18181b;border:1px solid #3f3f46;border-radius:1rem}
+  .sel{outline:2px solid #22d3ee}
+  .kc{padding:.55rem 0;border-radius:.5rem;background:#18181b;border:1px solid #3f3f46;font-weight:700;transition:.15s}
+  .kc.on{outline:2px solid #22d3ee}.kc.drawn{background:#52525b}.kc.hit{background:#16a34a}
+</style>
 </head>
 <body>
 
-  <!-- AUTH SCREEN -->
-  <div id="auth-screen" class="min-h-screen flex items-center justify-center p-4">
-    <div class="glass rounded-2xl p-8 w-full max-w-md">
-
-      <h1 class="text-3xl font-bold text-center mb-2" style="background: linear-gradient(135deg, #22d3ee, #34d399); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-        Future Gambling
-      </h1>
-      <p class="text-center text-zinc-400 text-sm mb-6">Nur Fake-Geld • Nur zum Spaß</p>
-
-      <div id="status" class="mb-6 p-4 rounded-xl text-center text-sm font-medium bg-zinc-800 text-zinc-300">
-        Bereit. Drücke einen Button.
-      </div>
-
-      <input id="username" type="text" placeholder="Username"
-        class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 mb-3 outline-none text-white" />
-
-      <input id="password" type="password" placeholder="Passwort"
-        class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 mb-6 outline-none text-white" />
-
-      <div class="flex gap-3">
-        <button id="loginBtn" class="flex-1 bg-cyan-600 py-3.5 rounded-xl font-semibold">
-          Einloggen
-        </button>
-        <button id="registerBtn" class="flex-1 bg-emerald-600 py-3.5 rounded-xl font-semibold">
-          Registrieren
-        </button>
-      </div>
+<!-- AUTH -->
+<div id="auth-screen" class="min-h-screen flex items-center justify-center p-4">
+  <div class="glass rounded-2xl p-8 w-full max-w-md">
+    <h1 class="text-3xl font-bold text-center mb-2 grad">Future Gambling</h1>
+    <p class="text-center text-zinc-400 text-sm mb-6">Nur Fake-Geld • Nur zum Spaß</p>
+    <div id="status" class="mb-6 p-4 rounded-xl text-center text-sm font-medium bg-zinc-800 text-zinc-300">Bereit. Drücke einen Button.</div>
+    <input id="username" type="text" placeholder="Username" class="inp w-full mb-3" />
+    <input id="password" type="password" placeholder="Passwort" class="inp w-full mb-6" />
+    <div class="flex gap-3">
+      <button id="loginBtn" class="btn bg-cyan-600">Einloggen</button>
+      <button id="registerBtn" class="btn bg-emerald-600">Registrieren</button>
     </div>
   </div>
+</div>
 
-  <!-- APP -->
-  <div id="app" class="hidden min-h-screen p-6">
-    <div class="max-w-lg mx-auto">
-      <h2 class="text-2xl font-bold mb-2" id="welcome">Willkommen</h2>
-      <div class="text-emerald-400 text-xl font-bold mb-6">
-        Balance: <span id="balance">0</span> FC
-      </div>
-
-      <button onclick="claimDaily()" class="bg-yellow-500 text-black px-4 py-2 rounded-lg font-bold mr-3 mb-4">
-        Daily +300
-      </button>
-
-      <button onclick="logout()" class="bg-zinc-700 px-4 py-2 rounded-lg mb-4">
-        Logout
-      </button>
-
-      <div class="glass rounded-2xl p-5 mt-6">
-        <h3 class="text-xl font-bold mb-4">🪙 Coinflip</h3>
-        <input id="coinflip-bet" type="number" value="50" class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 mb-4 outline-none text-white">
-        <div class="flex gap-3">
-          <button onclick="playCoinflip('kopf')" class="flex-1 bg-cyan-600 py-3 rounded-xl font-semibold">Kopf</button>
-          <button onclick="playCoinflip('zahl')" class="flex-1 bg-pink-600 py-3 rounded-xl font-semibold">Zahl</button>
-        </div>
-        <div id="coinflip-result" class="mt-4 text-center"></div>
-      </div>
+<!-- APP -->
+<div id="app" class="hidden">
+  <aside id="sidebar" class="fixed inset-y-0 left-0 w-64 glass z-40 flex flex-col p-4 transition-transform -translate-x-full md:translate-x-0">
+    <div class="text-xl font-extrabold grad mb-5">Future Gambling</div>
+    <div class="rounded-2xl p-4 mb-5" style="background:linear-gradient(135deg,rgba(34,211,238,.15),rgba(52,211,153,.15));border:1px solid #3f3f46">
+      <div class="text-xs text-zinc-400" id="welcome">Lade...</div>
+      <div class="text-3xl font-black text-emerald-400 mt-1">🪙 <span id="balance">0</span></div>
+      <div class="text-xs text-zinc-500">Future Coins</div>
     </div>
-  </div>
+    <nav id="nav" class="flex-1 space-y-1 overflow-y-auto mb-3"></nav>
+    <button onclick="claimDaily()" class="btn bg-yellow-500 text-black mb-2">🎁 Daily +300</button>
+    <button onclick="logout()" class="btn bg-zinc-800">Logout</button>
+  </aside>
 
-  <script>
-    const SUPABASE_URL = 'https://gxxblyzjxsagwmgjvhyu.supabase.co'
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd4eGJseXpqeHNhZ3dtZ2p2aHl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTUwOTQ5NjUsImV4cCI6MjExMDY3MDk2NX0.7Jktb_7QPtdmPGi-LxRutLSRca5ehdWLqX0lfkU22Ik'
+  <header class="md:hidden sticky top-0 z-30 glass flex items-center justify-between px-4 py-3">
+    <button onclick="toggleMenu()" class="text-2xl">☰</button>
+    <span class="grad font-bold">Future Gambling</span>
+    <span class="text-emerald-400 font-bold">🪙 <span id="balance2">0</span></span>
+  </header>
 
-    // WICHTIG: nicht "supabase" nennen, der Name ist vom CDN-Skript schon belegt
-    const { createClient } = window.supabase
-    const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+  <main class="md:ml-64 p-4 md:p-10">
+    <div class="max-w-2xl mx-auto">
+      <h2 id="title" class="text-3xl font-black mb-1"></h2>
+      <p id="desc" class="text-zinc-400 mb-6"></p>
+      <div id="view" class="glass rounded-2xl p-6"></div>
+      <div id="msg" class="mt-5 text-center text-xl font-bold min-h-[2rem]"></div>
+      <div id="hist" class="mt-6 space-y-1 text-sm"></div>
+    </div>
+  </main>
+</div>
 
-    function setStatus(text, type = 'info') {
-      const el = document.getElementById('status')
-      el.textContent = text
-      if (type === 'error') {
-        el.style.background = 'rgba(127, 29, 29, 0.5)'
-        el.style.color = '#fca5a5'
-      } else if (type === 'success') {
-        el.style.background = 'rgba(6, 78, 59, 0.5)'
-        el.style.color = '#6ee7b7'
-      } else {
-        el.style.background = '#27272a'
-        el.style.color = '#d4d4d8'
-      }
+<div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 glass rounded-xl px-5 py-3 text-sm hidden z-50"></div>
+
+<script>
+const SUPABASE_URL = 'https://gxxblyzjxsagwmgjvhyu.supabase.co'
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd4eGJseXpqeHNhZ3dtZ2p2aHl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTUwOTQ5NjUsImV4cCI6MjExMDY3MDk2NX0.7Jktb_7QPtdmPGi-LxRutLSRca5ehdWLqX0lfkU22Ik'
+const { createClient } = window.supabase
+const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+
+const $ = id => document.getElementById(id)
+const sleep = ms => new Promise(r => setTimeout(r, ms))
+let wheelRot = 0, kpicks = [], HIST = []
+let balance = 0, current = 'lobby', busy = false, lastBet = 50, diceMode = 'over', diceTarget = 50
+
+const GAMES = {
+  lobby:    { icon: '🏠', name: 'Lobby', desc: 'Wähle ein Spiel und viel Glück!' },
+  coinflip: { icon: '🪙', name: 'Coinflip', desc: 'Kopf oder Zahl – gewinne das Doppelte (2×).' },
+  dice:     { icon: '🎲', name: 'Dice', desc: 'Wähle deine Zahl. Je riskanter, desto höher der Gewinn.' },
+  slots:    { icon: '🎰', name: 'Slots', desc: 'Drei gleiche = 20×, zwei gleiche = 0,6× zurück.' },
+  roulette: { icon: '🎡', name: 'Roulette', desc: 'Rot/Schwarz = 2×, Grün (0) = 14×.' },
+  crash:    { icon: '🚀', name: 'Crash', desc: 'Setze ein Ziel – erreicht die Rakete es, gewinnst du.' },
+  plinko:   { icon: '🟡', name: 'Plinko', desc: 'Ball fallen lassen – die Ränder zahlen bis 5,6×.' },
+  wheel:    { icon: '🎯', name: 'Glücksrad', desc: 'Dreh das Rad – Gewinne bis 4×.' },
+  keno:     { icon: '🔢', name: 'Keno', desc: 'Tippe 5 Zahlen von 40 – bis zu 80×.' }
+}
+
+/* ---------- UI helpers ---------- */
+function setStatus(text, type = 'info') {
+  const el = $('status'); el.textContent = text
+  el.style.background = type === 'error' ? 'rgba(127,29,29,.5)' : type === 'success' ? 'rgba(6,78,59,.5)' : '#27272a'
+  el.style.color = type === 'error' ? '#fca5a5' : type === 'success' ? '#6ee7b7' : '#d4d4d8'
+}
+function toast(t) { const e = $('toast'); e.textContent = t; e.classList.remove('hidden'); clearTimeout(toast.t); toast.t = setTimeout(() => e.classList.add('hidden'), 2600) }
+function msg(t, type) { const e = $('msg'); e.textContent = t; e.style.color = type === 'win' ? '#34d399' : type === 'lose' ? '#f87171' : '#a1a1aa' }
+function toggleMenu() { $('sidebar').classList.toggle('-translate-x-full') }
+
+function setBalance(n) {
+  n = Number(n) || 0
+  const from = balance, t0 = performance.now(); balance = n
+  ;(function step(t) {
+    const k = Math.min(1, (t - t0) / 500), v = Math.round(from + (n - from) * k)
+    $('balance').textContent = $('balance2').textContent = v.toLocaleString('de-DE')
+    if (k < 1) requestAnimationFrame(step)
+  })(t0)
+}
+
+async function loadProfile() {
+  const { data, error } = await sb.rpc('get_me')
+  if (error) { console.error(error); toast('Profil-Fehler: ' + error.message); return }
+  $('welcome').textContent = 'Hey, ' + data.username
+  setBalance(data.balance)
+}
+
+/* ---------- Navigation ---------- */
+function renderNav() {
+  $('nav').innerHTML = Object.entries(GAMES).map(([k, g]) =>
+    `<button class="nav ${k === current ? 'on' : ''}" onclick="show('${k}')"><span class="text-xl">${g.icon}</span>${g.name}</button>`).join('')
+}
+function betBox() {
+  return `<label class="text-xs text-zinc-400">Einsatz (FC)</label>
+  <div class="flex gap-2 mt-1 mb-5">
+    <input id="bet" type="number" min="1" value="${lastBet}" class="inp flex-1 min-w-0" />
+    <button onclick="mod('half')" class="btn bg-zinc-800" style="width:auto">½</button>
+    <button onclick="mod('double')" class="btn bg-zinc-800" style="width:auto">2×</button>
+    <button onclick="mod('max')" class="btn bg-zinc-800" style="width:auto">Max</button>
+  </div>`
+}
+function mod(m) {
+  let v = Math.floor(Number($('bet').value)) || 1
+  v = m === 'half' ? Math.max(1, Math.floor(v / 2)) : m === 'double' ? v * 2 : Math.max(1, balance)
+  $('bet').value = Math.min(v, Math.max(1, balance))
+}
+
+const VIEWS = {
+  coinflip: () => betBox() + `<div id="stage" class="h-32 flex items-center justify-center text-7xl">🪙</div>
+    <div class="flex gap-3"><button class="btn play bg-cyan-600" onclick="play('kopf')">Kopf</button><button class="btn play bg-pink-600" onclick="play('zahl')">Zahl</button></div>`,
+  dice: () => betBox() + `<div class="flex gap-2 mb-4">
+      <button id="m-over" class="btn bg-zinc-800" onclick="setMode('over')">Über</button>
+      <button id="m-under" class="btn bg-zinc-800" onclick="setMode('under')">Unter</button></div>
+    <input id="target" type="range" min="5" max="95" value="${diceTarget}" oninput="diceTarget=+this.value;diceInfo()" class="w-full accent-emerald-500" />
+    <div id="dice-info" class="text-sm text-zinc-400 mt-3 text-center"></div>
+    <div id="stage" class="h-28 flex items-center justify-center text-7xl font-black">🎲</div>
+    <button class="btn play bg-emerald-600" onclick="play(diceMode+':'+diceTarget)">Würfeln</button>`,
+  slots: () => betBox() + `<div id="stage" class="flex justify-center gap-3 my-6"><div class="reel" id="r0">🍒</div><div class="reel" id="r1">🍋</div><div class="reel" id="r2">🔔</div></div>
+    <button class="btn play bg-emerald-600" onclick="play('spin')">Drehen</button>`,
+  roulette: () => betBox() + `<div id="stage" class="h-32 flex items-center justify-center"><div class="w-24 h-24 rounded-full flex items-center justify-center text-4xl font-black bg-zinc-800 border-4 border-zinc-600">?</div></div>
+    <div class="flex gap-3"><button class="btn play bg-red-600" onclick="play('red')">Rot 2×</button><button class="btn play bg-zinc-700" onclick="play('black')">Schwarz 2×</button><button class="btn play bg-green-600" onclick="play('green')">Grün 14×</button></div>`
+}
+
+const PM = [5.6, 2.1, 1.1, 1, 0.5, 1, 1.1, 2.1, 5.6]
+const WM = [0, 0.5, 0, 1.5, 0, 2, 0, 1, 0, 4]
+
+VIEWS.lobby = () => `<div class="grid grid-cols-2 gap-3">${Object.entries(GAMES).filter(([k]) => k !== 'lobby').map(([k, g]) =>
+  `<button onclick="show('${k}')" class="glass rounded-2xl p-5 text-left hover:border-cyan-500 transition"><div class="text-4xl mb-2">${g.icon}</div><div class="font-bold">${g.name}</div><div class="text-xs text-zinc-400 mt-1">${g.desc}</div></button>`).join('')}</div>`
+
+VIEWS.crash = () => betBox() + `<div id="stage" class="h-36 flex items-center justify-center text-5xl font-black">🚀 1.00×</div>
+  <label class="text-xs text-zinc-400">Auto-Cashout bei (×)</label>
+  <input id="cash" type="number" step="0.1" min="1.1" max="100" value="2" class="inp w-full mt-1 mb-2" />
+  <div class="text-xs text-zinc-500 mb-4">Je höher das Ziel, desto kleiner die Chance (ca. 98 % ÷ Ziel).</div>
+  <button class="btn play bg-emerald-600" onclick="play($('cash').value)">Start</button>`
+
+function plinkoBoard() {
+  let h = ''
+  for (let r = 0; r < 8; r++) for (let k = -r; k <= r; k += 2)
+    h += `<i style="position:absolute;left:${50 + k * 5.5}%;top:${(r + 1) * 9}%;width:6px;height:6px;margin:-3px;border-radius:50%;background:#52525b"></i>`
+  PM.forEach((m, k) => h += `<b style="position:absolute;left:${50 + (2 * k - 8) * 5.5}%;top:90%;transform:translateX(-50%);font-size:11px" class="${m >= 2 ? 'text-emerald-400' : m < 1 ? 'text-red-400' : 'text-zinc-300'}">${m}×</b>`)
+  return h + '<span id="ball" style="position:absolute;left:50%;top:0;font-size:18px;transform:translateX(-50%)">🟡</span>'
+}
+VIEWS.plinko = () => betBox() + `<div id="stage" class="relative h-72 mb-4 overflow-hidden">${plinkoBoard()}</div>
+  <button class="btn play bg-emerald-600" onclick="play('drop')">Ball fallen lassen</button>`
+
+VIEWS.wheel = () => betBox() + `<div class="relative w-64 h-64 mx-auto my-6">
+  <div style="position:absolute;left:50%;top:-14px;transform:translateX(-50%);z-index:2;font-size:24px">🔻</div>
+  <div id="wheel" style="width:100%;height:100%;border-radius:50%;border:4px solid #52525b;position:relative;background:conic-gradient(${WM.map((m, i) => (m >= 2 ? '#16a34a' : m >= 1 ? '#0891b2' : m > 0 ? '#ca8a04' : '#3f3f46') + ' ' + i * 36 + 'deg ' + (i + 1) * 36 + 'deg').join(',')})">
+  ${WM.map((m, i) => `<span style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(${i * 36 + 18}deg) translateY(-6.2rem);font-weight:800;font-size:14px">${m}×</span>`).join('')}</div></div>
+  <button class="btn play bg-emerald-600" onclick="play('spin')">Drehen</button>`
+
+VIEWS.keno = () => { kpicks = []; return betBox() + `<div class="grid grid-cols-8 gap-1.5 mb-3">${Array.from({ length: 40 }, (_, i) => `<button id="k${i + 1}" onclick="kpick(${i + 1})" class="kc">${i + 1}</button>`).join('')}</div>
+  <div class="text-xs text-zinc-400 mb-4">Wähle 5 Zahlen • 2 Treffer 1,5× • 3 → 4× • 4 → 15× • 5 → 80×</div>
+  <button class="btn play bg-emerald-600" onclick="kplay()">Ziehen</button>` }
+function kpick(n) {
+  if (busy) return
+  const i = kpicks.indexOf(n)
+  if (i >= 0) kpicks.splice(i, 1); else if (kpicks.length < 5) kpicks.push(n)
+  document.querySelectorAll('.kc').forEach(b => b.classList.remove('on', 'hit', 'drawn'))
+  kpicks.forEach(k => $('k' + k).classList.add('on'))
+}
+function kplay() { if (kpicks.length !== 5) return msg('Wähle genau 5 Zahlen', 'lose'); play(kpicks.join(',')) }
+
+function renderHist() {
+  $('hist').innerHTML = HIST.length ? '<div class="text-xs text-zinc-500 mb-1">Letzte Spiele</div>' + HIST.map(h =>
+    `<div class="glass rounded-lg px-3 py-2 flex justify-between"><span>${h.g}</span><span class="text-zinc-400">${h.bet} FC</span><b class="${h.net > 0 ? 'text-emerald-400' : h.net < 0 ? 'text-red-400' : 'text-zinc-400'}">${h.net > 0 ? '+' : ''}${h.net}</b></div>`).join('') : ''
+}
+
+function setMode(m) { diceMode = m; diceInfo() }
+function diceInfo() {
+  const over = diceMode === 'over', ch = over ? 100 - diceTarget : diceTarget - 1
+  $('dice-info').innerHTML = `Würfel ${over ? 'über' : 'unter'} <b class="text-white">${diceTarget}</b> • Chance <b class="text-white">${ch}%</b> • Gewinn <b class="text-emerald-400">${(98 / ch).toFixed(2)}×</b>`
+  $('m-over').classList.toggle('sel', over); $('m-under').classList.toggle('sel', !over)
+}
+
+function show(g) {
+  current = g; busy = false
+  $('title').textContent = GAMES[g].icon + ' ' + GAMES[g].name
+  $('desc').textContent = GAMES[g].desc
+  wheelRot = 0; $('view').innerHTML = VIEWS[g](); msg(''); renderHist()
+  if (g === 'dice') diceInfo()
+  renderNav()
+  $('sidebar').classList.add('-translate-x-full')
+}
+
+/* ---------- Spiel-Animationen ---------- */
+const REVEAL = {
+  coinflip: async d => {
+    $('stage').innerHTML = '<span class="animate-spin inline-block">🪙</span>'; await sleep(700)
+    $('stage').innerHTML = `<span class="text-4xl font-black ${d.win ? 'text-emerald-400' : 'text-red-400'}">${d.result.toUpperCase()}</span>`
+  },
+  dice: async d => {
+    const s = $('stage'), iv = setInterval(() => s.textContent = 1 + Math.floor(Math.random() * 100), 60)
+    await sleep(700); clearInterval(iv)
+    s.textContent = d.result; s.style.color = d.win ? '#34d399' : '#f87171'
+  },
+  slots: async d => {
+    const S = ['🍒', '🍋', '🔔', '⭐', '💎', '🍀'], el = [0, 1, 2].map(i => $('r' + i))
+    const iv = setInterval(() => el.forEach(e => e.textContent = S[Math.floor(Math.random() * 6)]), 80)
+    await sleep(900); clearInterval(iv)
+    d.result.split(' ').forEach((s, i) => el[i].textContent = s)
+  },
+  roulette: async d => {
+    const [n, col] = d.result.split(' '), c = { red: '#dc2626', black: '#27272a', green: '#16a34a' }[col]
+    $('stage').innerHTML = '<div class="text-5xl animate-spin">🎡</div>'; await sleep(900)
+    $('stage').innerHTML = `<div class="w-24 h-24 rounded-full flex items-center justify-center text-4xl font-black border-4 border-zinc-500" style="background:${c}">${n}</div>`
+  }
+}
+
+Object.assign(REVEAL, {
+  crash: async d => {
+    const cp = parseFloat(d.result), s = $('stage'); let x = 1
+    s.style.color = '#e4e4e7'
+    while (x < cp) { x = Math.min(cp, x * 1.07 + 0.01); s.textContent = '🚀 ' + x.toFixed(2) + '×'; await sleep(40) }
+    s.textContent = (d.win ? '✅ ' : '💥 ') + cp.toFixed(2) + '×'; s.style.color = d.win ? '#34d399' : '#f87171'
+  },
+  plinko: async d => {
+    const b = $('ball'); let pos = 0
+    b.style.transition = 'none'; b.style.left = '50%'; b.style.top = '0'; await sleep(60)
+    b.style.transition = 'all .25s'
+    for (let i = 0; i < 8; i++) {
+      pos += d.result[i] === '1' ? 1 : -1
+      b.style.left = (50 + pos * 5.5) + '%'; b.style.top = ((i + 1) * 9 + 4) + '%'; await sleep(290)
     }
+    b.style.top = '82%'
+  },
+  wheel: async d => {
+    const c = (+d.result - 1) * 36 + 18, w = $('wheel')
+    wheelRot = (Math.floor(wheelRot / 360) + 6) * 360 - c
+    w.style.transition = 'transform 3.2s cubic-bezier(.1,.7,.1,1)'; w.style.transform = `rotate(${wheelRot}deg)`
+    await sleep(3300)
+  },
+  keno: async d => {
+    document.querySelectorAll('.kc').forEach(b => b.classList.remove('hit', 'drawn'))
+    for (const n of d.result.split(',')) { await sleep(150); $('k' + n).classList.add(kpicks.includes(+n) ? 'hit' : 'drawn') }
+  }
+})
 
-    function makeFakeEmail(username) {
-      return username.toLowerCase().replace(/[^a-z0-9]/g, '') + '@future.community'
-    }
+/* ---------- Spielen ---------- */
+function setBtns(dis) { document.querySelectorAll('.play').forEach(b => b.disabled = dis) }
 
-    async function loadProfile(userId) {
-      const { data, error } = await sb
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single()
+async function play(param) {
+  if (busy) return
+  const bet = Math.floor(Number($('bet').value))
+  if (!(bet >= 1)) return msg('Ungültiger Einsatz', 'lose')
+  if (bet > balance) return msg('Nicht genug Coins', 'lose')
+  busy = true; lastBet = bet; setBtns(true); msg('')
+  const { data, error } = await sb.rpc('play_game', { game_name: current, bet_amount: bet, param })
+  if (error) { msg(error.message, 'lose'); busy = false; setBtns(false); return }
+  await REVEAL[current](data)
+  setBalance(data.balance)
+  const net = data.payout - bet
+  msg(net > 0 ? `🎉 +${net} FC` : net === 0 ? 'Einsatz zurück' : `−${bet - data.payout} FC`, net > 0 ? 'win' : 'lose')
+  HIST.unshift({ g: GAMES[current].icon + ' ' + GAMES[current].name, bet, net }); HIST.length = Math.min(HIST.length, 8); renderHist()
+  busy = false; setBtns(false)
+}
 
-      if (error) {
-        console.error('Profil laden fehlgeschlagen:', error)
-        return
-      }
-      if (data) {
-        document.getElementById('welcome').textContent = 'Hey, ' + data.username
-        document.getElementById('balance').textContent = Number(data.balance).toFixed(0)
-      }
-    }
+async function claimDaily() {
+  const { data, error } = await sb.rpc('claim_daily')
+  if (error) return toast(error.message)
+  setBalance(data.balance); toast('🎁 +' + data.reward + ' Coins!')
+}
 
-    document.getElementById('registerBtn').addEventListener('click', async () => {
-      setStatus('Registrierung läuft...')
+/* ---------- Auth ---------- */
+const fakeEmail = u => u.toLowerCase().replace(/[^a-z0-9]/g, '') + '@future.community'
 
-      const username = document.getElementById('username').value.trim()
-      const password = document.getElementById('password').value
+$('registerBtn').addEventListener('click', async () => {
+  setStatus('Registrierung läuft...')
+  const username = $('username').value.trim(), password = $('password').value
+  if (username.length < 3) return setStatus('Username muss min. 3 Zeichen haben', 'error')
+  if (password.length < 6) return setStatus('Passwort muss min. 6 Zeichen haben', 'error')
+  const { error } = await sb.auth.signUp({ email: fakeEmail(username), password, options: { data: { username } } })
+  error ? setStatus('Fehler: ' + error.message, 'error') : setStatus('Account erstellt! Jetzt einloggen.', 'success')
+})
 
-      if (!username || username.length < 3) {
-        setStatus('Username muss min. 3 Zeichen haben', 'error')
-        return
-      }
-      if (password.length < 6) {
-        setStatus('Passwort muss min. 6 Zeichen haben', 'error')
-        return
-      }
+$('loginBtn').addEventListener('click', async () => {
+  setStatus('Login läuft...')
+  const username = $('username').value.trim(), password = $('password').value
+  if (!username || !password) return setStatus('Bitte Username und Passwort eingeben', 'error')
+  const { error } = await sb.auth.signInWithPassword({ email: fakeEmail(username), password })
+  if (error) setStatus('Login fehlgeschlagen: ' + error.message, 'error')
+})
 
-      const { error } = await sb.auth.signUp({
-        email: makeFakeEmail(username),
-        password: password,
-        options: { data: { username } }
-      })
+async function logout() { await sb.auth.signOut(); location.reload() }
 
-      if (error) {
-        setStatus('Fehler: ' + error.message, 'error')
-      } else {
-        setStatus('Account erstellt! Jetzt einloggen.', 'success')
-      }
-    })
-
-    document.getElementById('loginBtn').addEventListener('click', async () => {
-      setStatus('Login läuft...')
-
-      const username = document.getElementById('username').value.trim()
-      const password = document.getElementById('password').value
-
-      if (!username || !password) {
-        setStatus('Bitte Username und Passwort eingeben', 'error')
-        return
-      }
-
-      const { error } = await sb.auth.signInWithPassword({
-        email: makeFakeEmail(username),
-        password: password
-      })
-
-      if (error) {
-        setStatus('Login fehlgeschlagen: ' + error.message, 'error')
-      }
-    })
-
-    async function logout() {
-      await sb.auth.signOut()
-      location.reload()
-    }
-
-    async function claimDaily() {
-      const { data, error } = await sb.rpc('claim_daily')
-      if (error) {
-        alert(error.message)
-      } else {
-        alert('+' + data.reward + ' Coins!')
-        const { data: { user } } = await sb.auth.getUser()
-        if (user) loadProfile(user.id)
-      }
-    }
-
-    async function playCoinflip(choice) {
-      const bet = Number(document.getElementById('coinflip-bet').value)
-      const resultDiv = document.getElementById('coinflip-result')
-      resultDiv.textContent = 'Münze fliegt...'
-      resultDiv.style.color = ''
-
-      const { data, error } = await sb.rpc('play_coinflip', {
-        bet_amount: bet,
-        choice: choice
-      })
-
-      if (error) {
-        resultDiv.textContent = error.message
-        resultDiv.style.color = '#f87171'
-      } else {
-        if (data.win) {
-          resultDiv.innerHTML = '🎉 Gewonnen! Es war <b>' + data.result.toUpperCase() + '</b>'
-          resultDiv.style.color = '#34d399'
-        } else {
-          resultDiv.innerHTML = 'Verloren. Es war <b>' + data.result.toUpperCase() + '</b>'
-          resultDiv.style.color = '#f87171'
-        }
-        const { data: { user } } = await sb.auth.getUser()
-        if (user) loadProfile(user.id)
-      }
-    }
-
-    // Kein await auf Supabase-Calls direkt im Callback (Deadlock-Gefahr in supabase-js v2)
-    sb.auth.onAuthStateChange((event, session) => {
-      if (!session) return
-
-      document.getElementById('auth-screen').style.display = 'none'
-      document.getElementById('app').classList.remove('hidden')
-
-      setTimeout(() => loadProfile(session.user.id), 0)
-    })
-  </script>
+sb.auth.onAuthStateChange((event, session) => {
+  if (!session) return
+  $('auth-screen').style.display = 'none'
+  $('app').classList.remove('hidden')
+  setTimeout(() => { if (!$('view').innerHTML) show(current); loadProfile() }, 0)
+})
+</script>
 </body>
 </html>
