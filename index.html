@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Future Community</title>
+  <title>Future Gambling</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
@@ -11,6 +11,7 @@
       font-family: system-ui, -apple-system, sans-serif;
       background: #09090b;
       color: white;
+      margin: 0;
     }
     .glass {
       background: rgba(24, 24, 27, 0.85);
@@ -18,112 +19,119 @@
     }
   </style>
 </head>
-<body class="min-h-screen">
+<body>
 
   <!-- AUTH SCREEN -->
   <div id="auth-screen" class="min-h-screen flex items-center justify-center p-4">
     <div class="glass rounded-2xl p-8 w-full max-w-md">
       
-      <h1 class="text-3xl font-bold text-center mb-2 bg-gradient-to-r from-cyan-400 to-emerald-400 bg-clip-text text-transparent">
-        Future Community
+      <h1 class="text-3xl font-bold text-center mb-2" style="background: linear-gradient(135deg, #22d3ee, #34d399); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+        Future Gambling
       </h1>
       <p class="text-center text-zinc-400 text-sm mb-6">Nur Fake-Geld • Nur zum Spaß</p>
 
-      <!-- Status Anzeige (sehr wichtig) -->
       <div id="status" class="mb-6 p-4 rounded-xl text-center text-sm font-medium bg-zinc-800 text-zinc-300">
         Bereit. Drücke einen Button.
       </div>
 
       <input id="username" type="text" placeholder="Username" 
-        class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 mb-3 outline-none" />
+        class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 mb-3 outline-none text-white" />
 
       <input id="password" type="password" placeholder="Passwort" 
-        class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 mb-6 outline-none" />
+        class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 mb-6 outline-none text-white" />
 
       <div class="flex gap-3">
-        <button id="loginBtn" 
-          class="flex-1 bg-cyan-600 py-3.5 rounded-xl font-semibold active:bg-cyan-400">
+        <button id="loginBtn" class="flex-1 bg-cyan-600 py-3.5 rounded-xl font-semibold">
           Einloggen
         </button>
-        <button id="registerBtn" 
-          class="flex-1 bg-emerald-600 py-3.5 rounded-xl font-semibold active:bg-emerald-400">
+        <button id="registerBtn" class="flex-1 bg-emerald-600 py-3.5 rounded-xl font-semibold">
           Registrieren
         </button>
       </div>
     </div>
   </div>
 
-  <!-- APP (erstmal versteckt) -->
+  <!-- APP -->
   <div id="app" class="hidden min-h-screen p-6">
     <div class="max-w-lg mx-auto">
-      <h2 class="text-2xl font-bold mb-4" id="welcome">Willkommen</h2>
+      <h2 class="text-2xl font-bold mb-2" id="welcome">Willkommen</h2>
       <div class="text-emerald-400 text-xl font-bold mb-6">
         Balance: <span id="balance">0</span> FC
       </div>
-      <button onclick="logout()" class="bg-zinc-700 px-4 py-2 rounded-lg">Logout</button>
+
+      <button onclick="claimDaily()" class="bg-yellow-500 text-black px-4 py-2 rounded-lg font-bold mr-3 mb-4">
+        Daily +300
+      </button>
+
+      <button onclick="logout()" class="bg-zinc-700 px-4 py-2 rounded-lg mb-4">
+        Logout
+      </button>
+
+      <div class="glass rounded-2xl p-5 mt-6">
+        <h3 class="text-xl font-bold mb-4">🪙 Coinflip</h3>
+        <input id="coinflip-bet" type="number" value="50" class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 mb-4 outline-none text-white">
+        <div class="flex gap-3">
+          <button onclick="playCoinflip('kopf')" class="flex-1 bg-cyan-600 py-3 rounded-xl font-semibold">Kopf</button>
+          <button onclick="playCoinflip('zahl')" class="flex-1 bg-pink-600 py-3 rounded-xl font-semibold">Zahl</button>
+        </div>
+        <div id="coinflip-result" class="mt-4 text-center"></div>
+      </div>
     </div>
   </div>
 
   <script>
-    // ====================== SUPABASE ======================
     const SUPABASE_URL = 'https://gxxblyzjxsagwmgjvhyu.supabase.co'
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd4eGJseXpqeHNhZ3dtZ2p2aHl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTUwOTQ5NjUsImV4cCI6MjExMDY3MDk2NX0.7Jktb_7QPtdmPGi-LxRutLSRca5ehdWLqX0lfkU22Ik'
 
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
-    // Status anzeigen (sehr sichtbar)
     function setStatus(text, type = 'info') {
       const el = document.getElementById('status')
       el.textContent = text
       if (type === 'error') {
-        el.className = 'mb-6 p-4 rounded-xl text-center text-sm font-medium bg-red-900/50 text-red-300 border border-red-700'
+        el.style.background = 'rgba(127, 29, 29, 0.5)'
+        el.style.color = '#fca5a5'
       } else if (type === 'success') {
-        el.className = 'mb-6 p-4 rounded-xl text-center text-sm font-medium bg-emerald-900/50 text-emerald-300 border border-emerald-700'
+        el.style.background = 'rgba(6, 78, 59, 0.5)'
+        el.style.color = '#6ee7b7'
       } else {
-        el.className = 'mb-6 p-4 rounded-xl text-center text-sm font-medium bg-zinc-800 text-zinc-300'
+        el.style.background = '#27272a'
+        el.style.color = '#d4d4d8'
       }
     }
 
-    // ====================== REGISTER ======================
-    document.getElementById('registerBtn').addEventListener('click', async function() {
-      setStatus('Registrierung läuft...', 'info')
+    document.getElementById('registerBtn').addEventListener('click', async () => {
+      setStatus('Registrierung läuft...')
 
       const username = document.getElementById('username').value.trim()
       const password = document.getElementById('password').value
 
       if (!username || username.length < 3) {
-        setStatus('Username muss mindestens 3 Zeichen haben', 'error')
+        setStatus('Username muss min. 3 Zeichen haben', 'error')
         return
       }
       if (password.length < 4) {
-        setStatus('Passwort muss mindestens 4 Zeichen haben', 'error')
+        setStatus('Passwort muss min. 4 Zeichen haben', 'error')
         return
       }
 
       const fakeEmail = username.toLowerCase().replace(/[^a-z0-9]/g, '') + '@future.community'
 
-      try {
-        const { data, error } = await supabase.auth.signUp({
-          email: fakeEmail,
-          password: password,
-          options: {
-            data: { username: username }
-          }
-        })
+      const { error } = await supabase.auth.signUp({
+        email: fakeEmail,
+        password: password,
+        options: { data: { username } }
+      })
 
-        if (error) {
-          setStatus('Fehler: ' + error.message, 'error')
-        } else {
-          setStatus('Account erstellt! Du kannst dich jetzt einloggen.', 'success')
-        }
-      } catch (err) {
-        setStatus('Fehler: ' + err.message, 'error')
+      if (error) {
+        setStatus('Fehler: ' + error.message, 'error')
+      } else {
+        setStatus('Account erstellt! Jetzt einloggen.', 'success')
       }
     })
 
-    // ====================== LOGIN ======================
-    document.getElementById('loginBtn').addEventListener('click', async function() {
-      setStatus('Login läuft...', 'info')
+    document.getElementById('loginBtn').addEventListener('click', async () => {
+      setStatus('Login läuft...')
 
       const username = document.getElementById('username').value.trim()
       const password = document.getElementById('password').value
@@ -135,35 +143,62 @@
 
       const fakeEmail = username.toLowerCase().replace(/[^a-z0-9]/g, '') + '@future.community'
 
-      try {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: fakeEmail,
-          password: password
-        })
+      const { error } = await supabase.auth.signInWithPassword({
+        email: fakeEmail,
+        password: password
+      })
 
-        if (error) {
-          setStatus('Login fehlgeschlagen: ' + error.message, 'error')
-        } else {
-          setStatus('Login erfolgreich! Lade...', 'success')
-        }
-      } catch (err) {
-        setStatus('Fehler: ' + err.message, 'error')
+      if (error) {
+        setStatus('Login fehlgeschlagen: ' + error.message, 'error')
       }
     })
 
-    // ====================== LOGOUT ======================
     async function logout() {
       await supabase.auth.signOut()
       location.reload()
     }
 
-    // ====================== AUTH STATE ======================
+    async function claimDaily() {
+      const { data, error } = await supabase.rpc('claim_daily')
+      if (error) alert(error.message)
+      else {
+        alert('+' + data.reward + ' Coins!')
+        location.reload()
+      }
+    }
+
+    async function playCoinflip(choice) {
+      const bet = Number(document.getElementById('coinflip-bet').value)
+      const resultDiv = document.getElementById('coinflip-result')
+      resultDiv.textContent = 'Münze fliegt...'
+
+      const { data, error } = await supabase.rpc('play_coinflip', {
+        bet_amount: bet,
+        choice: choice
+      })
+
+      if (error) {
+        resultDiv.textContent = error.message
+        resultDiv.style.color = '#f87171'
+      } else {
+        if (data.win) {
+          resultDiv.innerHTML = '🎉 Gewonnen! Es war <b>' + data.result.toUpperCase() + '</b>'
+          resultDiv.style.color = '#34d399'
+        } else {
+          resultDiv.innerHTML = 'Verloren. Es war <b>' + data.result.toUpperCase() + '</b>'
+          resultDiv.style.color = '#f87171'
+        }
+        const { data: { user } } = await supabase.auth.getUser()
+        const { data: profile } = await supabase.from('profiles').select('balance').eq('id', user.id).single()
+        if (profile) document.getElementById('balance').textContent = Number(profile.balance).toFixed(0)
+      }
+    }
+
     supabase.auth.onAuthStateChange(async (event, session) => {
       if (session) {
-        document.getElementById('auth-screen').classList.add('hidden')
+        document.getElementById('auth-screen').style.display = 'none'
         document.getElementById('app').classList.remove('hidden')
 
-        // Profil laden
         const { data } = await supabase
           .from('profiles')
           .select('*')
@@ -174,9 +209,6 @@
           document.getElementById('welcome').textContent = 'Hey, ' + data.username
           document.getElementById('balance').textContent = Number(data.balance).toFixed(0)
         }
-      } else {
-        document.getElementById('auth-screen').classList.remove('hidden')
-        document.getElementById('app').classList.add('hidden')
       }
     })
   </script>
