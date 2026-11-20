@@ -48,9 +48,12 @@
       <div class="text-3xl font-black text-emerald-400 mt-1">🪙 <span id="balance">0</span></div>
       <div class="text-xs text-zinc-500">Future Coins</div>
     </div>
+    <select id="diff" onchange="setDiff(this.value)" class="inp mb-3 text-sm">
+      <option value="easy">😊 Easy (+15 % Gewinne)</option><option value="normal">⚖️ Normal</option><option value="hard">💀 Hard (−10 %, Boni ×1.5)</option></select>
     <nav id="nav" class="flex-1 space-y-1 overflow-y-auto mb-3"></nav>
     <button onclick="claimDaily()" class="btn bg-yellow-500 text-black mb-2">🎁 Daily +300</button>
     <button onclick="logout()" class="btn bg-zinc-800">Logout</button>
+    <button onclick="delMe()" class="text-xs text-zinc-500 mt-2 hover:text-red-400">Account löschen</button>
   </aside>
 
   <header class="md:hidden sticky top-0 z-30 glass flex items-center justify-between px-4 py-3">
@@ -80,6 +83,7 @@ const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
 const $ = id => document.getElementById(id)
 const sleep = ms => new Promise(r => setTimeout(r, ms))
+let ROLE = 'user', chatTimer = null, cg = null, rg = null
 let wheelRot = 0, kpicks = [], HIST = []
 let balance = 0, current = 'lobby', busy = false, lastBet = 50, diceMode = 'over', diceTarget = 50
 
@@ -100,7 +104,11 @@ const GAMES = {
   dragon:   { icon: '🐉', name: 'Dragon Tiger', desc: 'Höhere Karte gewinnt: Drache, Tiger oder Tie (11×).' },
   doors:    { icon: '🚪', name: 'Schatztüren', desc: 'Drei Türen, hinter einer liegt 2,8×.' },
   number:   { icon: '🔟', name: 'Lucky Number', desc: 'Rate die Zahl von 1 bis 10 – 9×.' },
-  rps:      { icon: '✊', name: 'Schere Stein Papier', desc: 'Sieg 2,4×, Unentschieden gibt 0,5× zurück.' }
+  rps:      { icon: '✊', name: 'Schere Stein Papier', desc: 'Sieg 2,4×, Unentschieden gibt 0,5× zurück.' },
+  earn:     { icon: '⛏️', name: 'Coins verdienen', desc: 'Daily-Streak, Stunden-Bonus und Mini-Games.', page: true },
+  chat:     { icon: '💬', name: 'Chat', desc: 'Live-Chat mit allen Spielern.', page: true },
+  board:    { icon: '🏆', name: 'Leaderboard', desc: 'Die reichsten und aktivsten Spieler.', page: true },
+  admin:    { icon: '🛡️', name: 'Admin Board', desc: 'User verwalten, Coins, Rollen, Sperren, Löschen.', page: true, admin: true }
 }
 
 /* ---------- UI helpers ---------- */
@@ -125,14 +133,15 @@ function setBalance(n) {
 
 async function loadProfile() {
   const { data, error } = await sb.rpc('get_me')
-  if (error) { console.error(error); toast('Profil-Fehler: ' + error.message); return }
-  $('welcome').textContent = 'Hey, ' + data.username
-  setBalance(data.balance)
+  if (error) { console.error(error); if (/gesperrt/.test(error.message)) { alert(error.message); logout() } else toast('Profil-Fehler: ' + error.message); return }
+  ROLE = data.role; $('diff').value = data.difficulty
+  $('welcome').textContent = 'Hey, ' + data.username + ({ admin: ' 🛡️', mod: ' 🔧', vip: ' ⭐' }[ROLE] || '')
+  setBalance(data.balance); renderNav()
 }
 
 /* ---------- Navigation ---------- */
 function renderNav() {
-  $('nav').innerHTML = Object.entries(GAMES).map(([k, g]) =>
+  $('nav').innerHTML = Object.entries(GAMES).filter(([k, g]) => !g.admin || ROLE === 'admin').map(([k, g]) =>
     `<button class="nav ${k === current ? 'on' : ''}" onclick="show('${k}')"><span class="text-xl">${g.icon}</span>${g.name}</button>`).join('')
 }
 function betBox() {
@@ -169,7 +178,7 @@ const VIEWS = {
 const PM = [5.6, 2.1, 1.1, 1, 0.5, 1, 1.1, 2.1, 5.6]
 const WM = [0, 0.5, 0, 1.5, 0, 2, 0, 1, 0, 4]
 
-VIEWS.lobby = () => `<div class="grid grid-cols-2 md:grid-cols-3 gap-3">${Object.entries(GAMES).filter(([k]) => k !== 'lobby').map(([k, g]) =>
+VIEWS.lobby = () => `<div class="grid grid-cols-2 md:grid-cols-3 gap-3">${Object.entries(GAMES).filter(([k, g]) => k !== 'lobby' && !g.page).map(([k, g]) =>
   `<button onclick="show('${k}')" class="glass rounded-2xl p-5 text-left hover:border-cyan-500 transition"><div class="text-4xl mb-2">${g.icon}</div><div class="font-bold">${g.name}</div><div class="text-xs text-zinc-400 mt-1">${g.desc}</div></button>`).join('')}</div>`
 
 VIEWS.crash = () => betBox() + `<div id="stage" class="h-36 flex items-center justify-center text-5xl font-black">🚀 1.00×</div>
@@ -234,6 +243,93 @@ VIEWS.doors = () => betBox() + stg('🚪 🚪 🚪') + row([['Tür 1', '1', 'bg-
 VIEWS.number = () => betBox() + stg('🔟') + '<div class="grid grid-cols-5 gap-2">' + Array.from({ length: 10 }, (_, i) => `<button class="btn play bg-zinc-800" onclick="play('${i + 1}')">${i + 1}</button>`).join('') + '</div>'
 VIEWS.rps = () => betBox() + stg('✊ ✋ ✌️') + row([['✊ Stein', 'rock', 'bg-cyan-600'], ['✋ Papier', 'paper', 'bg-pink-600'], ['✌️ Schere', 'scissors', 'bg-emerald-600']])
 
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
+const BADGE = { admin: '🛡️', mod: '🔧', vip: '⭐' }
+const PAGEINIT = {}
+
+async function setDiff(lvl) { const { error } = await sb.rpc('set_difficulty', { lvl }); toast(error ? error.message : 'Schwierigkeit: ' + lvl) }
+async function delMe() {
+  if (!confirm('Account und alle Coins endgültig löschen?') || !confirm('Wirklich sicher?')) return
+  const { error } = await sb.rpc('delete_me'); if (error) return toast(error.message)
+  logout()
+}
+
+/* ---- Coins verdienen ---- */
+VIEWS.earn = () => `<div class="grid grid-cols-2 gap-3 mb-5">
+  <button class="btn bg-yellow-500 text-black" onclick="claimDaily()">🎁 Daily (Streak!)</button>
+  <button class="btn bg-cyan-600" onclick="claimHourly()">⏰ Stunden-Bonus +50</button></div>
+  <div class="glass rounded-xl p-4 mb-3"><b>👆 Klick-Challenge</b><div class="text-xs text-zinc-400 mb-3">10 Sekunden so oft klicken wie möglich – bis 40 Coins.</div><button id="clickbtn" class="btn bg-emerald-600" onclick="clickGame()">Start</button></div>
+  <div class="glass rounded-xl p-4"><b>⚡ Reaktionstest</b><div class="text-xs text-zinc-400 mb-3">Klick, sobald der Button grün wird – bis 40 Coins.</div><button id="reactbtn" class="btn bg-zinc-700" onclick="reactGame()">Start</button></div>
+  <div class="text-xs text-zinc-500 mt-3">Mini-Game-Cooldown: 60 Sekunden. Daily: je mehr Tage in Folge, desto mehr Coins.</div>`
+async function claimHourly() {
+  const { data, error } = await sb.rpc('claim_hourly'); if (error) return toast(error.message)
+  setBalance(data.balance); toast('⏰ +' + data.reward + ' Coins')
+}
+async function mini(kind, score) {
+  const { data, error } = await sb.rpc('claim_mini', { mini_kind: kind, mini_score: score })
+  if (error) return toast(error.message)
+  setBalance(data.balance); toast('🎉 +' + data.reward + ' Coins')
+}
+function clickGame() {
+  const b = $('clickbtn')
+  if (!cg) { cg = { n: 0 }; b.textContent = 'Klick! 0'; setTimeout(() => { const n = cg.n; cg = null; b.textContent = 'Start'; mini('click', n) }, 10000); return }
+  cg.n++; b.textContent = 'Klick! ' + cg.n
+}
+function reactGame() {
+  const b = $('reactbtn')
+  if (!rg) {
+    b.textContent = 'Warte...'; b.className = 'btn bg-red-700'; rg = { ready: false }
+    rg.to = setTimeout(() => { rg.ready = true; rg.t = performance.now(); b.textContent = 'JETZT!'; b.className = 'btn bg-green-500' }, 1500 + Math.random() * 2500); return
+  }
+  if (!rg.ready) { clearTimeout(rg.to); rg = null; b.textContent = 'Zu früh! Nochmal'; b.className = 'btn bg-zinc-700'; return }
+  const ms = Math.round(performance.now() - rg.t); rg = null
+  b.textContent = ms + ' ms – nochmal?'; b.className = 'btn bg-zinc-700'; mini('reaction', ms)
+}
+
+/* ---- Leaderboard ---- */
+VIEWS.board = () => '<div id="lb" class="text-zinc-400">Lade...</div>'
+PAGEINIT.board = async () => {
+  const { data, error } = await sb.rpc('leaderboard'); if (error) return $('lb').textContent = error.message
+  const list = (t, a, u) => `<div class="font-bold mb-2 mt-4">${t}</div>` + a.map((x, i) =>
+    `<div class="flex justify-between glass rounded-lg px-3 py-2 mb-1"><span>${['🥇', '🥈', '🥉'][i] || (i + 1) + '.'} ${esc(x.username)} ${BADGE[x.role] || ''}</span><b class="text-emerald-400">${Number(x.balance).toLocaleString('de-DE')} ${u}</b></div>`).join('')
+  $('lb').innerHTML = list('💰 Reichste Spieler', data.rich, 'FC') + list('🎰 Meist gesetzt', data.wager, 'FC')
+}
+
+/* ---- Chat ---- */
+VIEWS.chat = () => `<div id="chatbox" class="h-80 overflow-y-auto space-y-1 mb-3 text-sm"></div>
+  <div class="flex gap-2"><input id="chatin" maxlength="200" placeholder="Nachricht..." class="inp flex-1 min-w-0" onkeydown="if(event.key==='Enter')sendChat()"><button class="btn bg-cyan-600" style="width:auto" onclick="sendChat()">Senden</button></div>`
+PAGEINIT.chat = () => { loadChat(); chatTimer = setInterval(loadChat, 4000) }
+async function loadChat() {
+  const { data, error } = await sb.rpc('chat_list'); const box = $('chatbox'); if (error || !box) return
+  const bottom = box.scrollHeight - box.scrollTop - box.clientHeight < 60
+  box.innerHTML = data.map(m => `<div><b class="text-cyan-400">${esc(m.username)}${BADGE[m.role] || ''}:</b> ${esc(m.msg)}${ROLE === 'mod' || ROLE === 'admin' ? ` <button class="text-red-400" onclick="chatDel(${m.id})">✕</button>` : ''}</div>`).join('')
+  if (bottom) box.scrollTop = box.scrollHeight
+}
+async function sendChat() {
+  const i = $('chatin'), m = i.value.trim(); if (!m) return
+  const { error } = await sb.rpc('chat_send', { m }); if (error) return toast(error.message)
+  i.value = ''; await loadChat(); $('chatbox').scrollTop = 1e6
+}
+async function chatDel(id) { await sb.rpc('chat_delete', { msg_id: id }); loadChat() }
+
+/* ---- Admin ---- */
+VIEWS.admin = () => '<div id="adm" class="text-zinc-400">Lade...</div>'
+PAGEINIT.admin = () => loadAdmin()
+async function loadAdmin() {
+  const { data, error } = await sb.rpc('admin_users'); if (error) return $('adm').textContent = error.message
+  const sm = 'style="width:auto;padding:.3rem .7rem"'
+  $('adm').innerHTML = `<div class="text-xs text-zinc-400 mb-2">${data.length} User</div>` + data.map(u =>
+    `<div class="glass rounded-xl p-3 mb-2 flex flex-wrap items-center gap-2 text-sm"><b class="flex-1 min-w-[6rem]">${esc(u.username)}${u.banned ? ' 🚫' : ''}</b>
+    <select class="inp py-1" onchange="adm('admin_role',{target:'${u.id}',new_role:this.value})">${['user', 'vip', 'mod', 'admin'].map(r => `<option ${r === u.role ? 'selected' : ''}>${r}</option>`).join('')}</select>
+    <span class="text-emerald-400">${Number(u.balance).toLocaleString('de-DE')} FC</span>
+    <button class="btn bg-cyan-700" ${sm} onclick="admCoins('${u.id}')">± Coins</button>
+    <button class="btn ${u.banned ? 'bg-green-700' : 'bg-orange-700'}" ${sm} onclick="adm('admin_ban',{target:'${u.id}',is_banned:${!u.banned}})">${u.banned ? 'Entsperren' : 'Sperren'}</button>
+    <button class="btn bg-red-700" ${sm} onclick="admDel('${u.id}')">🗑</button></div>`).join('')
+}
+async function adm(fn, args) { const { error } = await sb.rpc(fn, args); error ? toast(error.message) : loadAdmin() }
+function admCoins(id) { const a = Number(prompt('Coins (negativ = abziehen):')); if (a) adm('admin_give', { target: id, amount: a }) }
+function admDel(id) { if (confirm('Account endgültig löschen?')) adm('admin_delete', { target: id }) }
+
 function setMode(m) { diceMode = m; diceInfo() }
 function diceInfo() {
   const over = diceMode === 'over', ch = over ? 100 - diceTarget : diceTarget - 1
@@ -245,7 +341,7 @@ function show(g) {
   current = g; busy = false
   $('title').textContent = GAMES[g].icon + ' ' + GAMES[g].name
   $('desc').textContent = GAMES[g].desc
-  wheelRot = 0; $('view').innerHTML = VIEWS[g](); msg(''); renderHist()
+  wheelRot = 0; $('view').innerHTML = VIEWS[g](); msg(''); renderHist(); clearInterval(chatTimer); if (PAGEINIT[g]) PAGEINIT[g]()
   if (g === 'dice') diceInfo()
   renderNav()
   $('sidebar').classList.add('-translate-x-full')
@@ -338,7 +434,7 @@ async function play(param) {
   if (!(bet >= 1)) return msg('Ungültiger Einsatz', 'lose')
   if (bet > balance) return msg('Nicht genug Coins', 'lose')
   busy = true; lastBet = bet; lastParam = param; setBtns(true); msg('')
-  const { data, error } = await sb.rpc('play_game', { game_name: current, bet_amount: bet, param })
+  const { data, error } = await sb.rpc('play_game_d', { game_name: current, bet_amount: bet, param })
   if (error) { msg(error.message, 'lose'); busy = false; setBtns(false); return }
   await REVEAL[current](data)
   setBalance(data.balance)
@@ -351,7 +447,7 @@ async function play(param) {
 async function claimDaily() {
   const { data, error } = await sb.rpc('claim_daily')
   if (error) return toast(error.message)
-  setBalance(data.balance); toast('🎁 +' + data.reward + ' Coins!')
+  setBalance(data.balance); toast('🎁 +' + data.reward + ' Coins • Streak ' + data.streak + ' 🔥')
 }
 
 /* ---------- Auth ---------- */
