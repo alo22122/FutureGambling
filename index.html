@@ -83,7 +83,7 @@ const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
 const $ = id => document.getElementById(id)
 const sleep = ms => new Promise(r => setTimeout(r, ms))
-let ROLE = 'user', chatTimer = null, cg = null, rg = null
+let ROLE = 'user', chatTimer = null, cg = null, rg = null, cr = null, mn = null, plinkoRisk = 'mid', crPoll = 0
 let wheelRot = 0, kpicks = [], HIST = []
 let balance = 0, current = 'lobby', busy = false, lastBet = 50, diceMode = 'over', diceTarget = 50
 
@@ -93,7 +93,9 @@ const GAMES = {
   dice:     { icon: '🎲', name: 'Dice', desc: 'Wähle deine Zahl. Je riskanter, desto höher der Gewinn.' },
   slots:    { icon: '🎰', name: 'Slots', desc: 'Drei gleiche = 20×, zwei gleiche = 0,6× zurück.' },
   roulette: { icon: '🎡', name: 'Roulette', desc: 'Rot/Schwarz = 2×, Grün (0) = 14×.' },
-  crash:    { icon: '🚀', name: 'Crash', desc: 'Setze ein Ziel – erreicht die Rakete es, gewinnst du.' },
+  crash:    { icon: '🚀', name: 'Crash', desc: 'Die Rakete steigt – drücke rechtzeitig auf Cashout!' },
+  mines:    { icon: '💣', name: 'Mines', desc: 'Decke Diamanten auf, meide die Minen, cashe jederzeit aus.' },
+  blackjack:{ icon: '♠️', name: 'Blackjack', desc: 'Schlage den Dealer. Blackjack zahlt 2,5×, Double möglich.' },
   plinko:   { icon: '🟡', name: 'Plinko', desc: 'Ball fallen lassen – die Ränder zahlen bis 5,6×.' },
   wheel:    { icon: '🎯', name: 'Glücksrad', desc: 'Dreh das Rad – Gewinne bis 4×.' },
   keno:     { icon: '🔢', name: 'Keno', desc: 'Tippe 5 Zahlen von 40 – bis zu 80×.' },
@@ -175,7 +177,7 @@ const VIEWS = {
     <div class="flex gap-3"><button class="btn play bg-red-600" onclick="play('red')">Rot 2×</button><button class="btn play bg-zinc-700" onclick="play('black')">Schwarz 2×</button><button class="btn play bg-green-600" onclick="play('green')">Grün 14×</button></div>`
 }
 
-const PM = [5.6, 2.1, 1.1, 1, 0.5, 1, 1.1, 2.1, 5.6]
+let PM = [5.6, 2.1, 1.1, 1, 0.5, 1, 1.1, 2.1, 5.6]
 const WM = [0, 0.5, 0, 1.5, 0, 2, 0, 1, 0, 4]
 
 VIEWS.lobby = () => `<div class="grid grid-cols-2 md:grid-cols-3 gap-3">${Object.entries(GAMES).filter(([k, g]) => k !== 'lobby' && !g.page).map(([k, g]) =>
@@ -330,6 +332,130 @@ async function adm(fn, args) { const { error } = await sb.rpc(fn, args); error ?
 function admCoins(id) { const a = Number(prompt('Coins (negativ = abziehen):')); if (a) adm('admin_give', { target: id, amount: a }) }
 function admDel(id) { if (confirm('Account endgültig löschen?')) adm('admin_delete', { target: id }) }
 
+/* ================= Helfer ================= */
+async function call(fn, args) { const { data, error } = await sb.rpc(fn, args); if (error) { toast(error.message); return null } return data }
+function readBet() {
+  const bet = Math.floor(Number($('bet').value))
+  if (!(bet >= 1)) { msg('Ungültiger Einsatz', 'lose'); return 0 }
+  if (bet > balance) { msg('Nicht genug Coins', 'lose'); return 0 }
+  return bet
+}
+function logRound(net) { HIST.unshift({ g: GAMES[current].icon + ' ' + GAMES[current].name, bet: lastBet, net }); HIST.length = Math.min(HIST.length, 8); renderHist() }
+
+/* ================= PLINKO mit Risiko ================= */
+const PMS = { low: [3, 1.5, 1.2, 1, 0.65, 1, 1.2, 1.5, 3], mid: [5.6, 2.1, 1.1, 1, 0.5, 1, 1.1, 2.1, 5.6], high: [26, 4, 1.5, 0.3, 0.2, 0.3, 1.5, 4, 26] }
+VIEWS.plinko = () => { PM = PMS[plinkoRisk]; return betBox() + `<div class="flex gap-2 mb-3">${['low', 'mid', 'high'].map(r =>
+  `<button class="btn bg-zinc-800 ${r === plinkoRisk ? 'sel' : ''}" onclick="lastBet=Math.floor(+$('bet').value)||lastBet;plinkoRisk='${r}';show('plinko')">${{ low: '🟢 Niedrig', mid: '🟡 Mittel', high: '🔴 Hoch' }[r]}</button>`).join('')}</div>
+  <div id="stage" class="relative h-72 mb-4 overflow-hidden">${plinkoBoard()}</div><button class="btn play bg-emerald-600" onclick="play('drop')">Ball fallen lassen</button>` }
+
+/* ================= CRASH (interaktiv) ================= */
+VIEWS.crash = () => betBox() + stg('🚀 1.00×', 'h-36') + `<button id="crbtn" class="btn bg-emerald-600" onclick="crashBtn()">Start</button>
+  <div class="text-xs text-zinc-500 mt-3 text-center">Drücke rechtzeitig auf Cashout – sonst crasht die Rakete und dein Einsatz ist weg!</div>`
+async function crashBtn() {
+  const b = $('crbtn')
+  if (!cr) {
+    const bet = readBet(); if (!bet) return
+    b.disabled = true
+    const d = await call('crash_start', { b: bet }); b.disabled = false; if (!d) return
+    lastBet = bet; setBalance(d.balance); msg(''); $('stage').style.color = ''
+    cr = { t0: performance.now(), polling: false }
+    b.textContent = '💸 CASHOUT'; b.className = 'btn bg-yellow-500 text-black'
+    cr.timer = setInterval(crashTick, 100); return
+  }
+  b.disabled = true
+  const d = await call('crash_status', { do_cash: true }); b.disabled = false
+  if (d && cr) crashEnd(d)
+}
+async function crashTick() {
+  if (!cr) return
+  const m = Math.exp(0.12 * (performance.now() - cr.t0) / 1000)
+  $('stage').textContent = '🚀 ' + (Math.floor(m * 100) / 100).toFixed(2) + '×'
+  if (++crPoll % 3 === 0 && !cr.polling) {
+    cr.polling = true
+    const d = await call('crash_status', {})
+    if (cr) { cr.polling = false; if (d && d.state === 'crashed') crashEnd(d) }
+  }
+}
+function crashEnd(d) {
+  clearInterval(cr.timer); cr = null; setBalance(d.balance)
+  const s = $('stage'), b = $('crbtn'); b.textContent = 'Start'; b.className = 'btn bg-emerald-600'
+  if (d.state === 'cashed') {
+    s.textContent = '✅ ' + Number(d.m).toFixed(2) + '×'; s.style.color = '#34d399'
+    const net = d.payout - lastBet; msg(`🎉 +${net} FC (Crash bei ${Number(d.cp).toFixed(2)}×)`, 'win'); logRound(net)
+  } else {
+    s.textContent = '💥 ' + Number(d.cp).toFixed(2) + '×'; s.style.color = '#f87171'
+    msg(`💥 −${lastBet} FC`, 'lose'); logRound(-lastBet)
+  }
+}
+
+/* ================= MINES ================= */
+VIEWS.mines = () => { mn = null; return betBox() + `<div class="flex items-center gap-2 mb-4"><label class="text-xs text-zinc-400">Minen</label>
+  <select id="mcount" class="inp py-2">${[1, 3, 5, 10, 15, 20].map(n => `<option ${n === 3 ? 'selected' : ''}>${n}</option>`).join('')}</select><div id="minfo" class="flex-1 text-right text-sm text-zinc-400"></div></div>
+  <div id="mgrid" class="grid grid-cols-5 gap-2 mb-4">${Array.from({ length: 25 }, (_, i) => `<button id="m${i}" class="kc" style="padding:1rem 0;font-size:1.4rem" onclick="minePick(${i})">?</button>`).join('')}</div>
+  <button id="mbtn" class="btn bg-emerald-600" onclick="mineBtn()">Start</button>` }
+async function mineBtn() {
+  const b = $('mbtn')
+  if (!mn) {
+    const bet = readBet(); if (!bet) return
+    const mc = +$('mcount').value
+    const d = await call('mines_start', { b: bet, mine_count: mc }); if (!d) return
+    lastBet = bet; setBalance(d.balance); msg('')
+    mn = { picked: [], lock: false }
+    document.querySelectorAll('#mgrid .kc').forEach(c => { c.textContent = '?'; c.className = 'kc' })
+    b.textContent = '💸 Cashout'; b.className = 'btn bg-yellow-500 text-black'; b.disabled = true
+    $('minfo').textContent = 'Wähle ein Feld'; return
+  }
+  const d = await call('mines_cash', {}); if (d) mineEnd(d, true)
+}
+async function minePick(i) {
+  if (!mn || mn.lock || mn.picked.includes(i)) return
+  mn.lock = true
+  const d = await call('mines_pick', { t: i })
+  if (!d) { mn.lock = false; return }
+  if (d.boom) { $('m' + i).textContent = '💥'; return mineEnd(d, false) }
+  mn.picked.push(i); mn.lock = false
+  const c = $('m' + i); c.textContent = '💎'; c.classList.add('hit')
+  $('minfo').textContent = Number(d.mult).toFixed(2) + '× • nächstes ' + (d.next ? Number(d.next).toFixed(2) + '×' : '–')
+  const b = $('mbtn'); b.disabled = false; b.textContent = '💸 Cashout ' + Math.floor(lastBet * d.mult) + ' FC'
+  if (d.done) mineEnd(d, true)
+}
+function mineEnd(d, won) {
+  const picked = mn ? mn.picked : []
+  ;(d.mines || []).forEach(x => { const c = $('m' + x); if (!picked.includes(x) && c.textContent !== '💥') c.textContent = '💣' })
+  mn = null; setBalance(d.balance)
+  const b = $('mbtn'); b.textContent = 'Start'; b.className = 'btn bg-emerald-600'; b.disabled = false
+  const net = won ? d.payout - lastBet : -lastBet
+  msg(won ? `🎉 +${net} FC` : `💥 −${lastBet} FC`, won ? 'win' : 'lose'); logRound(net)
+}
+
+/* ================= BLACKJACK ================= */
+const card = c => `<span class="glass rounded-lg px-3 py-2 text-xl font-bold">${RANKS[c - 1]}</span>`
+VIEWS.blackjack = () => betBox() + `<div id="bjt" class="space-y-4 mb-4 min-h-[9rem]"><div class="text-center text-zinc-500 pt-6">Setze und teile aus</div></div>
+  <div id="bjb" class="flex gap-3 flex-wrap"><button class="btn bg-emerald-600" onclick="bj('start')">Austeilen</button></div>`
+async function bj(act) {
+  const args = { act }
+  if (act === 'start') { const bet = readBet(); if (!bet) return; args.b = bet; lastBet = bet }
+  const btns = document.querySelectorAll('#bjb button'); btns.forEach(x => x.disabled = true)
+  const d = await call('bj_action', args)
+  if (!d) { btns.forEach(x => x.disabled = false); return }
+  setBalance(d.balance); renderBj(d)
+}
+function renderBj(d) {
+  $('bjt').innerHTML = `<div><div class="text-xs text-zinc-400 mb-1">Dealer ${d.dv ?? ''}</div><div class="flex gap-2">${d.d.map(card).join('')}${d.done ? '' : '<span class="glass rounded-lg px-3 py-2 text-xl">🂠</span>'}</div></div>
+    <div><div class="text-xs text-zinc-400 mb-1">Du ${d.pv}</div><div class="flex gap-2">${d.p.map(card).join('')}</div></div>`
+  const B = $('bjb')
+  if (d.done) {
+    const net = d.payout - d.bet
+    B.innerHTML = `<button class="btn bg-emerald-600" onclick="bj('start')">Neue Runde</button>`
+    msg({ blackjack: '🃏 BLACKJACK! ', win: '🎉 Gewonnen ', push: 'Push ', lose: 'Verloren ' }[d.result] + (net > 0 ? '+' + net : net < 0 ? net : '') + ' FC', net > 0 ? 'win' : net < 0 ? 'lose' : '')
+    logRound(net)
+  } else {
+    msg('')
+    B.innerHTML = `<button class="btn bg-cyan-600" onclick="bj('hit')">Hit</button><button class="btn bg-orange-600" onclick="bj('stand')">Stand</button>` +
+      (d.p.length === 2 ? `<button class="btn bg-pink-600" onclick="bj('double')">Double</button>` : '')
+  }
+}
+
 function setMode(m) { diceMode = m; diceInfo() }
 function diceInfo() {
   const over = diceMode === 'over', ch = over ? 100 - diceTarget : diceTarget - 1
@@ -341,7 +467,7 @@ function show(g) {
   current = g; busy = false
   $('title').textContent = GAMES[g].icon + ' ' + GAMES[g].name
   $('desc').textContent = GAMES[g].desc
-  wheelRot = 0; $('view').innerHTML = VIEWS[g](); msg(''); renderHist(); clearInterval(chatTimer); if (PAGEINIT[g]) PAGEINIT[g]()
+  wheelRot = 0; $('view').innerHTML = VIEWS[g](); msg(''); renderHist(); clearInterval(chatTimer); if (cr) { clearInterval(cr.timer); cr = null }; if (PAGEINIT[g]) PAGEINIT[g]()
   if (g === 'dice') diceInfo()
   renderNav()
   $('sidebar').classList.add('-translate-x-full')
@@ -434,7 +560,7 @@ async function play(param) {
   if (!(bet >= 1)) return msg('Ungültiger Einsatz', 'lose')
   if (bet > balance) return msg('Nicht genug Coins', 'lose')
   busy = true; lastBet = bet; lastParam = param; setBtns(true); msg('')
-  const { data, error } = await sb.rpc('play_game_d', { game_name: current, bet_amount: bet, param })
+  const { data, error } = current === 'plinko' ? await sb.rpc('play_plinko', { bet_amount: bet, risk: plinkoRisk }) : await sb.rpc('play_game_d', { game_name: current, bet_amount: bet, param })
   if (error) { msg(error.message, 'lose'); busy = false; setBtns(false); return }
   await REVEAL[current](data)
   setBalance(data.balance)
