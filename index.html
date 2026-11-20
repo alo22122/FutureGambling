@@ -26,14 +26,6 @@
       -webkit-text-fill-color: transparent;
     }
     
-    .glow-cyan {
-      box-shadow: 0 0 20px rgba(34, 211, 238, 0.15);
-    }
-    
-    .glow-emerald {
-      box-shadow: 0 0 20px rgba(52, 211, 153, 0.15);
-    }
-    
     ::-webkit-scrollbar {
       width: 6px;
     }
@@ -44,57 +36,43 @@
       background: #3f3f46;
       border-radius: 3px;
     }
-    
-    .animate-pulse-slow {
-      animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-    }
-    
-    @keyframes float {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-6px); }
-    }
-    
-    .float {
-      animation: float 4s ease-in-out infinite;
-    }
   </style>
 </head>
 <body class="bg-zinc-950 text-white min-h-screen">
 
-  <!-- ==================== AUTH SCREEN ==================== -->
+  <!-- AUTH SCREEN -->
   <div id="auth-screen" class="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
-    <!-- Background Effects -->
     <div class="absolute inset-0 overflow-hidden pointer-events-none">
       <div class="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl"></div>
       <div class="absolute bottom-1/4 right-1/4 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl"></div>
     </div>
 
-    <div class="glass rounded-3xl p-8 w-full max-w-md relative z-10 glow-cyan">
+    <div class="glass rounded-3xl p-8 w-full max-w-md relative z-10">
       <div class="text-center mb-8">
         <h1 class="text-4xl font-extrabold gradient-text mb-2 tracking-tight">Future Community</h1>
-        <p class="text-zinc-400 text-sm">Nur Fake-Geld • Nur zum Spaß • Kein Echtgeld</p>
+        <p class="text-zinc-400 text-sm">Nur Fake-Geld • Nur zum Spaß</p>
       </div>
 
       <div class="space-y-4">
         <div>
           <label class="text-xs text-zinc-500 uppercase tracking-wider mb-1.5 block">Username</label>
           <input id="username" type="text" placeholder="Dein Username" 
-            class="w-full bg-zinc-900/80 border border-zinc-700 rounded-xl px-4 py-3.5 outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/50 transition" />
+            class="w-full bg-zinc-900/80 border border-zinc-700 rounded-xl px-4 py-3.5 outline-none focus:border-cyan-500 transition" />
         </div>
         
         <div>
           <label class="text-xs text-zinc-500 uppercase tracking-wider mb-1.5 block">Passwort</label>
           <input id="password" type="password" placeholder="Mindestens 4 Zeichen" 
-            class="w-full bg-zinc-900/80 border border-zinc-700 rounded-xl px-4 py-3.5 outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/50 transition" />
+            class="w-full bg-zinc-900/80 border border-zinc-700 rounded-xl px-4 py-3.5 outline-none focus:border-cyan-500 transition" />
         </div>
 
         <div class="flex gap-3 pt-2">
           <button onclick="login()" 
-            class="flex-1 bg-cyan-600 hover:bg-cyan-500 active:scale-95 py-3.5 rounded-xl font-semibold transition-all duration-200">
+            class="flex-1 bg-cyan-600 hover:bg-cyan-500 active:scale-95 py-3.5 rounded-xl font-semibold transition">
             Einloggen
           </button>
           <button onclick="register()" 
-            class="flex-1 bg-emerald-600 hover:bg-emerald-500 active:scale-95 py-3.5 rounded-xl font-semibold transition-all duration-200">
+            class="flex-1 bg-emerald-600 hover:bg-emerald-500 active:scale-95 py-3.5 rounded-xl font-semibold transition">
             Registrieren
           </button>
         </div>
@@ -104,7 +82,7 @@
     </div>
   </div>
 
-  <!-- ==================== HAUPT APP ==================== -->
+  <!-- HAUPT APP -->
   <div id="app" class="hidden min-h-screen flex flex-col">
     
     <!-- Navbar -->
@@ -122,7 +100,7 @@
           </div>
           
           <button onclick="claimDaily()" 
-            class="bg-yellow-500 hover:bg-yellow-400 text-zinc-900 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-bold transition active:scale-95">
+            class="bg-yellow-500 hover:bg-yellow-400 text-zinc-900 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-bold transition">
             Daily +300
           </button>
           
@@ -133,23 +111,19 @@
       </div>
     </nav>
 
-    <!-- Main Content -->
     <div class="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 py-6 sm:py-8">
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        <!-- LEFT: Games -->
+        <!-- LEFT -->
         <div class="lg:col-span-2 space-y-6">
           
-          <!-- Welcome -->
-          <div class="flex items-center justify-between">
-            <div>
-              <h2 class="text-2xl font-bold" id="welcome-text">Willkommen</h2>
-              <p class="text-zinc-500 text-sm mt-0.5">Spiele mit Fake-Geld und hab Spaß</p>
-            </div>
+          <div>
+            <h2 class="text-2xl font-bold" id="welcome-text">Willkommen</h2>
+            <p class="text-zinc-500 text-sm mt-0.5">Spiele mit Fake-Geld und hab Spaß</p>
           </div>
 
-          <!-- Coinflip Card -->
-          <div class="glass rounded-2xl p-6 glow-cyan">
+          <!-- Coinflip -->
+          <div class="glass rounded-2xl p-6">
             <div class="flex items-center justify-between mb-5">
               <h3 class="text-xl font-bold flex items-center gap-2">
                 <span class="text-2xl">🪙</span> Coinflip
@@ -166,12 +140,12 @@
               
               <div class="flex gap-3">
                 <button onclick="playCoinflip('kopf')" 
-                  class="flex-1 sm:flex-none bg-cyan-600 hover:bg-cyan-500 active:scale-95 px-6 py-3 rounded-xl font-semibold transition flex items-center justify-center gap-2">
-                  <span>Kopf</span>
+                  class="flex-1 sm:flex-none bg-cyan-600 hover:bg-cyan-500 active:scale-95 px-6 py-3 rounded-xl font-semibold transition">
+                  Kopf
                 </button>
                 <button onclick="playCoinflip('zahl')" 
-                  class="flex-1 sm:flex-none bg-pink-600 hover:bg-pink-500 active:scale-95 px-6 py-3 rounded-xl font-semibold transition flex items-center justify-center gap-2">
-                  <span>Zahl</span>
+                  class="flex-1 sm:flex-none bg-pink-600 hover:bg-pink-500 active:scale-95 px-6 py-3 rounded-xl font-semibold transition">
+                  Zahl
                 </button>
               </div>
             </div>
@@ -179,55 +153,50 @@
             <div id="coinflip-result" class="mt-5 text-center text-lg font-medium min-h-[28px]"></div>
           </div>
 
-          <!-- Free Minigames (nur bei 0 Balance) -->
-          <div id="free-games" class="hidden glass rounded-2xl p-6 border border-purple-500/30 relative overflow-hidden">
-            <div class="absolute inset-0 bg-gradient-to-r from-purple-500/10 to-pink-500/10 pointer-events-none"></div>
-            <div class="relative">
-              <h3 class="text-xl font-bold text-pink-300 mb-1 flex items-center gap-2">
-                <span>💀</span> Du bist pleite!
-              </h3>
-              <p class="text-zinc-400 text-sm mb-5">Spiel diese Minigames und hole dir wieder ein bisschen Fake-Geld</p>
-              
-              <div class="flex flex-wrap gap-3">
-                <button onclick="playClicker()" 
-                  class="bg-pink-600 hover:bg-pink-500 active:scale-95 px-5 py-2.5 rounded-xl font-medium transition">
-                  🖱️ Klicker <span class="text-pink-200 text-sm">(+15–40)</span>
-                </button>
-                <button onclick="playGuess()" 
-                  class="bg-purple-600 hover:bg-purple-500 active:scale-95 px-5 py-2.5 rounded-xl font-medium transition">
-                  🔢 Zahlen raten <span class="text-purple-200 text-sm">(+20–60)</span>
-                </button>
-              </div>
-              
-              <div id="free-result" class="mt-4 text-emerald-400 font-medium text-sm"></div>
+          <!-- Free Minigames -->
+          <div id="free-games" class="hidden glass rounded-2xl p-6 border border-purple-500/30">
+            <h3 class="text-xl font-bold text-pink-300 mb-1">💀 Du bist pleite!</h3>
+            <p class="text-zinc-400 text-sm mb-5">Spiel diese Minigames und hole dir wieder Fake-Geld</p>
+            
+            <div class="flex flex-wrap gap-3">
+              <button onclick="playClicker()" 
+                class="bg-pink-600 hover:bg-pink-500 active:scale-95 px-5 py-2.5 rounded-xl font-medium transition">
+                🖱️ Klicker (+15–40)
+              </button>
+              <button onclick="playGuess()" 
+                class="bg-purple-600 hover:bg-purple-500 active:scale-95 px-5 py-2.5 rounded-xl font-medium transition">
+                🔢 Zahlen raten (+20–60)
+              </button>
             </div>
+            
+            <div id="free-result" class="mt-4 text-emerald-400 font-medium text-sm"></div>
           </div>
 
-          <!-- Coming Soon Games -->
+          <!-- Coming Soon -->
           <div>
             <h3 class="text-sm font-semibold text-zinc-500 uppercase tracking-wider mb-3">Weitere Spiele (bald)</h3>
             <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              <div class="glass rounded-xl p-4 opacity-50 cursor-not-allowed">
+              <div class="glass rounded-xl p-4 opacity-50">
                 <div class="text-2xl mb-1">📈</div>
                 <div class="font-semibold text-sm">Crash</div>
               </div>
-              <div class="glass rounded-xl p-4 opacity-50 cursor-not-allowed">
+              <div class="glass rounded-xl p-4 opacity-50">
                 <div class="text-2xl mb-1">💣</div>
                 <div class="font-semibold text-sm">Mines</div>
               </div>
-              <div class="glass rounded-xl p-4 opacity-50 cursor-not-allowed">
+              <div class="glass rounded-xl p-4 opacity-50">
                 <div class="text-2xl mb-1">📍</div>
                 <div class="font-semibold text-sm">Plinko</div>
               </div>
-              <div class="glass rounded-xl p-4 opacity-50 cursor-not-allowed">
+              <div class="glass rounded-xl p-4 opacity-50">
                 <div class="text-2xl mb-1">🎰</div>
                 <div class="font-semibold text-sm">Slots</div>
               </div>
-              <div class="glass rounded-xl p-4 opacity-50 cursor-not-allowed">
+              <div class="glass rounded-xl p-4 opacity-50">
                 <div class="text-2xl mb-1">🃏</div>
                 <div class="font-semibold text-sm">Blackjack</div>
               </div>
-              <div class="glass rounded-xl p-4 opacity-50 cursor-not-allowed">
+              <div class="glass rounded-xl p-4 opacity-50">
                 <div class="text-2xl mb-1">🐔</div>
                 <div class="font-semibold text-sm">Chicken</div>
               </div>
@@ -235,7 +204,7 @@
           </div>
         </div>
 
-        <!-- RIGHT: Leaderboard + Chat -->
+        <!-- RIGHT -->
         <div class="space-y-6">
           
           <!-- Leaderboard -->
@@ -276,78 +245,82 @@
       </div>
     </div>
 
-    <!-- Footer -->
     <footer class="border-t border-zinc-900 py-4 text-center text-zinc-600 text-xs">
-      Future Community • Nur Fake-Geld • Kein Echtgeld • Nur zum Spaß
+      Future Community • Nur Fake-Geld • Kein Echtgeld
     </footer>
   </div>
 
   <script>
-    // =====================================================
-    // SUPABASE CONFIG - HIER DEINE DATEN EINTRAGEN
-    // =====================================================
+    // ====================== SUPABASE CONFIG ======================
     const SUPABASE_URL = 'https://gxxblyzjxsagwmgjvhyu.supabase.co'
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd4eGJseXpqeHNhZ3dtZ2p2aHl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTUwOTQ5NjUsImV4cCI6MjExMDY3MDk2NX0.7Jktb_7QPtdmPGi-LxRutLSRca5ehdWLqX0lfkU22Ik'
 
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
-    // =====================================================
-    // STATE
-    // =====================================================
     let currentUser = null
     let profile = null
 
-    // =====================================================
-    // AUTH
-    // =====================================================
+    // ====================== AUTH ======================
     async function register() {
-      const username = document.getElementById('username').value.trim()
-      const password = document.getElementById('password').value
+      try {
+        const username = document.getElementById('username').value.trim()
+        const password = document.getElementById('password').value
 
-      if (!username || username.length < 3) {
-        alert('Username muss mindestens 3 Zeichen haben')
-        return
-      }
-      if (password.length < 4) {
-        alert('Passwort muss mindestens 4 Zeichen haben')
-        return
-      }
-
-      const fakeEmail = username.toLowerCase().replace(/[^a-z0-9]/g, '') + '@future.community'
-
-      const { error } = await supabase.auth.signUp({
-        email: fakeEmail,
-        password: password,
-        options: {
-          data: { username: username }
+        if (!username || username.length < 3) {
+          alert('Username muss mindestens 3 Zeichen haben')
+          return
         }
-      })
+        if (password.length < 4) {
+          alert('Passwort muss mindestens 4 Zeichen haben')
+          return
+        }
 
-      if (error) {
-        alert(error.message)
-      } else {
-        alert('Account erstellt! Du kannst dich jetzt einloggen.\nDu startest mit 1000 Fake-Coins.')
+        const fakeEmail = username.toLowerCase().replace(/[^a-z0-9]/g, '') + '@future.community'
+
+        alert('Registrierung wird gestartet...')
+
+        const { data, error } = await supabase.auth.signUp({
+          email: fakeEmail,
+          password: password,
+          options: {
+            data: { username: username }
+          }
+        })
+
+        if (error) {
+          alert('Fehler bei Registrierung: ' + error.message)
+        } else {
+          alert('Account erstellt! Du kannst dich jetzt einloggen.\nDu startest mit 1000 Fake-Coins.')
+        }
+      } catch (err) {
+        alert('JavaScript Fehler: ' + err.message)
       }
     }
 
     async function login() {
-      const username = document.getElementById('username').value.trim()
-      const password = document.getElementById('password').value
+      try {
+        const username = document.getElementById('username').value.trim()
+        const password = document.getElementById('password').value
 
-      if (!username || !password) {
-        alert('Bitte Username und Passwort eingeben')
-        return
-      }
+        if (!username || !password) {
+          alert('Bitte Username und Passwort eingeben')
+          return
+        }
 
-      const fakeEmail = username.toLowerCase().replace(/[^a-z0-9]/g, '') + '@future.community'
+        const fakeEmail = username.toLowerCase().replace(/[^a-z0-9]/g, '') + '@future.community'
 
-      const { error } = await supabase.auth.signInWithPassword({
-        email: fakeEmail,
-        password: password
-      })
+        alert('Login wird gestartet...')
 
-      if (error) {
-        alert('Login fehlgeschlagen: ' + error.message)
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: fakeEmail,
+          password: password
+        })
+
+        if (error) {
+          alert('Login fehlgeschlagen: ' + error.message)
+        }
+      } catch (err) {
+        alert('JavaScript Fehler: ' + err.message)
       }
     }
 
@@ -356,13 +329,11 @@
       location.reload()
     }
 
-    // =====================================================
-    // PROFILE & BALANCE
-    // =====================================================
+    // ====================== PROFILE ======================
     async function loadProfile() {
       if (!currentUser) return
 
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', currentUser.id)
@@ -371,9 +342,8 @@
       if (data) {
         profile = data
         document.getElementById('balance').textContent = Number(data.balance).toFixed(0)
-        document.getElementById('welcome-text').textContent = `Hey, ${data.username}`
+        document.getElementById('welcome-text').textContent = 'Hey, ' + data.username
 
-        // Free Games anzeigen wenn Balance <= 0
         const freeGames = document.getElementById('free-games')
         if (Number(data.balance) <= 0) {
           freeGames.classList.remove('hidden')
@@ -389,17 +359,14 @@
       if (error) {
         alert(error.message)
       } else {
-        showToast(`+${data.reward} Fake-Coins erhalten!`, 'success')
+        alert('+' + data.reward + ' Fake-Coins erhalten!')
         loadProfile()
       }
     }
 
-    // =====================================================
-    // COINFLIP
-    // =====================================================
+    // ====================== COINFLIP ======================
     async function playCoinflip(choice) {
-      const betInput = document.getElementById('coinflip-bet')
-      const bet = Number(betInput.value)
+      const bet = Number(document.getElementById('coinflip-bet').value)
       const resultDiv = document.getElementById('coinflip-result')
 
       if (!bet || bet <= 0) {
@@ -415,26 +382,18 @@
       })
 
       if (error) {
-        resultDiv.innerHTML = `<span class="text-red-400">${error.message}</span>`
+        resultDiv.innerHTML = '<span class="text-red-400">' + error.message + '</span>'
       } else {
         if (data.win) {
-          resultDiv.innerHTML = `
-            <span class="text-emerald-400 text-xl">🎉 Gewonnen!</span><br>
-            <span class="text-zinc-300">Es war <strong>${data.result.toUpperCase()}</strong> → +${Number(data.payout).toFixed(0)} Coins</span>
-          `
+          resultDiv.innerHTML = '<span class="text-emerald-400 text-xl">🎉 Gewonnen!</span><br><span class="text-zinc-300">Es war <strong>' + data.result.toUpperCase() + '</strong> → +' + Number(data.payout).toFixed(0) + ' Coins</span>'
         } else {
-          resultDiv.innerHTML = `
-            <span class="text-red-400 text-xl">💀 Verloren</span><br>
-            <span class="text-zinc-300">Es war <strong>${data.result.toUpperCase()}</strong></span>
-          `
+          resultDiv.innerHTML = '<span class="text-red-400 text-xl">💀 Verloren</span><br><span class="text-zinc-300">Es war <strong>' + data.result.toUpperCase() + '</strong></span>'
         }
         loadProfile()
       }
     }
 
-    // =====================================================
-    // FREE MINIGAMES
-    // =====================================================
+    // ====================== FREE MINIGAMES ======================
     async function giveFreeMoney(amount) {
       if (!profile) return
 
@@ -444,10 +403,8 @@
         .eq('id', currentUser.id)
 
       if (!error) {
-        document.getElementById('free-result').textContent = `+${amount} Coins erhalten! 🎉`
+        document.getElementById('free-result').textContent = '+' + amount + ' Coins erhalten! 🎉'
         loadProfile()
-        
-        // Nach 3 Sekunden wieder ausblenden
         setTimeout(() => {
           document.getElementById('free-result').textContent = ''
         }, 3000)
@@ -455,7 +412,7 @@
     }
 
     function playClicker() {
-      const amount = Math.floor(Math.random() * 26) + 15 // 15-40
+      const amount = Math.floor(Math.random() * 26) + 15
       giveFreeMoney(amount)
     }
 
@@ -466,17 +423,15 @@
       if (guess === null) return
       
       if (Number(guess) === secret) {
-        const amount = Math.floor(Math.random() * 41) + 20 // 20-60
+        const amount = Math.floor(Math.random() * 41) + 20
         giveFreeMoney(amount)
-        alert(`Richtig! Es war die ${secret}. Du bekommst ${amount} Coins!`)
+        alert('Richtig! Es war die ' + secret + '. Du bekommst ' + amount + ' Coins!')
       } else {
-        alert(`Falsch! Es war die ${secret}. Versuch es nochmal.`)
+        alert('Falsch! Es war die ' + secret + '. Versuch es nochmal.')
       }
     }
 
-    // =====================================================
-    // CHAT
-    // =====================================================
+    // ====================== CHAT ======================
     async function loadChat() {
       const { data } = await supabase
         .from('chat_messages')
@@ -491,12 +446,11 @@
         return
       }
 
-      container.innerHTML = data.map(msg => `
-        <div class="leading-relaxed">
-          <span class="text-cyan-400 font-medium">${escapeHtml(msg.username)}</span>
-          <span class="text-zinc-300"> ${escapeHtml(msg.message)}</span>
-        </div>
-      `).join('')
+      container.innerHTML = data.map(msg => 
+        '<div class="leading-relaxed"><span class="text-cyan-400 font-medium">' + 
+        escapeHtml(msg.username) + '</span><span class="text-zinc-300"> ' + 
+        escapeHtml(msg.message) + '</span></div>'
+      ).join('')
 
       container.scrollTop = container.scrollHeight
     }
@@ -506,25 +460,17 @@
       const text = input.value.trim()
       
       if (!text || !profile) return
-      if (text.length > 200) {
-        alert('Nachricht zu lang (max. 200 Zeichen)')
-        return
-      }
 
-      const { error } = await supabase.from('chat_messages').insert({
+      await supabase.from('chat_messages').insert({
         user_id: currentUser.id,
         username: profile.username,
         message: text
       })
 
-      if (!error) {
-        input.value = ''
-      }
+      input.value = ''
     }
 
-    // =====================================================
-    // LEADERBOARD
-    // =====================================================
+    // ====================== LEADERBOARD ======================
     async function loadLeaderboard() {
       const { data } = await supabase
         .from('profiles')
@@ -540,45 +486,20 @@
       }
 
       container.innerHTML = data.map((p, i) => {
-        const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `<span class="text-zinc-600 w-5 inline-block">${i + 1}.</span>`
-        return `
-          <div class="flex justify-between items-center">
-            <span class="text-zinc-300 flex items-center gap-1.5">
-              ${medal} ${escapeHtml(p.username)}
-            </span>
-            <span class="text-emerald-400 font-semibold">${Number(p.balance).toFixed(0)}</span>
-          </div>
-        `
+        const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '<span class="text-zinc-600 w-5 inline-block">' + (i + 1) + '.</span>'
+        return '<div class="flex justify-between items-center"><span class="text-zinc-300 flex items-center gap-1.5">' + 
+          medal + ' ' + escapeHtml(p.username) + '</span><span class="text-emerald-400 font-semibold">' + 
+          Number(p.balance).toFixed(0) + '</span></div>'
       }).join('')
     }
 
-    // =====================================================
-    // HELPERS
-    // =====================================================
     function escapeHtml(text) {
       const div = document.createElement('div')
       div.textContent = text
       return div.innerHTML
     }
 
-    function showToast(message, type = 'info') {
-      // Einfacher Toast
-      const toast = document.createElement('div')
-      toast.className = `fixed bottom-6 left-1/2 -translate-x-1/2 px-5 py-3 rounded-xl font-medium text-sm z-50 transition-all ${
-        type === 'success' ? 'bg-emerald-600' : 'bg-zinc-800'
-      }`
-      toast.textContent = message
-      document.body.appendChild(toast)
-      
-      setTimeout(() => {
-        toast.style.opacity = '0'
-        setTimeout(() => toast.remove(), 300)
-      }, 2500)
-    }
-
-    // =====================================================
-    // INIT
-    // =====================================================
+    // ====================== INIT ======================
     supabase.auth.onAuthStateChange(async (event, session) => {
       if (session) {
         currentUser = session.user
@@ -589,7 +510,6 @@
         await loadChat()
         await loadLeaderboard()
 
-        // Realtime Subscriptions
         supabase.channel('public:chat_messages')
           .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages' }, () => {
             loadChat()
