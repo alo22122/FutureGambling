@@ -20,6 +20,10 @@
   .sel{outline:2px solid #22d3ee}
   .kc{padding:.55rem 0;border-radius:.5rem;background:#18181b;border:1px solid #3f3f46;font-weight:700;transition:.15s}
   .kc.on{outline:2px solid #22d3ee}.kc.drawn{background:#52525b}.kc.hit{background:#16a34a}
+  @keyframes pop{0%{transform:scale(.2);opacity:0}60%{transform:scale(1.2);opacity:1}100%{transform:scale(1)}}
+  @keyframes fall{to{transform:translateY(110vh) rotate(360deg)}}
+  @keyframes shake{0%,100%{transform:translate(0)}25%{transform:translate(-6px,3px)}50%{transform:translate(5px,-4px)}75%{transform:translate(-4px,-2px)}}
+  .shake{animation:shake .4s 3}.stop{animation:pop .25s}
 </style>
 </head>
 <body>
@@ -83,7 +87,7 @@ const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
 const $ = id => document.getElementById(id)
 const sleep = ms => new Promise(r => setTimeout(r, ms))
-let ROLE = 'user', chatTimer = null, cg = null, rg = null, cr = null, mn = null, plinkoRisk = 'mid', crPoll = 0
+let ROLE = 'user', chatTimer = null, cg = null, rg = null, cr = null, mn = null, plinkoRisk = 'mid', crPoll = 0, ME = {}, hb = null, dTimer = null, slotCur = null, scr = null
 let wheelRot = 0, kpicks = [], HIST = []
 let balance = 0, current = 'lobby', busy = false, lastBet = 50, diceMode = 'over', diceTarget = 50
 
@@ -91,11 +95,13 @@ const GAMES = {
   lobby:    { icon: '🏠', name: 'Lobby', desc: 'Wähle ein Spiel und viel Glück!' },
   coinflip: { icon: '🪙', name: 'Coinflip', desc: 'Kopf oder Zahl – gewinne das Doppelte (2×).' },
   dice:     { icon: '🎲', name: 'Dice', desc: 'Wähle deine Zahl. Je riskanter, desto höher der Gewinn.' },
-  slots:    { icon: '🎰', name: 'Slots', desc: 'Drei gleiche = 20×, zwei gleiche = 0,6× zurück.' },
+  slots:    { icon: '🎰', name: 'Slots', desc: 'Wähle eine Slot-Maschine: von Low bis Extreme, plus globaler Jackpot.' },
   roulette: { icon: '🎡', name: 'Roulette', desc: 'Rot/Schwarz = 2×, Grün (0) = 14×.' },
   crash:    { icon: '🚀', name: 'Crash', desc: 'Die Rakete steigt – drücke rechtzeitig auf Cashout!' },
   mines:    { icon: '💣', name: 'Mines', desc: 'Decke Diamanten auf, meide die Minen, cashe jederzeit aus.' },
   blackjack:{ icon: '♠️', name: 'Blackjack', desc: 'Schlage den Dealer. Blackjack zahlt 2,5×, Double möglich.' },
+  baccarat: { icon: '🎴', name: 'Baccarat', desc: 'Player, Banker oder Tie – wer kommt näher an 9?' },
+  sicbo:    { icon: '🔮', name: 'Sic Bo', desc: 'Drei Würfel: Low, High oder Triple (30×).' },
   plinko:   { icon: '🟡', name: 'Plinko', desc: 'Ball fallen lassen – die Ränder zahlen bis 5,6×.' },
   wheel:    { icon: '🎯', name: 'Glücksrad', desc: 'Dreh das Rad – Gewinne bis 4×.' },
   keno:     { icon: '🔢', name: 'Keno', desc: 'Tippe 5 Zahlen von 40 – bis zu 80×.' },
@@ -107,6 +113,8 @@ const GAMES = {
   doors:    { icon: '🚪', name: 'Schatztüren', desc: 'Drei Türen, hinter einer liegt 2,8×.' },
   number:   { icon: '🔟', name: 'Lucky Number', desc: 'Rate die Zahl von 1 bis 10 – 9×.' },
   rps:      { icon: '✊', name: 'Schere Stein Papier', desc: 'Sieg 2,4×, Unentschieden gibt 0,5× zurück.' },
+  players:  { icon: '👥', name: 'Spieler', desc: 'Wer ist online? Schau Profile an und verschenke Coins.', page: true },
+  shop:     { icon: '🛍️', name: 'Shop & Profil', desc: 'Avatare, Namensfarben und Titel kaufen.', page: true },
   earn:     { icon: '⛏️', name: 'Coins verdienen', desc: 'Daily-Streak, Stunden-Bonus und Mini-Games.', page: true },
   chat:     { icon: '💬', name: 'Chat', desc: 'Live-Chat mit allen Spielern.', page: true },
   board:    { icon: '🏆', name: 'Leaderboard', desc: 'Die reichsten und aktivsten Spieler.', page: true },
@@ -137,7 +145,8 @@ async function loadProfile() {
   const { data, error } = await sb.rpc('get_me')
   if (error) { console.error(error); if (/gesperrt/.test(error.message)) { alert(error.message); logout() } else toast('Profil-Fehler: ' + error.message); return }
   ROLE = data.role; $('diff').value = data.difficulty
-  $('welcome').textContent = 'Hey, ' + data.username + ({ admin: ' 🛡️', mod: ' 🔧', vip: ' ⭐' }[ROLE] || '')
+  ME = data; $('welcome').innerHTML = 'Lv ' + data.level + ' · ' + nm(data)
+  if (!hb) hb = setInterval(() => sb.rpc('heartbeat'), 60000)
   setBalance(data.balance); renderNav()
 }
 
@@ -258,11 +267,11 @@ async function delMe() {
 
 /* ---- Coins verdienen ---- */
 VIEWS.earn = () => `<div class="grid grid-cols-2 gap-3 mb-5">
-  <button class="btn bg-yellow-500 text-black" onclick="claimDaily()">🎁 Daily (Streak!)</button>
+  <div id="dailybox" class="glass rounded-xl p-4 text-center col-span-2">Lade...</div>
   <button class="btn bg-cyan-600" onclick="claimHourly()">⏰ Stunden-Bonus +50</button></div>
   <div class="glass rounded-xl p-4 mb-3"><b>👆 Klick-Challenge</b><div class="text-xs text-zinc-400 mb-3">10 Sekunden so oft klicken wie möglich – bis 40 Coins.</div><button id="clickbtn" class="btn bg-emerald-600" onclick="clickGame()">Start</button></div>
   <div class="glass rounded-xl p-4"><b>⚡ Reaktionstest</b><div class="text-xs text-zinc-400 mb-3">Klick, sobald der Button grün wird – bis 40 Coins.</div><button id="reactbtn" class="btn bg-zinc-700" onclick="reactGame()">Start</button></div>
-  <div class="text-xs text-zinc-500 mt-3">Mini-Game-Cooldown: 60 Sekunden. Daily: je mehr Tage in Folge, desto mehr Coins.</div>`
+  <div id="missions" class="mt-4"></div><div class="text-xs text-zinc-500 mt-3">Mini-Game-Cooldown: 60 Sekunden. Daily: je mehr Tage in Folge, desto mehr Coins.</div>`
 async function claimHourly() {
   const { data, error } = await sb.rpc('claim_hourly'); if (error) return toast(error.message)
   setBalance(data.balance); toast('⏰ +' + data.reward + ' Coins')
@@ -293,7 +302,7 @@ VIEWS.board = () => '<div id="lb" class="text-zinc-400">Lade...</div>'
 PAGEINIT.board = async () => {
   const { data, error } = await sb.rpc('leaderboard'); if (error) return $('lb').textContent = error.message
   const list = (t, a, u) => `<div class="font-bold mb-2 mt-4">${t}</div>` + a.map((x, i) =>
-    `<div class="flex justify-between glass rounded-lg px-3 py-2 mb-1"><span>${['🥇', '🥈', '🥉'][i] || (i + 1) + '.'} ${esc(x.username)} ${BADGE[x.role] || ''}</span><b class="text-emerald-400">${Number(x.balance).toLocaleString('de-DE')} ${u}</b></div>`).join('')
+    `<div class="flex justify-between glass rounded-lg px-3 py-2 mb-1"><span>${['🥇', '🥈', '🥉'][i] || (i + 1) + '.'} ${nm(x)}</span><b class="text-emerald-400">${Number(x.balance).toLocaleString('de-DE')} ${u}</b></div>`).join('')
   $('lb').innerHTML = list('💰 Reichste Spieler', data.rich, 'FC') + list('🎰 Meist gesetzt', data.wager, 'FC')
 }
 
@@ -304,7 +313,7 @@ PAGEINIT.chat = () => { loadChat(); chatTimer = setInterval(loadChat, 4000) }
 async function loadChat() {
   const { data, error } = await sb.rpc('chat_list'); const box = $('chatbox'); if (error || !box) return
   const bottom = box.scrollHeight - box.scrollTop - box.clientHeight < 60
-  box.innerHTML = data.map(m => `<div><b class="text-cyan-400">${esc(m.username)}${BADGE[m.role] || ''}:</b> ${esc(m.msg)}${ROLE === 'mod' || ROLE === 'admin' ? ` <button class="text-red-400" onclick="chatDel(${m.id})">✕</button>` : ''}</div>`).join('')
+  box.innerHTML = data.map(m => `<div><b>${nm(m)}:</b> ${esc(m.msg)}${ROLE === 'mod' || ROLE === 'admin' ? ` <button class="text-red-400" onclick="chatDel(${m.id})">✕</button>` : ''}</div>`).join('')
   if (bottom) box.scrollTop = box.scrollHeight
 }
 async function sendChat() {
@@ -315,7 +324,7 @@ async function sendChat() {
 async function chatDel(id) { await sb.rpc('chat_delete', { msg_id: id }); loadChat() }
 
 /* ---- Admin ---- */
-VIEWS.admin = () => '<div id="adm" class="text-zinc-400">Lade...</div>'
+VIEWS.admin = () => '<button class="btn bg-sky-600 mb-3" onclick="admRain()">🌧️ Coin Rain starten</button><div id="adm" class="text-zinc-400">Lade...</div>'
 PAGEINIT.admin = () => loadAdmin()
 async function loadAdmin() {
   const { data, error } = await sb.rpc('admin_users'); if (error) return $('adm').textContent = error.message
@@ -456,6 +465,152 @@ function renderBj(d) {
   }
 }
 
+/* ================= Cosmetics / Profile ================= */
+const nm = u => `<span class="cursor-pointer" data-u="${esc(u.username)}" onclick="showProfile(this.dataset.u)" style="color:${/^#[0-9a-f]{6}$/i.test(u.color) ? u.color : '#fff'}">${esc(u.avatar || '')} ${esc(u.username)}</span>${BADGE[u.role] || ''}${u.title ? ` <i class="text-xs text-zinc-400">${esc(u.title)}</i>` : ''}`
+
+/* ---- Daily mit Streak-Kalender & Countdown ---- */
+PAGEINIT.earn = async () => {
+  loadMissions()
+  const d = await call('daily_status', {}), box = $('dailybox'); if (!d || !box) return
+  const t0 = Date.now(), cur = d.streak % 7 || (d.streak ? 7 : 0)
+  const draw = () => {
+    const left = Math.max(0, d.secs_left - Math.floor((Date.now() - t0) / 1000))
+    if (!left && !d.can_claim) { clearInterval(dTimer); return PAGEINIT.earn() }
+    box.innerHTML = `<div class="font-bold mb-2">🎁 Daily Streak: ${d.streak} 🔥</div><div class="flex justify-center gap-1 mb-3">${[1, 2, 3, 4, 5, 6, 7].map(i =>
+      `<span class="w-8 h-8 rounded-full flex items-center justify-center text-xs ${i <= cur ? 'bg-emerald-600' : 'bg-zinc-800'}">${i}</span>`).join('')}</div>` +
+      (d.can_claim ? `<button class="btn bg-yellow-500 text-black" onclick="claimDaily()">Abholen +${d.reward} FC</button>`
+        : `<div class="text-zinc-400 text-sm">Nächstes Daily in ${Math.floor(left / 3600)}h ${Math.floor(left % 3600 / 60)}m ${left % 60}s (dann +${d.reward} FC)</div>`) +
+      '<div class="text-xs text-zinc-500 mt-2">Jeden Tag abholen = mehr Coins. Tag 7 gibt +500 Bonus!</div>'
+  }
+  clearInterval(dTimer); draw(); dTimer = setInterval(draw, 1000)
+}
+
+/* ---- Spieler, Profile, Geschenke ---- */
+VIEWS.players = () => `<div class="glass rounded-xl p-4 mb-4"><b>🎁 Coins verschenken</b>
+  <div class="flex gap-2 mt-2"><input id="gto" placeholder="Username" class="inp flex-1 min-w-0"><input id="gam" type="number" min="1" placeholder="FC" class="inp w-24"><button class="btn bg-pink-600" style="width:auto" onclick="gift()">Senden</button></div>
+  <div class="text-xs text-zinc-500 mt-1">Limit: 5.000 FC pro Tag</div></div>
+  <input id="pq" placeholder="Spieler suchen..." class="inp w-full mb-3" oninput="loadPlayers()"><div id="plist"></div>`
+PAGEINIT.players = () => loadPlayers()
+async function loadPlayers() {
+  const d = await call('players_list', { q: ($('pq') || {}).value || '' }); if (!d || !$('plist')) return
+  $('plist').innerHTML = d.map(u => `<div class="glass rounded-lg px-3 py-2 mb-1 flex justify-between items-center"><span>${u.online ? '🟢' : '⚪'} ${nm(u)} <span class="text-xs text-zinc-500">Lv ${u.level}</span></span>
+    <button class="text-pink-400" data-u="${esc(u.username)}" onclick="$('gto').value=this.dataset.u;$('gam').focus()">🎁</button></div>`).join('')
+}
+async function gift() {
+  const d = await call('send_coins', { to_user: $('gto').value.trim(), amount: +$('gam').value }); if (!d) return
+  setBalance(d.balance); toast('🎁 Gesendet!'); $('gam').value = ''
+}
+async function showProfile(name) {
+  const u = await call('get_profile', { uname: name }); if (!u) return toast('Profil nicht gefunden')
+  clearInterval(chatTimer); $('title').textContent = '🙍 ' + u.username; $('desc').textContent = 'Spielerprofil'; msg('')
+  $('view').innerHTML = `<div class="text-center"><div class="text-7xl mb-2">${esc(u.avatar)}</div><div class="text-2xl font-black" style="color:${/^#[0-9a-f]{6}$/i.test(u.color) ? u.color : '#fff'}">${esc(u.username)} ${BADGE[u.role] || ''}</div>
+    <div class="text-zinc-400 text-sm">${esc(u.title || 'Spieler')} · Level ${u.level} · ${u.online ? '🟢 online' : '⚪ offline'}</div>
+    <div class="my-4 italic text-zinc-300">${esc(u.bio || 'Keine Bio.')}</div>
+    <div class="grid grid-cols-3 gap-2 text-sm mb-4"><div class="glass rounded-lg p-2">🪙<br><b>${Number(u.balance).toLocaleString('de-DE')}</b></div><div class="glass rounded-lg p-2">🎰 gesetzt<br><b>${Number(u.wagered).toLocaleString('de-DE')}</b></div><div class="glass rounded-lg p-2">🔥 Streak<br><b>${u.streak}</b></div></div>
+    <div class="flex flex-wrap justify-center gap-2 mb-3">${ACH.map(([i, n, f]) => `<span class="text-xs px-2 py-1 rounded-full ${f(u) ? 'bg-emerald-900 text-emerald-300' : 'bg-zinc-800 text-zinc-600'}">${i} ${n}</span>`).join('')}</div>
+    <div class="text-xs text-zinc-500 mb-4">Dabei seit ${new Date(u.joined).toLocaleDateString('de-DE')}</div>
+    <button class="btn bg-pink-600" data-u="${esc(u.username)}" onclick="show('players');$('gto').value=this.dataset.u">🎁 Coins schenken</button></div>`
+}
+
+/* ---- Shop & Profil ---- */
+VIEWS.shop = () => '<div id="shop" class="text-zinc-400">Lade...</div>'
+PAGEINIT.shop = async () => {
+  const cat = await call('shop_catalog', {}); if (!cat || !$('shop')) return
+  const owned = ME.owned || [], eq = { avatar: ME.avatar, color: ME.color, title: ME.title }
+  const sec = (slot, label) => `<div class="flex justify-between items-center mt-5 mb-2"><b>${label}</b><button class="text-xs text-zinc-500" onclick="shopAct('equip','reset_${slot}')">zurücksetzen</button></div><div class="grid grid-cols-2 gap-2">` +
+    cat.filter(i => i.slot === slot).map(i => {
+      const has = owned.includes(i.id), on = eq[slot] === i.v
+      const show_ = slot === 'color' ? `<span style="color:${i.v}">■ ${esc(i.name)}</span>` : esc(i.v)
+      return `<div class="glass rounded-xl p-3 text-center ${on ? 'sel' : ''}"><div class="${slot === 'avatar' ? 'text-3xl' : 'font-bold'} mb-2">${show_}</div>` +
+        (has ? `<button class="btn bg-cyan-700" style="padding:.3rem" onclick="shopAct('equip','${i.id}')">${on ? '✔ Aktiv' : 'Anlegen'}</button>`
+          : `<button class="btn bg-yellow-500 text-black" style="padding:.3rem" onclick="shopAct('shop_buy','${i.id}')">${i.price.toLocaleString('de-DE')} FC</button>`) + '</div>'
+    }).join('') + '</div>'
+  $('shop').innerHTML = `<div class="glass rounded-xl p-4"><b>Bio</b><div class="flex gap-2 mt-2"><input id="bio" maxlength="80" value="${esc(ME.bio || '')}" class="inp flex-1 min-w-0"><button class="btn bg-cyan-600" style="width:auto" onclick="saveBio()">Speichern</button></div></div>` +
+    sec('avatar', '😎 Avatare') + sec('color', '🎨 Namensfarben') + sec('title', '🏷️ Titel')
+}
+async function shopAct(fn, id) {
+  const d = await call(fn, { item: id }); if (!d) return
+  setBalance(d.balance); await loadProfile(); show('shop')
+}
+async function saveBio() { const d = await call('set_bio', { t: $('bio').value }); if (d) { ME.bio = $('bio').value; toast('Bio gespeichert') } }
+
+/* ================= SLOT-MENÜ ================= */
+const SLOTS = {
+  classic: { name: 'Classic 777', icon: '🍒', n: 3, tag: 'Low', col: '#22d3ee', sym: ['🍒', '🍋', '🔔', '⭐', '💎', '🍀'], desc: '3 Walzen, klassisch. Ein Paar zahlt schon.', pay: 'Paar 0,72× · Drilling 22×' },
+  fruit: { name: 'Fruit Party', icon: '🍇', n: 5, tag: 'Low', col: '#34d399', sym: ['🍒', '🍋', '🍇', '🍉', '🍓'], desc: 'Fast jede Drehung trifft – bis 40×.', pay: '2 gleiche 0,3× · 3: 1,5× · 4: 8× · 5: 40×' },
+  volcano: { name: 'Volcano', icon: '🌋', n: 5, tag: 'High', col: '#fb923c', sym: ['🌋', '🔥', '💎', '🪙', '🦖', '🥚', '⚡'], desc: 'Schwerer Slot: seltene, wuchtige Treffer bis 350×.', pay: '3 gleiche 2,8× · 4: 28× · 5: 350×' },
+  mega: { name: 'Mega Titan', icon: '👑', n: 5, tag: 'Extreme', col: '#f43f5e', sym: ['💎', '👑', '🔔', '⭐', '🍀', '🍒', '🍋', '🍇', '🎰'], desc: 'Extreme Volatilität – selten, aber bis zu 1.075×!', pay: '3 gleiche 4,5× · 4: 54× · 5: 1.075×' },
+  jackpot: { name: 'Global Jackpot', icon: '💰', n: 3, tag: 'Jackpot', col: '#facc15', sym: ['🍒', '🍋', '🔔', '⭐', '🍀', '💰'], desc: 'Alle Spieler füllen den Pot. Drei 💰 knacken ihn!', pay: 'Paar 0,77× · Drilling 19× · 💰💰💰 = JACKPOT' },
+  scratch: { name: 'Rubbellos', icon: '🎟️', n: 6, tag: 'Scratch', col: '#a78bfa', sym: ['🍒', '🍋', '⭐', '💎', '🍀', '🎁'], desc: 'Rubbel 6 Felder frei. 3 gleiche gewinnen, bis 340×.', pay: '3 gleiche 1,35× · 4: 6,8× · 5: 34× · 6: 340×' }
+}
+const ACH = [['🎰', 'Zocker', u => u.wagered >= 10000], ['🐳', 'Whale', u => u.wagered >= 500000], ['💰', 'Reich', u => u.balance >= 100000], ['🔥', '7er-Streak', u => u.streak >= 7], ['⭐', 'Level 5', u => u.level >= 5], ['👑', 'Level 10', u => u.level >= 10]]
+
+VIEWS.slots = () => {
+  slotCur = null; scr = null
+  return `<div class="grid grid-cols-2 gap-3">${Object.entries(SLOTS).map(([k, m]) =>
+    `<button onclick="openSlot('${k}')" class="glass rounded-2xl p-4 text-left hover:border-cyan-500 transition"><div class="text-4xl mb-1">${m.icon}</div><div class="font-bold">${m.name}</div>
+    <span class="text-xs px-2 py-0.5 rounded-full" style="background:${m.col}33;color:${m.col}">${m.tag}</span><div class="text-xs text-zinc-400 mt-2">${m.desc}</div>
+    ${k === 'jackpot' ? '<div class="text-yellow-400 font-bold mt-1">Pot: <span id="jp">…</span> FC</div>' : ''}</button>`).join('')}</div>`
+}
+PAGEINIT.slots = () => refreshPool()
+async function refreshPool() { const p = await call('jackpot_pool', {}); if (p != null && $('jp')) $('jp').textContent = Number(p).toLocaleString('de-DE') }
+
+function openSlot(k) {
+  const m = SLOTS[k]; slotCur = k; scr = null; busy = false
+  $('title').textContent = m.icon + ' ' + m.name; $('desc').textContent = m.desc; msg('')
+  const big = m.n > 3 && m.n !== 6, st = big ? 'width:3.6rem;height:4.6rem;font-size:2rem' : ''
+  $('view').innerHTML = `<button class="text-sm text-zinc-400 mb-3" onclick="show('slots')">← Alle Slots</button>` + betBox() +
+    `<div id="stage" class="flex flex-wrap justify-center gap-2 my-5 mx-auto" style="max-width:${m.n === 6 ? '17rem' : 'none'}">${Array.from({ length: m.n }, (_, i) =>
+      `<div class="reel" id="rl${i}" style="${st}" onclick="scratchClick(${i})">${m.sym[i % m.sym.length]}</div>`).join('')}</div>
+    ${k === 'jackpot' ? '<div class="text-center text-yellow-400 font-bold mb-3">💰 Pot: <span id="jp">…</span> FC</div>' : ''}
+    <div class="flex gap-3"><button id="spinbtn" class="btn bg-emerald-600" onclick="slotSpin()">${k === 'scratch' ? 'Los kaufen' : 'Drehen'}</button>${k === 'scratch' ? '<button class="btn bg-zinc-700" onclick="scratchAll()">Alles aufdecken</button>' : ''}</div>
+    <div class="text-xs text-zinc-500 mt-3 text-center">${m.pay}<br>Gleiche Symbole zählen, egal auf welcher Walze.</div>`
+  if (k === 'jackpot') refreshPool()
+}
+async function slotSpin() {
+  if (busy || !slotCur) return
+  const M = SLOTS[slotCur], bet = readBet(); if (!bet) return
+  busy = true; lastBet = bet; $('spinbtn').disabled = true; msg('')
+  const d = await call('slot_play', { machine: slotCur, bet_amount: bet })
+  if (!d) { busy = false; $('spinbtn').disabled = false; return }
+  const arr = d.result.split(' ').map(Number), cells = [...document.querySelectorAll('.reel')]
+  if (slotCur === 'scratch') { scr = { d, arr, done: new Set() }; cells.forEach(c => { c.textContent = '❔' }); return }
+  const iv = cells.map(c => setInterval(() => c.textContent = M.sym[Math.floor(Math.random() * M.sym.length)], 70))
+  for (let i = 0; i < cells.length; i++) { await sleep(450 + i * 350); clearInterval(iv[i]); cells[i].textContent = M.sym[arr[i] - 1]; cells[i].classList.add('stop') }
+  slotDone(d)
+}
+function scratchClick(i) {
+  if (!scr || scr.done.has(i)) return
+  scr.done.add(i); const c = $('rl' + i); c.textContent = SLOTS.scratch.sym[scr.arr[i] - 1]; c.classList.add('stop')
+  if (scr.done.size === scr.arr.length) { const d = scr.d; scr = null; slotDone(d) }
+}
+function scratchAll() { if (scr) [...Array(scr.arr.length).keys()].forEach(scratchClick) }
+function slotDone(d) {
+  setBalance(d.balance); busy = false; $('spinbtn').disabled = false
+  const net = d.payout - lastBet, x = d.payout / lastBet
+  msg(net > 0 ? `🎉 +${net.toLocaleString('de-DE')} FC` : net === 0 ? 'Einsatz zurück' : `−${lastBet - d.payout} FC`, net > 0 ? 'win' : 'lose'); logRound(net)
+  if (d.jackpot) bigWin('💰 JACKPOT!<br>' + d.payout.toLocaleString('de-DE') + ' FC', true)
+  else if (x >= 20) bigWin('MEGA WIN ×' + Math.floor(x)); else if (x >= 5) bigWin('BIG WIN ×' + x.toFixed(1))
+  if (slotCur === 'jackpot') refreshPool()
+}
+function bigWin(text, jp) {
+  const o = document.createElement('div'); o.style.cssText = 'position:fixed;inset:0;z-index:60;pointer-events:none;display:flex;align-items:center;justify-content:center;overflow:hidden'
+  o.innerHTML = `<div style="font-size:clamp(2rem,9vw,4.5rem);font-weight:900;text-align:center;animation:pop .5s;color:${jp ? '#facc15' : '#fff'};text-shadow:0 0 30px ${jp ? '#facc15' : '#22d3ee'}">${text}</div>` +
+    Array.from({ length: 28 }, (_, i) => `<span style="position:absolute;top:-40px;left:${Math.random() * 100}%;font-size:${20 + Math.random() * 20}px;animation:fall ${1.5 + Math.random() * 1.5}s ${Math.random() * 0.6}s linear forwards">${['🪙', '💎', '⭐', '🎉'][i % 4]}</span>`).join('')
+  document.body.appendChild(o); const mn_ = document.querySelector('main'); mn_.classList.add('shake')
+  setTimeout(() => { o.remove(); mn_.classList.remove('shake') }, 3300)
+}
+
+/* ================= Missionen & Rain ================= */
+async function loadMissions() {
+  const d = await call('missions_list', {}); if (!d || !$('missions')) return
+  $('missions').innerHTML = '<div class="font-bold mb-2">📋 Tagesmissionen</div>' + d.map(m => `<div class="glass rounded-xl p-3 mb-2"><div class="flex justify-between text-sm mb-1"><span>${m.label}</span><b class="text-yellow-400">+${m.reward} FC</b></div>
+    <div class="h-2 rounded bg-zinc-800 mb-2"><div class="h-2 rounded bg-emerald-500" style="width:${Math.min(100, m.progress / m.target * 100)}%"></div></div>` +
+    (m.claimed ? '<div class="text-xs text-zinc-500">✔ abgeholt</div>' : m.progress >= m.target ? `<button class="btn bg-emerald-600" style="padding:.3rem" onclick="claimMission('${m.kind}')">Belohnung abholen</button>` : `<div class="text-xs text-zinc-500">${Math.floor(m.progress)} / ${m.target}</div>`) + '</div>').join('')
+}
+async function claimMission(k) { const d = await call('mission_claim', { k }); if (d) { setBalance(d.balance); toast('📋 Belohnung erhalten!'); loadMissions() } }
+async function admRain() { const t = Number(prompt('Gesamtsumme für alle Online-Spieler (FC):')); if (t > 0) { const d = await call('admin_rain', { total: t }); if (d) toast('🌧️ ' + d.each + ' FC an ' + d.count + ' Spieler') } }
+
 function setMode(m) { diceMode = m; diceInfo() }
 function diceInfo() {
   const over = diceMode === 'over', ch = over ? 100 - diceTarget : diceTarget - 1
@@ -467,7 +622,7 @@ function show(g) {
   current = g; busy = false
   $('title').textContent = GAMES[g].icon + ' ' + GAMES[g].name
   $('desc').textContent = GAMES[g].desc
-  wheelRot = 0; $('view').innerHTML = VIEWS[g](); msg(''); renderHist(); clearInterval(chatTimer); if (cr) { clearInterval(cr.timer); cr = null }; if (PAGEINIT[g]) PAGEINIT[g]()
+  wheelRot = 0; $('view').innerHTML = VIEWS[g](); msg(''); renderHist(); clearInterval(chatTimer); clearInterval(dTimer); if (cr) { clearInterval(cr.timer); cr = null }; if (PAGEINIT[g]) PAGEINIT[g]()
   if (g === 'dice') diceInfo()
   renderNav()
   $('sidebar').classList.add('-translate-x-full')
@@ -551,6 +706,13 @@ Object.assign(REVEAL, {
   rps: async d => { await sleep(500); say(`${RP[lastParam]} <span class="text-3xl">vs</span> ${RP[d.result]}`) }
 })
 
+VIEWS.baccarat = () => betBox() + stg('👤 vs 🏦') + row([['👤 Player 2.05×', 'player', 'bg-cyan-600'], ['Tie 9×', 'tie', 'bg-zinc-700'], ['🏦 Banker 2.05×', 'banker', 'bg-red-600']])
+VIEWS.sicbo = () => betBox() + stg('🎲🎲🎲') + row([['⬇ Low ≤10 · 2×', 'low', 'bg-cyan-600'], ['Triple 30×', 'triple', 'bg-yellow-600'], ['⬆ High ≥11 · 2×', 'high', 'bg-pink-600']])
+Object.assign(REVEAL, {
+  baccarat: async d => { const [a, b] = d.result.split(' '); await sleep(600); say(`👤 ${a} <span class="text-3xl">vs</span> 🏦 ${b}`) },
+  sicbo: async d => { const x = d.result.split(' '); await sleep(700); say(x.map(n => DICE[n - 1]).join('') + `<span class="text-3xl">= ${x.reduce((t, n) => t + +n, 0)}</span>`) }
+})
+
 /* ---------- Spielen ---------- */
 function setBtns(dis) { document.querySelectorAll('.play').forEach(b => b.disabled = dis) }
 
@@ -560,7 +722,7 @@ async function play(param) {
   if (!(bet >= 1)) return msg('Ungültiger Einsatz', 'lose')
   if (bet > balance) return msg('Nicht genug Coins', 'lose')
   busy = true; lastBet = bet; lastParam = param; setBtns(true); msg('')
-  const { data, error } = current === 'plinko' ? await sb.rpc('play_plinko', { bet_amount: bet, risk: plinkoRisk }) : await sb.rpc('play_game_d', { game_name: current, bet_amount: bet, param })
+  const { data, error } = current === 'plinko' ? await sb.rpc('play_plinko', { bet_amount: bet, risk: plinkoRisk }) : await sb.rpc(current === 'baccarat' || current === 'sicbo' ? 'play_game2' : 'play_game_d', { game_name: current, bet_amount: bet, param })
   if (error) { msg(error.message, 'lose'); busy = false; setBtns(false); return }
   await REVEAL[current](data)
   setBalance(data.balance)
@@ -573,7 +735,7 @@ async function play(param) {
 async function claimDaily() {
   const { data, error } = await sb.rpc('claim_daily')
   if (error) return toast(error.message)
-  setBalance(data.balance); toast('🎁 +' + data.reward + ' Coins • Streak ' + data.streak + ' 🔥')
+  setBalance(data.balance); toast('🎁 +' + data.reward + ' Coins • Streak ' + data.streak + ' 🔥'); if (current === 'earn') show('earn')
 }
 
 /* ---------- Auth ---------- */
