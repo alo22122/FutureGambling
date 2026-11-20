@@ -92,7 +92,15 @@ const GAMES = {
   crash:    { icon: '🚀', name: 'Crash', desc: 'Setze ein Ziel – erreicht die Rakete es, gewinnst du.' },
   plinko:   { icon: '🟡', name: 'Plinko', desc: 'Ball fallen lassen – die Ränder zahlen bis 5,6×.' },
   wheel:    { icon: '🎯', name: 'Glücksrad', desc: 'Dreh das Rad – Gewinne bis 4×.' },
-  keno:     { icon: '🔢', name: 'Keno', desc: 'Tippe 5 Zahlen von 40 – bis zu 80×.' }
+  keno:     { icon: '🔢', name: 'Keno', desc: 'Tippe 5 Zahlen von 40 – bis zu 80×.' },
+  double:   { icon: '💰', name: 'Double or Nothing', desc: 'Verdopple oder verliere alles. Dein Gewinn wird direkt neu gesetzt.' },
+  allin:    { icon: '🔥', name: 'All In', desc: 'Dein ganzes Guthaben auf eine Karte: 48 % für 2×.' },
+  hilo:     { icon: '🃏', name: 'Hi-Lo', desc: 'Höher oder niedriger als die Karte? Je riskanter, desto mehr.' },
+  lucky7:   { icon: '7️⃣', name: 'Lucky 7', desc: 'Zwei Würfel: unter 7, über 7 oder genau 7 (5,7×).' },
+  dragon:   { icon: '🐉', name: 'Dragon Tiger', desc: 'Höhere Karte gewinnt: Drache, Tiger oder Tie (11×).' },
+  doors:    { icon: '🚪', name: 'Schatztüren', desc: 'Drei Türen, hinter einer liegt 2,8×.' },
+  number:   { icon: '🔟', name: 'Lucky Number', desc: 'Rate die Zahl von 1 bis 10 – 9×.' },
+  rps:      { icon: '✊', name: 'Schere Stein Papier', desc: 'Sieg 2,4×, Unentschieden gibt 0,5× zurück.' }
 }
 
 /* ---------- UI helpers ---------- */
@@ -161,7 +169,7 @@ const VIEWS = {
 const PM = [5.6, 2.1, 1.1, 1, 0.5, 1, 1.1, 2.1, 5.6]
 const WM = [0, 0.5, 0, 1.5, 0, 2, 0, 1, 0, 4]
 
-VIEWS.lobby = () => `<div class="grid grid-cols-2 gap-3">${Object.entries(GAMES).filter(([k]) => k !== 'lobby').map(([k, g]) =>
+VIEWS.lobby = () => `<div class="grid grid-cols-2 md:grid-cols-3 gap-3">${Object.entries(GAMES).filter(([k]) => k !== 'lobby').map(([k, g]) =>
   `<button onclick="show('${k}')" class="glass rounded-2xl p-5 text-left hover:border-cyan-500 transition"><div class="text-4xl mb-2">${g.icon}</div><div class="font-bold">${g.name}</div><div class="text-xs text-zinc-400 mt-1">${g.desc}</div></button>`).join('')}</div>`
 
 VIEWS.crash = () => betBox() + `<div id="stage" class="h-36 flex items-center justify-center text-5xl font-black">🚀 1.00×</div>
@@ -202,6 +210,29 @@ function renderHist() {
   $('hist').innerHTML = HIST.length ? '<div class="text-xs text-zinc-500 mb-1">Letzte Spiele</div>' + HIST.map(h =>
     `<div class="glass rounded-lg px-3 py-2 flex justify-between"><span>${h.g}</span><span class="text-zinc-400">${h.bet} FC</span><b class="${h.net > 0 ? 'text-emerald-400' : h.net < 0 ? 'text-red-400' : 'text-zinc-400'}">${h.net > 0 ? '+' : ''}${h.net}</b></div>`).join('') : ''
 }
+
+const RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K']
+const DICE = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'], RP = { rock: '✊', paper: '✋', scissors: '✌️' }
+let dnS = 0, dnBase = 50, hiRef = 1 + Math.floor(Math.random() * 13), lastParam = ''
+const row = a => '<div class="flex gap-3 flex-wrap">' + a.map(([l, p, c]) => `<button class="btn play ${c}" style="flex:1" onclick="play('${p}')">${l}</button>`).join('') + '</div>'
+const stg = (t, h = 'h-32') => `<div id="stage" class="${h} flex items-center justify-center text-6xl font-black gap-4">${t}</div>`
+const say = h => { $('stage').innerHTML = h }
+
+VIEWS.double = () => { dnS = 0; dnBase = lastBet; return betBox() + stg('💰') + '<div id="dn" class="text-center text-sm text-zinc-400 mb-4">Streak: 0 – Gewinne werden automatisch neu gesetzt</div>' + row([['💥 Double or Nothing', 'x', 'bg-orange-600']]) }
+VIEWS.allin = () => `<input id="bet" type="hidden" value="${balance}">` + stg('🔥', 'h-36') + `<div class="text-center text-zinc-400 mb-4">Dein ganzes Guthaben (${balance} FC) – 48 % Chance auf 2×</div><button class="btn play bg-red-600" onclick="$('bet').value=balance;play('x')">🔥 ALL IN</button>`
+VIEWS.hilo = () => {
+  const up = 13 - hiRef, lo = hiRef - 1, m = c => (0.97 * 13 / c).toFixed(2)
+  return betBox() + stg(`<div class="glass rounded-xl px-6 py-4">${RANKS[hiRef - 1]}</div>`) + '<div class="flex gap-3 mb-3">' +
+    (up ? `<button class="btn play bg-emerald-600" onclick="play('higher:${hiRef}')">⬆ Höher ${m(up)}×</button>` : '') +
+    (lo ? `<button class="btn play bg-rose-600" onclick="play('lower:${hiRef}')">⬇ Niedriger ${m(lo)}×</button>` : '') +
+    '</div><button class="btn bg-zinc-800" onclick="newRef()">🔄 Neue Karte</button>'
+}
+function newRef() { lastBet = Math.floor(Number($('bet').value)) || lastBet; hiRef = 1 + Math.floor(Math.random() * 13); show('hilo') }
+VIEWS.lucky7 = () => betBox() + stg('🎲 🎲') + row([['⬇ Unter 7 · 2.3×', 'under', 'bg-cyan-600'], ['7 · 5.7×', 'seven', 'bg-yellow-600'], ['⬆ Über 7 · 2.3×', 'over', 'bg-pink-600']])
+VIEWS.dragon = () => betBox() + stg('🐉 vs 🐅') + row([['🐉 Dragon 2.05×', 'dragon', 'bg-red-600'], ['Tie 11×', 'tie', 'bg-zinc-700'], ['🐅 Tiger 2.05×', 'tiger', 'bg-orange-600']])
+VIEWS.doors = () => betBox() + stg('🚪 🚪 🚪') + row([['Tür 1', '1', 'bg-cyan-600'], ['Tür 2', '2', 'bg-cyan-600'], ['Tür 3', '3', 'bg-cyan-600']])
+VIEWS.number = () => betBox() + stg('🔟') + '<div class="grid grid-cols-5 gap-2">' + Array.from({ length: 10 }, (_, i) => `<button class="btn play bg-zinc-800" onclick="play('${i + 1}')">${i + 1}</button>`).join('') + '</div>'
+VIEWS.rps = () => betBox() + stg('✊ ✋ ✌️') + row([['✊ Stein', 'rock', 'bg-cyan-600'], ['✋ Papier', 'paper', 'bg-pink-600'], ['✌️ Schere', 'scissors', 'bg-emerald-600']])
 
 function setMode(m) { diceMode = m; diceInfo() }
 function diceInfo() {
@@ -273,6 +304,31 @@ Object.assign(REVEAL, {
   }
 })
 
+Object.assign(REVEAL, {
+  double: async d => {
+    if (!dnS) dnBase = lastBet
+    await sleep(500)
+    if (d.win) { dnS++; $('bet').value = Math.min(d.payout, d.balance); say('✅ ×2') }
+    else { dnS = 0; $('bet').value = dnBase; say('💥 0') }
+    $('dn').textContent = 'Streak: ' + dnS + (d.win ? ' – Einsatz = dein Gewinn, mach weiter!' : '')
+  },
+  allin: async d => { await sleep(900); say(d.win ? '🎉 ×2' : '💀') },
+  hilo: async d => {
+    await sleep(400)
+    say(`<div class="glass rounded-xl px-5 py-3">${RANKS[hiRef - 1]}</div><span class="text-3xl">→</span><div class="glass rounded-xl px-5 py-3 ${d.win ? 'text-emerald-400' : 'text-red-400'}">${RANKS[d.result - 1]}</div>`)
+  },
+  lucky7: async d => {
+    const [a, b] = d.result.split(' ')
+    const iv = setInterval(() => say(DICE[Math.floor(Math.random() * 6)] + DICE[Math.floor(Math.random() * 6)]), 80)
+    await sleep(800); clearInterval(iv)
+    say(DICE[a - 1] + DICE[b - 1] + `<span class="text-3xl">= ${+a + +b}</span>`)
+  },
+  dragon: async d => { const [a, b] = d.result.split(' '); await sleep(600); say(`🐉 ${RANKS[a - 1]} <span class="text-3xl">vs</span> 🐅 ${RANKS[b - 1]}`) },
+  doors: async d => { await sleep(600); say([1, 2, 3].map(i => i == d.result ? '💎' : '💀').join(' ')) },
+  number: async d => { await sleep(600); say(`<span class="${d.win ? 'text-emerald-400' : 'text-red-400'}">${d.result}</span>`) },
+  rps: async d => { await sleep(500); say(`${RP[lastParam]} <span class="text-3xl">vs</span> ${RP[d.result]}`) }
+})
+
 /* ---------- Spielen ---------- */
 function setBtns(dis) { document.querySelectorAll('.play').forEach(b => b.disabled = dis) }
 
@@ -281,7 +337,7 @@ async function play(param) {
   const bet = Math.floor(Number($('bet').value))
   if (!(bet >= 1)) return msg('Ungültiger Einsatz', 'lose')
   if (bet > balance) return msg('Nicht genug Coins', 'lose')
-  busy = true; lastBet = bet; setBtns(true); msg('')
+  busy = true; lastBet = bet; lastParam = param; setBtns(true); msg('')
   const { data, error } = await sb.rpc('play_game', { game_name: current, bet_amount: bet, param })
   if (error) { msg(error.message, 'lose'); busy = false; setBtns(false); return }
   await REVEAL[current](data)
