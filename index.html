@@ -52,8 +52,6 @@
       <div class="text-3xl font-black text-emerald-400 mt-1">🪙 <span id="balance">0</span></div>
       <div class="text-xs text-zinc-500">Future Coins</div>
     </div>
-    <select id="diff" onchange="setDiff(this.value)" class="inp mb-3 text-sm">
-      <option value="easy">😊 Easy (+15 % Gewinne)</option><option value="normal">⚖️ Normal</option><option value="hard">💀 Hard (−10 %, Boni ×1.5)</option></select>
     <nav id="nav" class="flex-1 space-y-1 overflow-y-auto mb-3"></nav>
     <button onclick="claimDaily()" class="btn bg-yellow-500 text-black mb-2">🎁 Daily +300</button>
     <button onclick="logout()" class="btn bg-zinc-800">Logout</button>
@@ -87,7 +85,7 @@ const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
 const $ = id => document.getElementById(id)
 const sleep = ms => new Promise(r => setTimeout(r, ms))
-let ROLE = 'user', chatTimer = null, cg = null, rg = null, cr = null, mn = null, plinkoRisk = 'mid', crPoll = 0, ME = {}, hb = null, dTimer = null, slotCur = null, scr = null
+let ROLE = 'user', chatTimer = null, cg = null, rg = null, cr = null, mn = null, plinkoRisk = 'mid', crPoll = 0, ME = {}, hb = null, dTimer = null, slotCur = null, scr = null, tw = null
 let wheelRot = 0, kpicks = [], HIST = []
 let balance = 0, current = 'lobby', busy = false, lastBet = 50, diceMode = 'over', diceTarget = 50
 
@@ -102,6 +100,7 @@ const GAMES = {
   blackjack:{ icon: '♠️', name: 'Blackjack', desc: 'Schlage den Dealer. Blackjack zahlt 2,5×, Double möglich.' },
   baccarat: { icon: '🎴', name: 'Baccarat', desc: 'Player, Banker oder Tie – wer kommt näher an 9?' },
   sicbo:    { icon: '🔮', name: 'Sic Bo', desc: 'Drei Würfel: Low, High oder Triple (30×).' },
+  towers:   { icon: '🗼', name: 'Towers', desc: 'Steige 8 Ebenen auf – wähle deine Schwierigkeit!' },
   plinko:   { icon: '🟡', name: 'Plinko', desc: 'Ball fallen lassen – die Ränder zahlen bis 5,6×.' },
   wheel:    { icon: '🎯', name: 'Glücksrad', desc: 'Dreh das Rad – Gewinne bis 4×.' },
   keno:     { icon: '🔢', name: 'Keno', desc: 'Tippe 5 Zahlen von 40 – bis zu 80×.' },
@@ -113,6 +112,7 @@ const GAMES = {
   doors:    { icon: '🚪', name: 'Schatztüren', desc: 'Drei Türen, hinter einer liegt 2,8×.' },
   number:   { icon: '🔟', name: 'Lucky Number', desc: 'Rate die Zahl von 1 bis 10 – 9×.' },
   rps:      { icon: '✊', name: 'Schere Stein Papier', desc: 'Sieg 2,4×, Unentschieden gibt 0,5× zurück.' },
+  community:{ icon: '🌍', name: 'Community', desc: 'Community-Ziel, Lotterie und Clans.', page: true },
   players:  { icon: '👥', name: 'Spieler', desc: 'Wer ist online? Schau Profile an und verschenke Coins.', page: true },
   shop:     { icon: '🛍️', name: 'Shop & Profil', desc: 'Avatare, Namensfarben und Titel kaufen.', page: true },
   earn:     { icon: '⛏️', name: 'Coins verdienen', desc: 'Daily-Streak, Stunden-Bonus und Mini-Games.', page: true },
@@ -144,7 +144,7 @@ function setBalance(n) {
 async function loadProfile() {
   const { data, error } = await sb.rpc('get_me')
   if (error) { console.error(error); if (/gesperrt/.test(error.message)) { alert(error.message); logout() } else toast('Profil-Fehler: ' + error.message); return }
-  ROLE = data.role; $('diff').value = data.difficulty
+  ROLE = data.role
   ME = data; $('welcome').innerHTML = 'Lv ' + data.level + ' · ' + nm(data)
   if (!hb) hb = setInterval(() => sb.rpc('heartbeat'), 60000)
   setBalance(data.balance); renderNav()
@@ -271,7 +271,7 @@ VIEWS.earn = () => `<div class="grid grid-cols-2 gap-3 mb-5">
   <button class="btn bg-cyan-600" onclick="claimHourly()">⏰ Stunden-Bonus +50</button></div>
   <div class="glass rounded-xl p-4 mb-3"><b>👆 Klick-Challenge</b><div class="text-xs text-zinc-400 mb-3">10 Sekunden so oft klicken wie möglich – bis 40 Coins.</div><button id="clickbtn" class="btn bg-emerald-600" onclick="clickGame()">Start</button></div>
   <div class="glass rounded-xl p-4"><b>⚡ Reaktionstest</b><div class="text-xs text-zinc-400 mb-3">Klick, sobald der Button grün wird – bis 40 Coins.</div><button id="reactbtn" class="btn bg-zinc-700" onclick="reactGame()">Start</button></div>
-  <div id="missions" class="mt-4"></div><div class="text-xs text-zinc-500 mt-3">Mini-Game-Cooldown: 60 Sekunden. Daily: je mehr Tage in Folge, desto mehr Coins.</div>`
+  <div id="lvlbox" class="mt-4"></div><div id="missions" class="mt-4"></div><div class="text-xs text-zinc-500 mt-3">Mini-Game-Cooldown: 60 Sekunden. Daily: je mehr Tage in Folge, desto mehr Coins.</div>`
 async function claimHourly() {
   const { data, error } = await sb.rpc('claim_hourly'); if (error) return toast(error.message)
   setBalance(data.balance); toast('⏰ +' + data.reward + ' Coins')
@@ -303,7 +303,7 @@ PAGEINIT.board = async () => {
   const { data, error } = await sb.rpc('leaderboard'); if (error) return $('lb').textContent = error.message
   const list = (t, a, u) => `<div class="font-bold mb-2 mt-4">${t}</div>` + a.map((x, i) =>
     `<div class="flex justify-between glass rounded-lg px-3 py-2 mb-1"><span>${['🥇', '🥈', '🥉'][i] || (i + 1) + '.'} ${nm(x)}</span><b class="text-emerald-400">${Number(x.balance).toLocaleString('de-DE')} ${u}</b></div>`).join('')
-  $('lb').innerHTML = list('💰 Reichste Spieler', data.rich, 'FC') + list('🎰 Meist gesetzt', data.wager, 'FC')
+  $('lb').innerHTML = (await tournamentHtml()) + list('💰 Reichste Spieler', data.rich, 'FC') + list('🎰 Meist gesetzt', data.wager, 'FC')
 }
 
 /* ---- Chat ---- */
@@ -324,7 +324,7 @@ async function sendChat() {
 async function chatDel(id) { await sb.rpc('chat_delete', { msg_id: id }); loadChat() }
 
 /* ---- Admin ---- */
-VIEWS.admin = () => '<button class="btn bg-sky-600 mb-3" onclick="admRain()">🌧️ Coin Rain starten</button><div id="adm" class="text-zinc-400">Lade...</div>'
+VIEWS.admin = () => '<button class="btn bg-sky-600 mb-3" onclick="admRain()">🌧️ Coin Rain starten</button><button class="btn bg-yellow-600 mb-3" onclick="admPayWeek()">🏆 Wochenpreise auszahlen</button><div id="adm" class="text-zinc-400">Lade...</div>'
 PAGEINIT.admin = () => loadAdmin()
 async function loadAdmin() {
   const { data, error } = await sb.rpc('admin_users'); if (error) return $('adm').textContent = error.message
@@ -399,7 +399,7 @@ function crashEnd(d) {
 
 /* ================= MINES ================= */
 VIEWS.mines = () => { mn = null; return betBox() + `<div class="flex items-center gap-2 mb-4"><label class="text-xs text-zinc-400">Minen</label>
-  <select id="mcount" class="inp py-2">${[1, 3, 5, 10, 15, 20].map(n => `<option ${n === 3 ? 'selected' : ''}>${n}</option>`).join('')}</select><div id="minfo" class="flex-1 text-right text-sm text-zinc-400"></div></div>
+  <select id="mcount" class="inp py-2">${[[1, '🟢 Leicht · 1 Mine'], [3, '🟡 Mittel · 3 Minen'], [5, '🟠 Schwer · 5 Minen'], [10, '🔴 Extrem · 10 Minen'], [15, '💀 Wahnsinn · 15'], [20, '☠️ Unmöglich · 20']].map(([n, l]) => `<option value="${n}" ${n === 3 ? 'selected' : ''}>${l}</option>`).join('')}</select><div id="minfo" class="flex-1 text-right text-sm text-zinc-400"></div></div>
   <div id="mgrid" class="grid grid-cols-5 gap-2 mb-4">${Array.from({ length: 25 }, (_, i) => `<button id="m${i}" class="kc" style="padding:1rem 0;font-size:1.4rem" onclick="minePick(${i})">?</button>`).join('')}</div>
   <button id="mbtn" class="btn bg-emerald-600" onclick="mineBtn()">Start</button>` }
 async function mineBtn() {
@@ -470,8 +470,11 @@ const nm = u => `<span class="cursor-pointer" data-u="${esc(u.username)}" onclic
 
 /* ---- Daily mit Streak-Kalender & Countdown ---- */
 PAGEINIT.earn = async () => {
-  loadMissions()
-  const d = await call('daily_status', {}), box = $('dailybox'); if (!d || !box) return
+  loadMissions(); loadLevel()
+  const box = $('dailybox'); if (!box) return
+  const { data: d, error: derr } = await sb.rpc('daily_status')
+  if (derr) { box.innerHTML = '⚠️ Daily-Fehler: ' + esc(derr.message) + '<div class="text-xs text-zinc-500 mt-1">Tipp: supabase_complete.sql erneut ausführen und die Seite neu laden.</div>'; return }
+  if (!d) { box.innerHTML = '<button class="btn bg-yellow-500 text-black" onclick="claimDaily()">🎁 Daily abholen</button><div class="text-xs text-zinc-500 mt-2">Status konnte nicht geladen werden (SQL-Update ausführen?)</div>'; return }
   const t0 = Date.now(), cur = d.streak % 7 || (d.streak ? 7 : 0)
   const draw = () => {
     const left = Math.max(0, d.secs_left - Math.floor((Date.now() - t0) / 1000))
@@ -504,7 +507,7 @@ async function showProfile(name) {
   const u = await call('get_profile', { uname: name }); if (!u) return toast('Profil nicht gefunden')
   clearInterval(chatTimer); $('title').textContent = '🙍 ' + u.username; $('desc').textContent = 'Spielerprofil'; msg('')
   $('view').innerHTML = `<div class="text-center"><div class="text-7xl mb-2">${esc(u.avatar)}</div><div class="text-2xl font-black" style="color:${/^#[0-9a-f]{6}$/i.test(u.color) ? u.color : '#fff'}">${esc(u.username)} ${BADGE[u.role] || ''}</div>
-    <div class="text-zinc-400 text-sm">${esc(u.title || 'Spieler')} · Level ${u.level} · ${u.online ? '🟢 online' : '⚪ offline'}</div>
+    <div class="text-zinc-400 text-sm">${u.clan ? '🛡️ [' + esc(u.clan) + '] · ' : ''}${esc(u.title || 'Spieler')} · Level ${u.level} · ${u.online ? '🟢 online' : '⚪ offline'}</div>
     <div class="my-4 italic text-zinc-300">${esc(u.bio || 'Keine Bio.')}</div>
     <div class="grid grid-cols-3 gap-2 text-sm mb-4"><div class="glass rounded-lg p-2">🪙<br><b>${Number(u.balance).toLocaleString('de-DE')}</b></div><div class="glass rounded-lg p-2">🎰 gesetzt<br><b>${Number(u.wagered).toLocaleString('de-DE')}</b></div><div class="glass rounded-lg p-2">🔥 Streak<br><b>${u.streak}</b></div></div>
     <div class="flex flex-wrap justify-center gap-2 mb-3">${ACH.map(([i, n, f]) => `<span class="text-xs px-2 py-1 rounded-full ${f(u) ? 'bg-emerald-900 text-emerald-300' : 'bg-zinc-800 text-zinc-600'}">${i} ${n}</span>`).join('')}</div>
@@ -559,7 +562,7 @@ function openSlot(k) {
   const m = SLOTS[k]; slotCur = k; scr = null; busy = false
   $('title').textContent = m.icon + ' ' + m.name; $('desc').textContent = m.desc; msg('')
   const big = m.n > 3 && m.n !== 6, st = big ? 'width:3.6rem;height:4.6rem;font-size:2rem' : ''
-  $('view').innerHTML = `<button class="text-sm text-zinc-400 mb-3" onclick="show('slots')">← Alle Slots</button>` + betBox() +
+  $('view').innerHTML = `<button class="text-sm text-zinc-400 mb-3" onclick="show('slots')">← Alle Slots</button>` + speedBox() + betBox() +
     `<div id="stage" class="flex flex-wrap justify-center gap-2 my-5 mx-auto" style="max-width:${m.n === 6 ? '17rem' : 'none'}">${Array.from({ length: m.n }, (_, i) =>
       `<div class="reel" id="rl${i}" style="${st}" onclick="scratchClick(${i})">${m.sym[i % m.sym.length]}</div>`).join('')}</div>
     ${k === 'jackpot' ? '<div class="text-center text-yellow-400 font-bold mb-3">💰 Pot: <span id="jp">…</span> FC</div>' : ''}
@@ -575,8 +578,9 @@ async function slotSpin() {
   if (!d) { busy = false; $('spinbtn').disabled = false; return }
   const arr = d.result.split(' ').map(Number), cells = [...document.querySelectorAll('.reel')]
   if (slotCur === 'scratch') { scr = { d, arr, done: new Set() }; cells.forEach(c => { c.textContent = '❔' }); return }
-  const iv = cells.map(c => setInterval(() => c.textContent = M.sym[Math.floor(Math.random() * M.sym.length)], 70))
-  for (let i = 0; i < cells.length; i++) { await sleep(450 + i * 350); clearInterval(iv[i]); cells[i].textContent = M.sym[arr[i] - 1]; cells[i].classList.add('stop') }
+  const sp = { normal: [450, 330], fast: [160, 110], turbo: [0, 0] }[slotSpeed] || [450, 330]
+  const iv = slotSpeed === 'turbo' ? [] : cells.map(c => setInterval(() => c.textContent = M.sym[Math.floor(Math.random() * M.sym.length)], 70))
+  for (let i = 0; i < cells.length; i++) { await sleep(i === 0 ? sp[0] : sp[1]); clearInterval(iv[i]); cells[i].textContent = M.sym[arr[i] - 1]; cells[i].classList.add('stop') }
   slotDone(d)
 }
 function scratchClick(i) {
@@ -610,6 +614,111 @@ async function loadMissions() {
 }
 async function claimMission(k) { const d = await call('mission_claim', { k }); if (d) { setBalance(d.balance); toast('📋 Belohnung erhalten!'); loadMissions() } }
 async function admRain() { const t = Number(prompt('Gesamtsumme für alle Online-Spieler (FC):')); if (t > 0) { const d = await call('admin_rain', { total: t }); if (d) toast('🌧️ ' + d.each + ' FC an ' + d.count + ' Spieler') } }
+
+/* ================= Slot-Tempo ================= */
+let slotSpeed = 'normal'; try { slotSpeed = localStorage.getItem('slotSpeed') || 'normal' } catch (e) { }
+const speedBox = () => `<div class="flex gap-1 justify-end items-center mb-3 text-xs"><span class="text-zinc-500 mr-1">Tempo:</span>${[['normal', 'Normal'], ['fast', 'Schnell'], ['turbo', '⚡ Turbo']].map(([k, l]) =>
+  `<button class="px-2 py-1 rounded-lg bg-zinc-800 ${slotSpeed === k ? 'sel' : ''}" onclick="setSpeed('${k}')">${l}</button>`).join('')}</div>`
+function setSpeed(k) { slotSpeed = k; try { localStorage.setItem('slotSpeed', k) } catch (e) { } lastBet = Math.floor(+$('bet').value) || lastBet; openSlot(slotCur) }
+
+/* ================= Live-Gewinne (Lobby) ================= */
+const _lobby = VIEWS.lobby
+VIEWS.lobby = () => _lobby() + '<div id="feed" class="mt-5"></div>'
+PAGEINIT.lobby = () => { loadFeed(); chatTimer = setInterval(loadFeed, 8000) }
+async function loadFeed() {
+  const d = await call('recent_wins', {}); if (!d || !$('feed')) return
+  $('feed').innerHTML = '<div class="font-bold mb-2">🔥 Live-Gewinne</div>' + (d.map(w => `<div class="glass rounded-lg px-3 py-2 mb-1 text-sm flex justify-between"><span>${esc(w.username)}${w.game !== 'Spiel' ? ' · ' + esc(w.game) : ''}</span><b class="text-emerald-400">+${Number(w.payout).toLocaleString('de-DE')} FC (${Math.round(w.payout / w.bet)}×)</b></div>`).join('') || '<div class="text-zinc-500 text-sm">Noch keine großen Gewinne – du könntest der Erste sein!</div>')
+}
+
+/* ================= TOWERS ================= */
+const TDIFF = { easy: [4, '🟢 Leicht · 4 Felder, 1 Bombe'], medium: [3, '🟡 Mittel · 3 Felder, 1 Bombe'], hard: [2, '🔴 Schwer · 2 Felder, 1 Bombe'], extreme: [3, '💀 Extrem · 3 Felder, 2 Bomben'] }
+VIEWS.towers = () => { tw = null; return betBox() + `<select id="tdiff" class="inp w-full mb-3">${Object.entries(TDIFF).map(([k, v]) => `<option value="${k}">${v[1]}</option>`).join('')}</select>
+  <div id="tgrid" class="space-y-1 mb-3 min-h-[3rem]"></div><div id="tinfo" class="text-sm text-zinc-400 text-center mb-3">8 Ebenen – je höher, desto mehr Multiplikator</div>
+  <button id="tbtn" class="btn bg-emerald-600" onclick="towersBtn()">Start</button>` }
+function towersDraw(rev) {
+  const cols = TDIFF[tw.diff][0]; let h = ''
+  for (let l = 7; l >= 0; l--) {
+    h += '<div class="flex gap-1">' + Array.from({ length: cols }, (_, c) => {
+      const picked = tw.path[l] === c, bomb = rev && ((rev[l] >> c) & 1), act = l === tw.lvl && !rev
+      return `<button class="kc flex-1 ${picked && !bomb ? 'hit' : ''}" style="padding:.55rem 0" ${act ? `onclick="towersPick(${c})"` : 'disabled'}>${bomb ? '💣' : picked ? '💎' : act ? '?' : '·'}</button>`
+    }).join('') + '</div>'
+  }
+  $('tgrid').innerHTML = h
+}
+async function towersBtn() {
+  const b = $('tbtn')
+  if (!tw) {
+    const bet = readBet(); if (!bet) return
+    const diff = $('tdiff').value, d = await call('towers_start', { b: bet, tdiff: diff }); if (!d) return
+    lastBet = bet; setBalance(d.balance); msg(''); tw = { diff, lvl: 0, path: [], lock: false }
+    b.textContent = '💸 Cashout'; b.className = 'btn bg-yellow-500 text-black'; b.disabled = true
+    $('tinfo').textContent = 'Wähle ein Feld in der untersten Reihe'; towersDraw(); return
+  }
+  const d = await call('towers_cash', {}); if (d) towersEnd(d, true)
+}
+async function towersPick(c) {
+  if (!tw || tw.lock) return
+  tw.lock = true; const d = await call('towers_pick', { tcol: c })
+  if (!d) { tw.lock = false; return }
+  tw.path[tw.lvl] = c
+  if (d.boom) return towersEnd(d, false)
+  tw.lvl++; tw.lock = false; towersDraw()
+  $('tinfo').textContent = Number(d.mult).toFixed(2) + '× • nächste Ebene ' + (d.next ? Number(d.next).toFixed(2) + '×' : '–')
+  const b = $('tbtn'); b.disabled = false; b.textContent = '💸 Cashout ' + Math.floor(lastBet * d.mult) + ' FC'
+  if (d.done) towersEnd(d, true)
+}
+function towersEnd(d, won) {
+  towersDraw(d.bombs); tw = null; setBalance(d.balance)
+  const b = $('tbtn'); b.textContent = 'Start'; b.className = 'btn bg-emerald-600'; b.disabled = false
+  const net = won ? d.payout - lastBet : -lastBet
+  msg(won ? `🎉 +${net} FC` : `💥 −${lastBet} FC`, won ? 'win' : 'lose'); logRound(net)
+}
+
+/* ================= COMMUNITY ================= */
+VIEWS.community = () => '<div id="comm" class="text-zinc-400">Lade...</div>'
+PAGEINIT.community = () => loadCommunity()
+async function loadCommunity() {
+  const [g, l, c] = await Promise.all([call('goal_info', {}), call('lottery_info', {}), call('clans_list', {})])
+  if (!$('comm')) return; let h = ''
+  if (g) {
+    const pct = Math.min(100, g.total / g.target * 100), ok = g.total >= g.target
+    h += `<div class="glass rounded-xl p-4 mb-3"><b>🎯 Community-Ziel (heute)</b><div class="text-xs text-zinc-400 my-2">Alle Spieler zusammen setzen ${g.target.toLocaleString('de-DE')} FC → jeder aktive Spieler (mind. 500 FC selbst gesetzt) bekommt +500 FC. Du: ${Math.floor(g.mine)} FC.</div>
+    <div class="h-3 rounded bg-zinc-800 mb-2"><div class="h-3 rounded bg-cyan-500" style="width:${pct}%"></div></div><div class="text-xs mb-2">${Math.floor(g.total).toLocaleString('de-DE')} / ${g.target.toLocaleString('de-DE')} FC</div>
+    ${g.claimed ? '✔ heute abgeholt' : ok && g.mine >= 500 ? '<button class="btn bg-emerald-600" onclick="goalClaim()">+500 FC abholen</button>' : ''}</div>`
+  }
+  if (l) h += `<div class="glass rounded-xl p-4 mb-3"><b>🎟️ Stündliche Lotterie</b><div class="text-xs text-zinc-400 my-2">Ticket = ${l.price} FC. Ein Gewinner zieht 90 % des Pots. Ziehung in ${Math.floor(l.secs / 60)} Min.</div>
+    <div class="text-2xl font-black text-yellow-400 mb-1">Pot: ${Number(l.pot).toLocaleString('de-DE')} FC</div><div class="text-xs text-zinc-400 mb-3">Deine Tickets: ${l.mine} · Gesamt: ${l.total}</div>
+    <div class="flex gap-2">${[1, 5, 10].map(n => `<button class="btn bg-yellow-500 text-black" onclick="lotBuy(${n})">${n}× (${n * l.price})</button>`).join('')}</div></div>`
+  if (c) {
+    const mine = c.find(x => x.mine)
+    h += `<div class="glass rounded-xl p-4"><b>🛡️ Clans</b>` + (mine ? `<div class="text-sm my-2">Du bist in <b>[${esc(mine.tag)}] ${esc(mine.name)}</b> <button class="text-red-400 text-xs ml-2" onclick="clanLeave()">verlassen</button></div>`
+      : `<div class="flex gap-2 my-2"><input id="cname" maxlength="20" placeholder="Clan-Name" class="inp flex-1 min-w-0"><input id="ctag" maxlength="4" placeholder="TAG" class="inp w-20"><button class="btn bg-pink-600" style="width:auto" onclick="clanCreate()">Gründen (5.000)</button></div>`) +
+      c.map((x, i) => `<div class="flex justify-between items-center glass rounded-lg px-3 py-2 mt-1 text-sm"><span>${i + 1}. <b>[${esc(x.tag)}]</b> ${esc(x.name)} <span class="text-xs text-zinc-500">${x.members}/20 · ${Math.floor(x.w).toLocaleString('de-DE')} FC gesetzt</span></span>${mine ? '' : `<button class="text-cyan-400" onclick="clanJoin(${x.id})">Beitreten</button>`}</div>`).join('') + '</div>'
+  }
+  $('comm').innerHTML = h
+}
+async function goalClaim() { const d = await call('goal_claim', {}); if (d) { setBalance(d.balance); toast('🎯 +500 FC!'); loadCommunity() } }
+async function lotBuy(n) { const d = await call('lottery_buy', { cnt: n }); if (d) { setBalance(d.balance); toast('🎟️ Tickets gekauft – viel Glück!'); loadCommunity() } }
+async function clanCreate() { const d = await call('clan_create', { cname: $('cname').value, ctag: $('ctag').value }); if (d) { setBalance(d.balance); toast('🛡️ Clan gegründet!'); loadCommunity() } }
+async function clanJoin(id) { const { error } = await sb.rpc('clan_join', { cid: id }); error ? toast(error.message) : loadCommunity() }
+async function clanLeave() { await sb.rpc('clan_leave'); loadCommunity() }
+
+/* ================= Level-Belohnung & Wochenturnier ================= */
+async function loadLevel() {
+  const d = await call('level_info', {}); if (!d || !$('lvlbox')) return
+  $('lvlbox').innerHTML = `<div class="glass rounded-xl p-3 flex justify-between items-center"><div><b>⭐ Level ${d.level}</b><div class="text-xs text-zinc-400">Jedes neue Level: Level × 200 FC</div></div>` +
+    (d.reward > 0 ? `<button class="btn bg-yellow-500 text-black" style="width:auto" onclick="claimLevel()">+${Number(d.reward).toLocaleString('de-DE')} FC</button>` : '<span class="text-xs text-zinc-500">Nichts offen</span>') + '</div>'
+}
+async function claimLevel() { const d = await call('level_claim', {}); if (d) { setBalance(d.balance); toast('⭐ +' + d.reward + ' FC'); loadLevel() } }
+async function tournamentHtml() {
+  const t = await call('tournament_board', {}); if (!t) return ''
+  const h = Math.floor(t.secs_left / 3600), f = n => Number(n).toLocaleString('de-DE')
+  return `<div class="glass rounded-xl p-4 mb-2"><div class="font-bold">🏆 Wochenturnier <span class="text-xs text-zinc-400">(endet in ${Math.floor(h / 24)}d ${h % 24}h)</span></div>
+    <div class="text-xs text-zinc-500 mb-2">Wer diese Woche am meisten setzt: 🥇 5.000 · 🥈 2.500 · 🥉 1.000 FC</div>` +
+    t.board.map((x, i) => `<div class="flex justify-between text-sm py-1"><span>${['🥇', '🥈', '🥉'][i] || (i + 1) + '.'} ${nm(x)}</span><b>${f(x.score)}</b></div>`).join('') +
+    `<div class="text-xs text-zinc-400 mt-2">Du: Platz ${t.rank} · ${f(t.score)} FC gesetzt</div></div>`
+}
+async function admPayWeek() { const d = await call('admin_pay_week', {}); if (d) toast('🏆 ' + d.winners + ' Gewinner bezahlt') }
 
 function setMode(m) { diceMode = m; diceInfo() }
 function diceInfo() {
