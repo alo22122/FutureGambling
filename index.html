@@ -24,6 +24,11 @@
   @keyframes fall{to{transform:translateY(110vh) rotate(360deg)}}
   @keyframes shake{0%,100%{transform:translate(0)}25%{transform:translate(-6px,3px)}50%{transform:translate(5px,-4px)}75%{transform:translate(-4px,-2px)}}
   .shake{animation:shake .4s 3}.stop{animation:pop .25s}
+  .nav{padding:.45rem .75rem;font-size:.9rem;gap:.6rem}
+  .nhead{display:flex;justify-content:space-between;align-items:center;width:100%;padding:.4rem .6rem;margin-top:.5rem;font-size:.68rem;text-transform:uppercase;letter-spacing:.07em;color:#71717a}
+  .nhead:hover{color:#d4d4d8}
+  .vpc{width:3.6rem;height:5rem;border-radius:.6rem;background:#fafafa;color:#111;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:800;font-size:1.3rem;cursor:pointer;position:relative}
+  .vpc.red{color:#dc2626}.vpc.hold{outline:3px solid #22d3ee;margin-bottom:.3rem}.vpc.hold::after{content:'HOLD';position:absolute;bottom:-1.15rem;font-size:.6rem;color:#22d3ee}
 </style>
 </head>
 <body>
@@ -46,16 +51,16 @@
 <!-- APP -->
 <div id="app" class="hidden">
   <aside id="sidebar" class="fixed inset-y-0 left-0 w-64 glass z-40 flex flex-col p-4 transition-transform -translate-x-full md:translate-x-0">
-    <div class="text-xl font-extrabold grad mb-5">Future Gambling</div>
-    <div class="rounded-2xl p-4 mb-5" style="background:linear-gradient(135deg,rgba(34,211,238,.15),rgba(52,211,153,.15));border:1px solid #3f3f46">
+    <div class="text-xl font-extrabold grad mb-3">Future Gambling</div>
+    <div class="rounded-2xl p-3 mb-2" style="background:linear-gradient(135deg,rgba(34,211,238,.15),rgba(52,211,153,.15));border:1px solid #3f3f46">
       <div class="text-xs text-zinc-400" id="welcome">Lade...</div>
-      <div class="text-3xl font-black text-emerald-400 mt-1">🪙 <span id="balance">0</span></div>
-      <div class="text-xs text-zinc-500">Future Coins</div>
+      <div class="text-2xl font-black text-emerald-400">🪙 <span id="balance">0</span></div>
     </div>
     <nav id="nav" class="flex-1 space-y-1 overflow-y-auto mb-3"></nav>
-    <button onclick="claimDaily()" class="btn bg-yellow-500 text-black mb-2">🎁 Daily +300</button>
-    <button onclick="logout()" class="btn bg-zinc-800">Logout</button>
-    <button onclick="delMe()" class="text-xs text-zinc-500 mt-2 hover:text-red-400">Account löschen</button>
+    <div class="grid grid-cols-2 gap-2">
+      <button onclick="claimDaily()" class="btn bg-yellow-500 text-black col-span-2" style="padding:.5rem">🎁 Daily abholen</button>
+      <button onclick="logout()" class="btn bg-zinc-800" style="padding:.4rem;font-size:.8rem">Logout</button>
+      <button onclick="delMe()" class="btn bg-zinc-900 text-zinc-500 hover:text-red-400" style="padding:.4rem;font-size:.7rem">Konto löschen</button></div>
   </aside>
 
   <header class="md:hidden sticky top-0 z-30 glass flex items-center justify-between px-4 py-3">
@@ -99,6 +104,7 @@ const GAMES = {
   mines:    { icon: '💣', name: 'Mines', desc: 'Decke Diamanten auf, meide die Minen, cashe jederzeit aus.' },
   blackjack:{ icon: '♠️', name: 'Blackjack', desc: 'Schlage den Dealer. Blackjack zahlt 2,5×, Double möglich.' },
   baccarat: { icon: '🎴', name: 'Baccarat', desc: 'Player, Banker oder Tie – wer kommt näher an 9?' },
+  poker:    { icon: '♦️', name: 'Video Poker', desc: 'Jacks or Better: Karten halten, tauschen, bis 800×.' },
   sicbo:    { icon: '🔮', name: 'Sic Bo', desc: 'Drei Würfel: Low, High oder Triple (30×).' },
   towers:   { icon: '🗼', name: 'Towers', desc: 'Steige 8 Ebenen auf – wähle deine Schwierigkeit!' },
   plinko:   { icon: '🟡', name: 'Plinko', desc: 'Ball fallen lassen – die Ränder zahlen bis 5,6×.' },
@@ -113,6 +119,7 @@ const GAMES = {
   number:   { icon: '🔟', name: 'Lucky Number', desc: 'Rate die Zahl von 1 bis 10 – 9×.' },
   rps:      { icon: '✊', name: 'Schere Stein Papier', desc: 'Sieg 2,4×, Unentschieden gibt 0,5× zurück.' },
   community:{ icon: '🌍', name: 'Community', desc: 'Community-Ziel, Lotterie und Clans.', page: true },
+  stats:    { icon: '📊', name: 'Statistiken', desc: 'Deine Zahlen: Runden, Einsatz, Auszahlung, Rückzahlung.', page: true },
   players:  { icon: '👥', name: 'Spieler', desc: 'Wer ist online? Schau Profile an und verschenke Coins.', page: true },
   shop:     { icon: '🛍️', name: 'Shop & Profil', desc: 'Avatare, Namensfarben und Titel kaufen.', page: true },
   earn:     { icon: '⛏️', name: 'Coins verdienen', desc: 'Daily-Streak, Stunden-Bonus und Mini-Games.', page: true },
@@ -151,9 +158,26 @@ async function loadProfile() {
 }
 
 /* ---------- Navigation ---------- */
+const NAVGROUPS = [
+  ['⭐', 'Beliebt', ['slots', 'crash', 'mines', 'plinko', 'blackjack', 'towers']],
+  ['🃏', 'Tischspiele', ['roulette', 'baccarat', 'sicbo', 'dragon', 'poker', 'hilo']],
+  ['⚡', 'Schnelle Spiele', ['coinflip', 'dice', 'double', 'allin', 'lucky7', 'rps', 'number', 'doors', 'wheel', 'keno']],
+  ['🌍', 'Community', ['community', 'chat', 'players', 'board']],
+  ['👤', 'Mein Konto', ['earn', 'shop', 'stats', 'admin']]
+]
+const navOpen = {}
+const grpOpen = (name, keys) => name in navOpen ? navOpen[name] : (name === 'Beliebt' || keys.includes(current))
+function toggleGroup(name) { const g = NAVGROUPS.find(x => x[1] === name); navOpen[name] = !grpOpen(name, g[2]); renderNav() }
 function renderNav() {
-  $('nav').innerHTML = Object.entries(GAMES).filter(([k, g]) => !g.admin || ROLE === 'admin').map(([k, g]) =>
-    `<button class="nav ${k === current ? 'on' : ''}" onclick="show('${k}')"><span class="text-xl">${g.icon}</span>${g.name}</button>`).join('')
+  const ok = k => GAMES[k] && (!GAMES[k].admin || ROLE === 'admin')
+  const btn = k => `<button class="nav ${k === current ? 'on' : ''}" onclick="show('${k}')"><span class="text-lg">${GAMES[k].icon}</span>${GAMES[k].name}</button>`
+  const listed = NAVGROUPS.flatMap(g => g[2]).concat('lobby'), rest = Object.keys(GAMES).filter(k => !listed.includes(k))
+  const groups = rest.length ? NAVGROUPS.concat([['➕', 'Mehr', rest]]) : NAVGROUPS
+  $('nav').innerHTML = btn('lobby') + groups.map(([ic, name, keys]) => {
+    keys = keys.filter(ok); if (!keys.length) return ''
+    const open = grpOpen(name, keys)
+    return `<div><button class="nhead" onclick="toggleGroup('${name}')"><span>${ic} ${name}</span><span>${open ? '▾' : '▸'}</span></button>${open ? keys.map(btn).join('') : ''}</div>`
+  }).join('')
 }
 function betBox() {
   return `<label class="text-xs text-zinc-400">Einsatz (FC)</label>
@@ -569,6 +593,7 @@ function openSlot(k) {
     <div class="flex gap-3"><button id="spinbtn" class="btn bg-emerald-600" onclick="slotSpin()">${k === 'scratch' ? 'Los kaufen' : 'Drehen'}</button>${k === 'scratch' ? '<button class="btn bg-zinc-700" onclick="scratchAll()">Alles aufdecken</button>' : ''}</div>
     <div class="text-xs text-zinc-500 mt-3 text-center">${m.pay}<br>Gleiche Symbole zählen, egal auf welcher Walze.</div>`
   if (k === 'jackpot') refreshPool()
+  sb.rpc('hint_game', { g: 'slot:' + k })
 }
 async function slotSpin() {
   if (busy || !slotCur) return
@@ -720,6 +745,46 @@ async function tournamentHtml() {
 }
 async function admPayWeek() { const d = await call('admin_pay_week', {}); if (d) toast('🏆 ' + d.winners + ' Gewinner bezahlt') }
 
+/* ================= VIDEO POKER ================= */
+const RK = '23456789TJQKA', SU = ['♠', '♥', '♦', '♣']
+let vp = null
+VIEWS.poker = () => { vp = null; return betBox() + `<div id="vph" class="flex justify-center gap-2 mt-6 mb-8">${Array.from({ length: 5 }, () => '<div class="vpc"><div>?</div></div>').join('')}</div>
+  <div id="vpinfo" class="text-center text-sm text-zinc-400 mb-3">Austeilen, Karten halten, tauschen.</div>
+  <button id="vpbtn" class="btn bg-emerald-600" onclick="vpBtn()">Austeilen</button>
+  <div class="text-xs text-zinc-500 mt-3 text-center">Paar (J+) 1× · 2 Paare 2× · Drilling 3× · Straße 4× · Flush 5× · Full House 8× · Vierling 25× · Straight Flush 50× · Royal Flush 800×</div>` }
+const vpCard = (c, i) => `<div class="vpc ${[1, 2].includes(Math.floor(c / 13)) ? 'red' : ''} ${vp && vp.hold.has(i) ? 'hold' : ''}" onclick="vpHold(${i})"><div>${RK[c % 13] === 'T' ? '10' : RK[c % 13]}</div><div>${SU[Math.floor(c / 13)]}</div></div>`
+const vpRender = hand => { $('vph').innerHTML = hand.map(vpCard).join('') }
+function vpHold(i) { if (!vp || vp.done) return; vp.hold.has(i) ? vp.hold.delete(i) : vp.hold.add(i); vpRender(vp.hand) }
+async function vpBtn() {
+  const b = $('vpbtn')
+  if (!vp || vp.done) {
+    const bet = readBet(); if (!bet) return
+    const d = await call('vp_deal', { b: bet }); if (!d) return
+    lastBet = bet; setBalance(d.balance); msg(''); vp = { hand: d.hand, hold: new Set(), done: false }
+    vpRender(d.hand); b.textContent = '🔄 Tauschen'; $('vpinfo').textContent = 'Tippe die Karten an, die du behalten willst.'; return
+  }
+  b.disabled = true
+  const d = await call('vp_draw', { holds: [...vp.hold] }); b.disabled = false; if (!d) return
+  vp.hand = d.hand; vp.done = true; vp.hold = new Set(); vpRender(d.hand); setBalance(d.balance)
+  b.textContent = 'Neue Runde'; $('vpinfo').textContent = d.name
+  const net = d.payout - lastBet
+  msg(net > 0 ? `🎉 ${d.name}! +${net} FC` : net === 0 ? 'Einsatz zurück' : `−${lastBet} FC`, net > 0 ? 'win' : 'lose'); logRound(net)
+  if (d.mult >= 25) bigWin(d.name + ' ×' + d.mult)
+}
+
+/* ================= STATISTIKEN ================= */
+VIEWS.stats = () => '<div id="st" class="text-zinc-400">Lade...</div>'
+PAGEINIT.stats = async () => {
+  const d = await call('stats_me', {}); if (!d || !$('st')) return
+  const f = n => Number(n).toLocaleString('de-DE'), t = d.total
+  const label = g => g.startsWith('slot:') ? (SLOTS[g.slice(5)] ? SLOTS[g.slice(5)].icon + ' ' + SLOTS[g.slice(5)].name : g) : (GAMES[g] ? GAMES[g].icon + ' ' + GAMES[g].name : g)
+  const rtp = t.wagered > 0 ? (t.won / t.wagered * 100).toFixed(1) + ' %' : '–'
+  $('st').innerHTML = `<div class="grid grid-cols-2 gap-2 mb-4">${[['🎲 Runden', f(t.plays)], ['💸 Gesetzt', f(t.wagered)], ['💰 Ausgezahlt', f(t.won)], ['📈 Rückzahlung', rtp], ['🏅 Beste Auszahlung', f(t.best)]].map(([a, b]) =>
+    `<div class="glass rounded-xl p-3"><div class="text-xs text-zinc-400">${a}</div><div class="text-xl font-black text-white">${b}</div></div>`).join('')}</div>` +
+    (d.games.length ? '<div class="font-bold mb-2">Nach Spiel</div>' + d.games.map(g => `<div class="glass rounded-lg px-3 py-2 mb-1 text-sm flex justify-between"><span>${label(g.game)} <span class="text-zinc-500">· ${f(g.plays)}×</span></span><span class="text-zinc-400">${f(g.wagered)} → <b class="${g.won >= g.wagered ? 'text-emerald-400' : 'text-red-400'}">${f(g.won)}</b></span></div>`).join('') : '<div>Noch keine Daten – spiel ein paar Runden!</div>') +
+    '<div class="text-xs text-zinc-500 mt-3">Gezählt ab diesem Update.</div>'
+}
+
 function setMode(m) { diceMode = m; diceInfo() }
 function diceInfo() {
   const over = diceMode === 'over', ch = over ? 100 - diceTarget : diceTarget - 1
@@ -733,6 +798,8 @@ function show(g) {
   $('desc').textContent = GAMES[g].desc
   wheelRot = 0; $('view').innerHTML = VIEWS[g](); msg(''); renderHist(); clearInterval(chatTimer); clearInterval(dTimer); if (cr) { clearInterval(cr.timer); cr = null }; if (PAGEINIT[g]) PAGEINIT[g]()
   if (g === 'dice') diceInfo()
+  { const gr = NAVGROUPS.find(x => x[2].includes(g)); if (gr) delete navOpen[gr[1]] }
+  if (!GAMES[g].page && g !== 'lobby') sb.rpc('hint_game', { g })
   renderNav()
   $('sidebar').classList.add('-translate-x-full')
 }
