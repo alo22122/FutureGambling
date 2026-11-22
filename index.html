@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Future Gambling</title>
 <script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <style>
   body{font-family:system-ui,-apple-system,sans-serif;background:radial-gradient(1200px 600px at 80% -10%,rgba(34,211,238,.12),transparent),#09090b;color:#fff;margin:0}
@@ -90,7 +91,7 @@ const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
 const $ = id => document.getElementById(id)
 const sleep = ms => new Promise(r => setTimeout(r, ms))
-let ROLE = 'user', chatTimer = null, cg = null, rg = null, cr = null, mn = null, plinkoRisk = 'mid', crPoll = 0, ME = {}, hb = null, dTimer = null, slotCur = null, scr = null, tw = null
+let ROLE = 'user', chatTimer = null, cg = null, rg = null, cr = null, mn = null, plinkoRisk = 'mid', crPoll = 0, ME = {}, hb = null, dTimer = null, slotCur = null, scr = null, tw = null, pvpTimer = null, dmWith = null, cg_ = null
 let wheelRot = 0, kpicks = [], HIST = []
 let balance = 0, current = 'lobby', busy = false, lastBet = 50, diceMode = 'over', diceTarget = 50
 
@@ -119,6 +120,18 @@ const GAMES = {
   number:   { icon: '🔟', name: 'Lucky Number', desc: 'Rate die Zahl von 1 bis 10 – 9×.' },
   rps:      { icon: '✊', name: 'Schere Stein Papier', desc: 'Sieg 2,4×, Unentschieden gibt 0,5× zurück.' },
   community:{ icon: '🌍', name: 'Community', desc: 'Community-Ziel, Lotterie und Clans.', page: true },
+  duel:     { icon: '⚔️', name: 'Duelle (1v1)', desc: 'Fordere andere Spieler heraus: Coinflip oder Dice um echte Coins.', page: true },
+  chess:    { icon: '♟️', name: 'Schach (Elo)', desc: '1v1 Schach mit Elo-Rating und Rangliste.', page: true },
+  friends:  { icon: '🤝', name: 'Freunde & DMs', desc: 'Freunde hinzufügen und privat schreiben.', page: true },
+  snake:    { icon: '🐍', name: 'Snake', desc: 'Friss so viel wie du kannst – ohne dich selbst zu beißen.', page: true },
+  typing:   { icon: '⌨️', name: 'Typing Race', desc: 'Wie schnell tippst du? Miss deine WPM.', page: true },
+  trivia:   { icon: '🧠', name: 'Trivia', desc: '10 Fragen, wie viele weißt du?', page: true },
+  versus:   { icon: '🎮', name: 'Versus (Mini-Games)', desc: '1v1 in Snake, Typing, Trivia oder Tetris – gleiche Runde für beide.', page: true },
+  tetris:   { icon: '🧱', name: 'Tetris', desc: '2 Minuten, so viele Punkte wie möglich.', page: true },
+  clanhq:   { icon: '🏰', name: 'Clan-HQ', desc: 'Kasse, Upgrades und Tagesbonus deines Clans.', page: true },
+  feed:     { icon: '📰', name: 'Aktivität', desc: 'Was gerade auf dem Server passiert.', page: true },
+  bp:       { icon: '🎫', name: 'Battle Pass', desc: 'Season-Belohnungen, Premium und Prestige.', page: true },
+  ach:      { icon: '🏅', name: 'Achievements', desc: 'Ziele erreichen und Coins kassieren.', page: true },
   stats:    { icon: '📊', name: 'Statistiken', desc: 'Deine Zahlen: Runden, Einsatz, Auszahlung, Rückzahlung.', page: true },
   players:  { icon: '👥', name: 'Spieler', desc: 'Wer ist online? Schau Profile an und verschenke Coins.', page: true },
   shop:     { icon: '🛍️', name: 'Shop & Profil', desc: 'Avatare, Namensfarben und Titel kaufen.', page: true },
@@ -152,9 +165,10 @@ async function loadProfile() {
   const { data, error } = await sb.rpc('get_me')
   if (error) { console.error(error); if (/gesperrt/.test(error.message)) { alert(error.message); logout() } else toast('Profil-Fehler: ' + error.message); return }
   ROLE = data.role
-  ME = data; $('welcome').innerHTML = 'Lv ' + data.level + ' · ' + nm(data)
+  ME = data; $('welcome').innerHTML = (data.prestige ? '👑' + data.prestige + ' ' : '') + 'Lv ' + data.level + ' · ' + nm(data)
   if (!hb) hb = setInterval(() => sb.rpc('heartbeat'), 60000)
   setBalance(data.balance); renderNav()
+  sb.rpc('fg_version').then(r => { if (r.error || r.data !== 'v10') toast('⚠️ Datenbank-Setup unvollständig – supabase_complete.sql komplett ausführen') })
 }
 
 /* ---------- Navigation ---------- */
@@ -162,8 +176,10 @@ const NAVGROUPS = [
   ['⭐', 'Beliebt', ['slots', 'crash', 'mines', 'plinko', 'blackjack', 'towers']],
   ['🃏', 'Tischspiele', ['roulette', 'baccarat', 'sicbo', 'dragon', 'poker', 'hilo']],
   ['⚡', 'Schnelle Spiele', ['coinflip', 'dice', 'double', 'allin', 'lucky7', 'rps', 'number', 'doors', 'wheel', 'keno']],
-  ['🌍', 'Community', ['community', 'chat', 'players', 'board']],
-  ['👤', 'Mein Konto', ['earn', 'shop', 'stats', 'admin']]
+  ['⚔️', 'PvP', ['duel', 'chess', 'versus']],
+  ['🎮', 'Future Games', ['snake', 'typing', 'trivia', 'tetris']],
+  ['🌍', 'Community', ['community', 'friends', 'chat', 'clanhq', 'feed', 'players', 'board']],
+  ['👤', 'Mein Konto', ['earn', 'bp', 'ach', 'shop', 'stats', 'admin']]
 ]
 const navOpen = {}
 const grpOpen = (name, keys) => name in navOpen ? navOpen[name] : (name === 'Beliebt' || keys.includes(current))
@@ -532,6 +548,8 @@ async function showProfile(name) {
   clearInterval(chatTimer); $('title').textContent = '🙍 ' + u.username; $('desc').textContent = 'Spielerprofil'; msg('')
   $('view').innerHTML = `<div class="text-center"><div class="text-7xl mb-2">${esc(u.avatar)}</div><div class="text-2xl font-black" style="color:${/^#[0-9a-f]{6}$/i.test(u.color) ? u.color : '#fff'}">${esc(u.username)} ${BADGE[u.role] || ''}</div>
     <div class="text-zinc-400 text-sm">${u.clan ? '🛡️ [' + esc(u.clan) + '] · ' : ''}${esc(u.title || 'Spieler')} · Level ${u.level} · ${u.online ? '🟢 online' : '⚪ offline'}</div>
+    <div class="text-sm text-zinc-300 mt-2">${u.status ? '💬 ' + esc(u.status) : ''}${u.fav_game ? ' · 🎮 ' + esc(u.fav_game) : ''}</div>
+    <div class="text-xs text-zinc-400">${u.prestige ? '👑 Prestige ' + u.prestige + ' · ' : ''}${u.clan ? '🏰 [' + esc(u.clan) + '] · ' : ''}♟️ Elo ${u.elo} (${u.chess_w}S/${u.chess_d}R/${u.chess_l}N)</div>
     <div class="my-4 italic text-zinc-300">${esc(u.bio || 'Keine Bio.')}</div>
     <div class="grid grid-cols-3 gap-2 text-sm mb-4"><div class="glass rounded-lg p-2">🪙<br><b>${Number(u.balance).toLocaleString('de-DE')}</b></div><div class="glass rounded-lg p-2">🎰 gesetzt<br><b>${Number(u.wagered).toLocaleString('de-DE')}</b></div><div class="glass rounded-lg p-2">🔥 Streak<br><b>${u.streak}</b></div></div>
     <div class="flex flex-wrap justify-center gap-2 mb-3">${ACH.map(([i, n, f]) => `<span class="text-xs px-2 py-1 rounded-full ${f(u) ? 'bg-emerald-900 text-emerald-300' : 'bg-zinc-800 text-zinc-600'}">${i} ${n}</span>`).join('')}</div>
@@ -550,9 +568,10 @@ PAGEINIT.shop = async () => {
       const show_ = slot === 'color' ? `<span style="color:${i.v}">■ ${esc(i.name)}</span>` : esc(i.v)
       return `<div class="glass rounded-xl p-3 text-center ${on ? 'sel' : ''}"><div class="${slot === 'avatar' ? 'text-3xl' : 'font-bold'} mb-2">${show_}</div>` +
         (has ? `<button class="btn bg-cyan-700" style="padding:.3rem" onclick="shopAct('equip','${i.id}')">${on ? '✔ Aktiv' : 'Anlegen'}</button>`
-          : `<button class="btn bg-yellow-500 text-black" style="padding:.3rem" onclick="shopAct('shop_buy','${i.id}')">${i.price.toLocaleString('de-DE')} FC</button>`) + '</div>'
+          : i.rare ? `<div class="text-xs text-purple-300 py-1">🔒 ${esc(i.how)}</div>` : `<button class="btn bg-yellow-500 text-black" style="padding:.3rem" onclick="shopAct('shop_buy','${i.id}')">${i.price.toLocaleString('de-DE')} FC</button>`) + '</div>'
     }).join('') + '</div>'
-  $('shop').innerHTML = `<div class="glass rounded-xl p-4"><b>Bio</b><div class="flex gap-2 mt-2"><input id="bio" maxlength="80" value="${esc(ME.bio || '')}" class="inp flex-1 min-w-0"><button class="btn bg-cyan-600" style="width:auto" onclick="saveBio()">Speichern</button></div></div>` +
+  $('shop').innerHTML = `<div class="glass rounded-xl p-4"><b>Bio</b><div class="flex gap-2 mt-2"><input id="bio" maxlength="80" value="${esc(ME.bio || '')}" class="inp flex-1 min-w-0"><button class="btn bg-cyan-600" style="width:auto" onclick="saveBio()">Speichern</button></div></div>
+    <div class="glass rounded-xl p-4 mt-2"><b>Profil</b><div class="flex gap-2 mt-2 flex-wrap"><input id="pst" maxlength="40" placeholder="Status" value="${esc(ME.status || '')}" class="inp flex-1 min-w-0"><input id="pfv" maxlength="30" placeholder="Lieblingsspiel" value="${esc(ME.fav_game || '')}" class="inp w-40"><button class="btn bg-cyan-600" style="width:auto" onclick="saveExtra()">Speichern</button></div></div>` +
     sec('avatar', '😎 Avatare') + sec('color', '🎨 Namensfarben') + sec('title', '🏷️ Titel')
 }
 async function shopAct(fn, id) {
@@ -785,6 +804,361 @@ PAGEINIT.stats = async () => {
     '<div class="text-xs text-zinc-500 mt-3">Gezählt ab diesem Update.</div>'
 }
 
+/* ================= DUELLE ================= */
+VIEWS.duel = () => `<div class="glass rounded-xl p-4 mb-3"><b>⚔️ Duell erstellen</b>
+  <div class="flex gap-2 mt-2 flex-wrap"><select id="dgame" class="inp py-2"><option value="coinflip">🪙 Coinflip</option><option value="dice">🎲 Dice (höchster Wurf)</option></select>
+  <input id="dbet" type="number" min="10" value="100" class="inp flex-1 min-w-0"><button class="btn bg-pink-600" style="width:auto" onclick="duelCreate()">Erstellen</button></div>
+  <div class="text-xs text-zinc-500 mt-1">Dein Einsatz wird reserviert. Der Gewinner bekommt 95 % des Pots.</div></div><div id="dlist"></div><div id="drecent" class="mt-4"></div>`
+PAGEINIT.duel = () => { loadDuels(); pvpTimer = setInterval(loadDuels, 4000) }
+async function loadDuels() {
+  const d = await call('duel_list', {}); if (!d || !$('dlist')) return
+  const f = n => Number(n).toLocaleString('de-DE'), G = { coinflip: '🪙 Coinflip', dice: '🎲 Dice' }
+  $('dlist').innerHTML = '<div class="font-bold mb-2">Offene Duelle</div>' + (d.open.length ? d.open.map(x => `<div class="glass rounded-lg px-3 py-2 mb-1 flex justify-between items-center text-sm"><span>${nm(x)} · ${G[x.game]} · <b class="text-yellow-400">${f(x.bet)} FC</b></span>` +
+    (x.mine ? `<button class="btn bg-zinc-700" style="width:auto;padding:.25rem .8rem" onclick="duelAct('duel_cancel',${x.id})">Zurückziehen</button>` : `<button class="btn bg-pink-600" style="width:auto;padding:.25rem .8rem" onclick="duelAct('duel_accept',${x.id})">Annehmen</button>`) + '</div>').join('') : '<div class="text-zinc-500 text-sm">Keine offenen Duelle – erstelle eins!</div>')
+  $('drecent').innerHTML = '<div class="font-bold mb-2">Letzte Duelle</div>' + d.recent.map(r => `<div class="text-sm text-zinc-400 py-0.5">⚔️ <b class="text-white">${esc(r.winner)}</b> besiegt ${esc(r.loser)} · +${f(r.prize)} FC</div>`).join('')
+}
+async function duelCreate() { const d = await call('duel_create', { dgame: $('dgame').value, b: Math.floor(+$('dbet').value) }); if (d) { setBalance(d.balance); toast('⚔️ Duell erstellt'); loadDuels() } }
+async function duelAct(fn, id) {
+  const d = await call(fn, { did: id }); if (!d) return; setBalance(d.balance)
+  if (fn === 'duel_accept') {
+    const rolls = d.game === 'dice' ? ` (du ${d.mine} · Gegner ${d.theirs})` : ''
+    toast(d.win ? `🎉 Gewonnen! +${d.prize} FC${rolls}` : `💀 Verloren${rolls}`); if (d.win && d.prize >= 500) bigWin('DUELL GEWONNEN<br>+' + d.prize + ' FC')
+  }
+  loadDuels()
+}
+
+/* ================= SCHACH ================= */
+const PC = { p: '♟', n: '♞', b: '♝', r: '♜', q: '♛', k: '♚' }
+VIEWS.chess = () => '<div id="chessbox" class="text-zinc-400">Lade...</div>'
+PAGEINIT.chess = () => chessLobby()
+async function chessLobby() {
+  const d = await call('chess_lobby', {}); if (!d || !$('chessbox')) return
+  clearInterval(pvpTimer); cg_ = null
+  if (d.mine) return chessOpen(d.mine)
+  $('chessbox').innerHTML = `<div class="glass rounded-xl p-4 mb-3 flex justify-between items-center"><div><b>♟️ Dein Elo: ${d.me.elo}</b><div class="text-xs text-zinc-400">${d.me.w} Siege · ${d.me.d} Remis · ${d.me.l} Niederlagen</div></div><button class="btn bg-emerald-600" style="width:auto" onclick="chessNew()">Neue Partie</button></div>
+    <div class="font-bold mb-2">Offene Partien</div>` + (d.open.length ? d.open.map(g => `<div class="glass rounded-lg px-3 py-2 mb-1 flex justify-between items-center text-sm"><span>${nm(g)} <span class="text-zinc-500">Elo ${g.elo}</span></span><button class="btn bg-cyan-700" style="width:auto;padding:.25rem .8rem" onclick="chessJoin(${g.id})">Annehmen</button></div>`).join('') : '<div class="text-zinc-500 text-sm">Keine offenen Partien – erstelle eine!</div>') +
+    '<div class="font-bold mt-4 mb-2">🏆 Elo-Rangliste</div>' + (d.top.length ? d.top.map((x, i) => `<div class="flex justify-between glass rounded-lg px-3 py-2 mb-1 text-sm"><span>${['🥇', '🥈', '🥉'][i] || (i + 1) + '.'} ${nm(x)}</span><b>${x.elo}</b></div>`).join('') : '<div class="text-zinc-500 text-sm">Noch keine gewerteten Partien.</div>')
+  pvpTimer = setInterval(chessLobby, 5000)
+}
+async function chessNew() { const d = await call('chess_create', {}); if (d) chessOpen(d.id) }
+async function chessJoin(id) { const d = await call('chess_join', { gid: id }); if (d) chessOpen(d.id) }
+async function chessCancel() { await call('chess_cancel', { gid: cg_.id }); chessLobby() }
+function chessLeave() { clearInterval(pvpTimer); cg_ = null; chessLobby() }
+async function chessEnd(kind) { if (kind === 'resign' && !confirm('Wirklich aufgeben?')) return; const d = await call('chess_end', { gid: cg_.id, kind }); if (d) chessPoll() }
+async function chessOpen(id) { clearInterval(pvpTimer); cg_ = { id, ch: new Chess(), sel: null, n: -1 }; await chessPoll(); pvpTimer = setInterval(chessPoll, 2000) }
+async function chessPoll() {
+  if (!cg_) return
+  const s = await call('chess_state', { gid: cg_.id }); if (!s || !cg_ || !$('chessbox')) return
+  cg_.s = s
+  if (s.moves.length !== cg_.n) {
+    cg_.ch = new Chess(); cg_.sel = null; cg_.n = s.moves.length
+    s.moves.forEach(m => { if (!cg_.ch.move(m) && !cg_.warned) { cg_.warned = 1; toast('⚠️ Ungültiger Zug erkannt – gib auf oder warte auf Zeitablauf.') } })
+  }
+  chessRender()
+  if (s.status === 'active' && s.turn === s.my_color && !cg_.rep) {
+    if (cg_.ch.in_checkmate()) { cg_.rep = 1; await call('chess_end', { gid: cg_.id, kind: 'mated' }); chessPoll() }
+    else if (cg_.ch.in_draw()) { cg_.rep = 1; await call('chess_end', { gid: cg_.id, kind: 'draw' }); chessPoll() }
+  }
+}
+function chessRender() {
+  const s = cg_.s, box = $('chessbox'), mine = s.my_color, ch = cg_.ch
+  if (s.status === 'open') { box.innerHTML = '<div class="glass rounded-xl p-4 text-center">⏳ Warte auf einen Gegner...<br><button class="btn bg-zinc-800 mt-3" onclick="chessCancel()">Abbrechen</button></div>'; return }
+  const board = ch.board(), flip = mine === 'b', sqs = []
+  const targets = cg_.sel ? ch.moves({ square: cg_.sel, verbose: true }).map(m => m.to) : []
+  for (let r = 0; r < 8; r++) for (let f = 0; f < 8; f++) {
+    const rr = flip ? 7 - r : r, ff = flip ? 7 - f : f, pc = board[rr][ff], name = 'abcdefgh'[ff] + (8 - rr)
+    const bg = cg_.sel === name ? '#0e7490' : (rr + ff) % 2 ? '#52525b' : '#a1a1aa', w = pc && pc.color === 'w'
+    sqs.push(`<div onclick="chessClick('${name}')" style="aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:clamp(1.5rem,7vw,2.3rem);cursor:pointer;background:${bg};${targets.includes(name) ? 'box-shadow:inset 0 0 0 3px #34d399;' : ''}color:${w ? '#fff' : '#111'};text-shadow:${w ? '0 0 3px #000' : 'none'}">${pc ? PC[pc.type] : ''}</div>`)
+  }
+  const over = s.status === 'done'
+  const status = over ? { white: '⬜ Weiß gewinnt', black: '⬛ Schwarz gewinnt', draw: '½ Remis' }[s.result] : (s.turn === mine ? '🟢 Du bist am Zug' : '⏳ Gegner ist am Zug')
+  box.innerHTML = `<div class="flex justify-between text-sm mb-2"><span>⬛ ${esc(s.black.username)} (${s.black.elo})</span><span>⬜ ${esc(s.white.username)} (${s.white.elo})</span></div>
+    <div class="grid grid-cols-8 mx-auto rounded-lg overflow-hidden" style="max-width:24rem">${sqs.join('')}</div><div class="text-center font-bold my-3">${status}</div><div class="flex gap-2 justify-center flex-wrap">` +
+    (over ? '<button class="btn bg-emerald-600" style="width:auto" onclick="chessLeave()">Zur Lobby</button>' :
+      `<button class="btn bg-red-700" style="width:auto" onclick="chessEnd('resign')">🏳️ Aufgeben</button>` + (s.turn !== mine && s.secs > 180 ? `<button class="btn bg-yellow-600" style="width:auto" onclick="chessEnd('timeout')">⏱ Zeit abgelaufen – Sieg</button>` : '')) + '</div>'
+}
+async function chessClick(name) {
+  const s = cg_ && cg_.s; if (!s || s.status !== 'active' || s.turn !== s.my_color) return
+  if (cg_.sel && cg_.sel !== name) {
+    const t = new Chess(cg_.ch.fen()), m = t.move({ from: cg_.sel, to: name, promotion: 'q' })
+    if (m) { cg_.sel = null; const d = await call('chess_move', { gid: cg_.id, san: m.san }); if (d) chessPoll(); return }
+  }
+  const pc = cg_.ch.get(name); cg_.sel = pc && pc.color === s.my_color ? name : null; chessRender()
+}
+
+/* ================= FREUNDE & DMs ================= */
+VIEWS.friends = () => `<div class="flex gap-2 mb-3"><input id="fadd" placeholder="Username" class="inp flex-1 min-w-0"><button class="btn bg-cyan-600" style="width:auto" onclick="friendAct('friend_request',{uname:$('fadd').value})">Anfrage senden</button></div><div id="flist"></div><div id="dmbox" class="mt-4"></div>`
+PAGEINIT.friends = () => { dmWith = null; loadFriends(); pvpTimer = setInterval(() => { loadFriends(); if (dmWith) loadDm() }, 4000) }
+async function friendAct(fn, args) { const d = await call(fn, args); if (d) { toast('✔ Erledigt'); loadFriends() } }
+async function loadFriends() {
+  const d = await call('friends_list', {}); if (!d || !$('flist')) return
+  const sm = 'style="width:auto;padding:.2rem .7rem"'
+  $('flist').innerHTML = (d.incoming.length ? '<div class="font-bold mb-2">📨 Anfragen</div>' + d.incoming.map(u => `<div class="glass rounded-lg px-3 py-2 mb-1 flex justify-between items-center text-sm"><span>${nm(u)}</span><span class="flex gap-2">
+    <button class="btn bg-emerald-700" ${sm} data-u="${esc(u.username)}" onclick="friendAct('friend_respond',{uname:this.dataset.u,accept:true})">✔</button>
+    <button class="btn bg-red-800" ${sm} data-u="${esc(u.username)}" onclick="friendAct('friend_respond',{uname:this.dataset.u,accept:false})">✖</button></span></div>`).join('') : '') +
+    '<div class="font-bold mt-3 mb-2">Freunde</div>' + (d.friends.length ? d.friends.map(u => `<div class="glass rounded-lg px-3 py-2 mb-1 flex justify-between items-center text-sm"><span>${u.online ? '🟢' : '⚪'} ${nm(u)}</span><span class="flex gap-3 items-center">
+    <button data-u="${esc(u.username)}" onclick="openDm(this.dataset.u)">💬${u.unread > 0 ? ' <b class="text-pink-400">' + u.unread + '</b>' : ''}</button>
+    <button class="text-zinc-500" data-u="${esc(u.username)}" onclick="if(confirm('Freund entfernen?'))friendAct('friend_remove',{uname:this.dataset.u})">✖</button></span></div>`).join('') : '<div class="text-zinc-500 text-sm">Noch keine Freunde – füge jemanden über den Usernamen hinzu.</div>')
+}
+function openDm(name) {
+  dmWith = name
+  $('dmbox').innerHTML = `<div class="glass rounded-xl p-3"><div class="font-bold mb-2">💬 ${esc(name)}</div><div id="dmmsgs" class="h-56 overflow-y-auto space-y-1 mb-2 text-sm"></div>
+    <div class="flex gap-2"><input id="dmin" maxlength="300" class="inp flex-1 min-w-0" placeholder="Nachricht..." onkeydown="if(event.key==='Enter')dmSend()"><button class="btn bg-cyan-600" style="width:auto" onclick="dmSend()">Senden</button></div></div>`
+  loadDm()
+}
+async function loadDm() {
+  const d = await call('dm_list', { with_user: dmWith }), b = $('dmmsgs'); if (!d || !b) return
+  b.innerHTML = d.map(m => `<div class="${m.mine ? 'text-right text-cyan-300' : 'text-zinc-200'}">${esc(m.msg)}</div>`).join(''); b.scrollTop = b.scrollHeight
+}
+async function dmSend() { const i = $('dmin'), m = i.value.trim(); if (!m) return; const d = await call('dm_send', { to_user: dmWith, m }); if (d) { i.value = ''; loadDm() } }
+
+/* ================= FUTURE GAMES ================= */
+async function submitScore(game, sc) {
+  const d = await call('submit_score', { sgame: game, sc }); if (!d) return
+  if (d.reward) { setBalance(d.balance); toast('🎯 Daily Challenge geschafft! +' + d.reward + ' FC') } else if (d.new_best) toast('🏅 Neuer Rekord: ' + sc)
+  loadScores(game); loadChallenge()
+}
+async function loadScores(game) {
+  const d = await call('scores_top', { sgame: game }), b = $('lbox'); if (!d || !b) return
+  b.innerHTML = '<div class="font-bold mb-2">🏆 Bestenliste</div>' + (d.length ? d.map((x, i) => `<div class="flex justify-between glass rounded-lg px-3 py-2 mb-1 text-sm"><span>${['🥇', '🥈', '🥉'][i] || (i + 1) + '.'} ${nm(x)}</span><b>${x.best}</b></div>`).join('') : '<div class="text-zinc-500 text-sm">Noch keine Einträge.</div>')
+}
+async function loadChallenge() {
+  const d = await call('challenge_info', {}), b = $('cbar'); if (!d || !b) return
+  const label = { snake: 'Snake: ' + d.target + ' Punkte', typing: 'Typing Race: ' + d.target + ' WPM', trivia: 'Trivia: ' + d.target + ' von 10' }[d.game]
+  b.innerHTML = `<div class="glass rounded-xl px-4 py-2 mb-3 text-sm flex justify-between"><span>🎯 Daily Challenge: <b>${label}</b></span><span>${d.done ? '✔ geschafft' : '+250 FC'}</span></div>`
+}
+const FG = g => { loadScores(g); loadChallenge() }
+
+/* ---- Snake ---- */
+VIEWS.snake = () => `<div id="vsbar"></div><div id="cbar"></div><canvas id="snk" width="300" height="300" class="mx-auto rounded-xl bg-zinc-900 border border-zinc-700 block"></canvas>
+  <div class="text-center my-3"><b>Punkte: <span id="snkscore">0</span></b></div><button class="btn bg-emerald-600" onclick="snakeStart()">Start</button>
+  <div class="text-xs text-zinc-500 mt-2 text-center">Pfeiltasten / WASD oder auf dem Handy wischen.</div><div id="lbox" class="mt-4"></div>`
+PAGEINIT.snake = () => { FG('snake'); vsAuto('snake') }
+function stopSnake() { if (snk) { clearInterval(snk.timer); document.removeEventListener('keydown', snk.key); snk = null } }
+let snk = null
+function snakeStart() {
+  stopSnake(); const c = $('snk'), x = c.getContext('2d'), N = 15, S = 20; $('snkscore').textContent = 0
+  snk = { body: [[7, 7], [6, 7]], dir: [1, 0], nd: [1, 0], food: [10, 7], score: 0 }
+  const place = () => { do { snk.food = [Math.floor(R() * N), Math.floor(R() * N)] } while (snk.body.some(b => b[0] === snk.food[0] && b[1] === snk.food[1])) }
+  const ok = m => m[0] !== -snk.dir[0] || m[1] !== -snk.dir[1]
+  snk.key = e => { const m = { ArrowUp: [0, -1], w: [0, -1], ArrowDown: [0, 1], s: [0, 1], ArrowLeft: [-1, 0], a: [-1, 0], ArrowRight: [1, 0], d: [1, 0] }[e.key]; if (m && ok(m)) { snk.nd = m; e.preventDefault() } }
+  document.addEventListener('keydown', snk.key)
+  let t0; c.ontouchstart = e => { t0 = e.touches[0] }
+  c.ontouchend = e => { if (!snk) return; const t = e.changedTouches[0], dx = t.clientX - t0.clientX, dy = t.clientY - t0.clientY, m = Math.abs(dx) > Math.abs(dy) ? [Math.sign(dx), 0] : [0, Math.sign(dy)]; if (ok(m)) snk.nd = m }
+  snk.timer = setInterval(() => {
+    snk.dir = snk.nd; const h = [snk.body[0][0] + snk.dir[0], snk.body[0][1] + snk.dir[1]]
+    if (h[0] < 0 || h[1] < 0 || h[0] >= N || h[1] >= N || snk.body.some(b => b[0] === h[0] && b[1] === h[1])) { const sc = snk.score; stopSnake(); toast('💥 Game Over: ' + sc + ' Punkte'); return finishScore('snake', sc) }
+    snk.body.unshift(h)
+    if (h[0] === snk.food[0] && h[1] === snk.food[1]) { snk.score++; $('snkscore').textContent = snk.score; place() } else snk.body.pop()
+    x.fillStyle = '#18181b'; x.fillRect(0, 0, 300, 300); x.fillStyle = '#f43f5e'; x.fillRect(snk.food[0] * S + 2, snk.food[1] * S + 2, S - 4, S - 4)
+    x.fillStyle = '#34d399'; snk.body.forEach(b => x.fillRect(b[0] * S + 1, b[1] * S + 1, S - 2, S - 2))
+  }, 110)
+}
+
+/* ---- Typing Race ---- */
+const TTEXT = ['Die schnelle braune Katze springt über den faulen Hund und läuft weiter durch den dunklen Wald',
+  'Wer zuletzt lacht lacht am besten aber wer zuerst tippt gewinnt am Ende das Rennen',
+  'Heute ist ein guter Tag um ein paar Coins zu gewinnen und neue Freunde zu finden',
+  'Ein kleiner Schritt nach dem anderen bringt dich weiter als ein großer Sprung ohne Plan']
+let ty = null
+VIEWS.typing = () => `<div id="vsbar"></div><div id="cbar"></div><div id="tprompt" class="glass rounded-xl p-4 mb-3 text-lg leading-relaxed">Drücke Start und tippe den Text so schnell du kannst.</div>
+  <input id="tin" class="inp w-full mb-3" disabled autocomplete="off" oninput="typingInput()"><button class="btn bg-emerald-600" onclick="typingStart()">Start</button><div id="lbox" class="mt-4"></div>`
+PAGEINIT.typing = () => { FG('typing'); vsAuto('typing') }
+function typingRender(v) { $('tprompt').innerHTML = [...ty.t].map((c, k) => `<span style="color:${k >= v.length ? '#a1a1aa' : v[k] === c ? '#34d399' : '#f87171'}">${c}</span>`).join('') }
+function typingStart() { ty = { t: TTEXT[Math.floor(R() * TTEXT.length)], t0: 0 }; const i = $('tin'); i.value = ''; i.disabled = false; i.focus(); typingRender('') }
+function typingInput() {
+  if (!ty) return; const v = $('tin').value; if (!ty.t0) ty.t0 = Date.now(); typingRender(v)
+  if (v === ty.t) {
+    const wpm = Math.min(220, Math.round(ty.t.length / 5 / ((Date.now() - ty.t0) / 60000)))
+    $('tin').disabled = true; $('tprompt').innerHTML += `<div class="mt-3 text-xl font-black text-emerald-400">${wpm} WPM</div>`; ty = null; finishScore('typing', wpm)
+  }
+}
+
+/* ---- Trivia ---- */
+const QS = [['Hauptstadt von Australien?', ['Sydney', 'Canberra', 'Melbourne', 'Perth'], 1], ['Wie viele Planeten hat unser Sonnensystem?', ['7', '8', '9', '10'], 1],
+  ['Welches Element hat das Symbol Au?', ['Silber', 'Gold', 'Aluminium', 'Argon'], 1], ['Wer malte die Mona Lisa?', ['Michelangelo', 'Raffael', 'Leonardo da Vinci', 'Rembrandt'], 2],
+  ['Wie viele Spieler hat eine Fußballmannschaft auf dem Feld?', ['9', '10', '11', '12'], 2], ['Größter Ozean der Erde?', ['Atlantik', 'Indischer Ozean', 'Pazifik', 'Arktis'], 2],
+  ['Hauptstadt von Kanada?', ['Toronto', 'Ottawa', 'Vancouver', 'Montreal'], 1], ['Wie viele Kontinente gibt es?', ['5', '6', '7', '8'], 2],
+  ['Schnellstes Landtier?', ['Löwe', 'Gepard', 'Pferd', 'Antilope'], 1], ['In welchem Jahr fiel die Berliner Mauer?', ['1985', '1987', '1989', '1991'], 2],
+  ['Was ist 7 × 8?', ['54', '56', '58', '64'], 1], ['Welche Farbe entsteht aus Blau und Gelb?', ['Grün', 'Orange', 'Lila', 'Braun'], 0],
+  ['Welcher Fluss ist in Deutschland am längsten?', ['Elbe', 'Rhein', 'Donau', 'Main'], 1], ['Welches Gas macht den größten Teil der Luft aus?', ['Sauerstoff', 'Stickstoff', 'Kohlendioxid', 'Wasserstoff'], 1]]
+let tv = null
+VIEWS.trivia = () => `<div id="vsbar"></div><div id="cbar"></div><div id="tvbox" class="glass rounded-xl p-5 mb-3 text-center"><button class="btn bg-emerald-600" onclick="triviaStart()">10 Fragen starten</button></div><div id="lbox"></div>`
+PAGEINIT.trivia = () => { FG('trivia'); vsAuto('trivia') }
+function triviaStart() { tv = { q: shuffle([...QS]).slice(0, 10), i: 0, s: 0 }; triviaShow() }
+function triviaShow() {
+  const [q, o] = tv.q[tv.i]
+  $('tvbox').innerHTML = `<div class="text-xs text-zinc-400 mb-2">Frage ${tv.i + 1}/10 · ${tv.s} Punkte</div><div class="text-lg font-bold mb-4">${q}</div>` + o.map((t, k) => `<button class="btn bg-zinc-800 mb-2" onclick="triviaAnswer(${k})">${t}</button>`).join('')
+}
+function triviaAnswer(k) {
+  const [, o, c] = tv.q[tv.i]; if (k === c) tv.s++
+  toast(k === c ? '✅ Richtig!' : '❌ Richtig wäre: ' + o[c]); tv.i++
+  if (tv.i < 10) return triviaShow()
+  const sc = tv.s; tv = null
+  $('tvbox').innerHTML = `<div class="text-4xl font-black mb-3">${sc}/10 🎉</div><button class="btn bg-emerald-600" onclick="triviaStart()">Nochmal</button>`; finishScore('trivia', sc)
+}
+
+/* ================= VERSUS (seeded) ================= */
+let vsRun = null, vsMid = null, R = Math.random, chatChan = 'global', tt = null
+function mkRng(seed) { let a = seed >>> 0; return () => { a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296 } }
+function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(R() * (i + 1)); [a[i], a[j]] = [a[j], a[i]] } return a }
+function finishScore(game, sc) { if (vsRun && vsRun.game === game) vsSubmit(sc); else submitScore(game, sc) }
+const VSG = [['snake', '🐍 Snake'], ['typing', '⌨️ Typing Race'], ['trivia', '🧠 Trivia Battle'], ['tetris', '🧱 Tetris']]
+const VSN = Object.fromEntries(VSG)
+VIEWS.versus = () => '<div id="vsbox" class="text-zinc-400">Lade...</div>'
+PAGEINIT.versus = () => vsLobby()
+async function vsLobby() {
+  clearInterval(pvpTimer); vsRun = null; R = Math.random
+  const d = await call('vs_lobby', {}); if (!d || !$('vsbox')) return
+  if (d.mine) return vsWait(d.mine)
+  $('vsbox').innerHTML = `<div class="glass rounded-xl p-4 mb-3"><b>🎮 Match erstellen</b><div class="flex gap-2 mt-2"><select id="vsg" class="inp py-2 flex-1">${VSG.map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select><button class="btn bg-emerald-600" style="width:auto" onclick="vsCreate()">Erstellen</button></div>
+    <div class="text-xs text-zinc-500 mt-1">Beide spielen dieselbe Runde (gleicher Seed). Die höhere Punktzahl gewinnt.</div></div><div class="font-bold mb-2">Offene Matches</div>` +
+    (d.open.length ? d.open.map(m => `<div class="glass rounded-lg px-3 py-2 mb-1 flex justify-between items-center text-sm"><span>${nm(m)} · ${VSN[m.game]}</span><button class="btn bg-cyan-700" style="width:auto;padding:.25rem .8rem" onclick="vsJoin(${m.id})">Annehmen</button></div>`).join('') : '<div class="text-zinc-500 text-sm">Keine offenen Matches.</div>') +
+    '<div class="font-bold mt-4 mb-2">Letzte Matches</div>' + d.recent.map(r => `<div class="text-sm text-zinc-400 py-0.5">${VSN[r.game]}: <b class="text-white">${esc(r.a)}</b> ${r.s1} : ${r.s2} <b class="text-white">${esc(r.b)}</b></div>`).join('')
+  pvpTimer = setInterval(vsLobby, 5000)
+}
+async function vsCreate() { const d = await call('vs_create', { vgame: $('vsg').value }); if (d) vsWait(d.id) }
+async function vsJoin(id) { const d = await call('vs_join', { mid: id }); if (d) vsWait(id) }
+async function vsCancel() { await call('vs_cancel', { mid: vsMid }); vsLobby() }
+function vsWait(id) {
+  clearInterval(pvpTimer); vsMid = id
+  const tick = async () => {
+    const s = await call('vs_state', { mid: id }); if (!s || !$('vsbox')) return
+    if (s.status === 'open') $('vsbox').innerHTML = `<div class="glass rounded-xl p-4 text-center">⏳ Warte auf einen Gegner (${VSN[s.game]})...<br><button class="btn bg-zinc-800 mt-3" onclick="vsCancel()">Abbrechen</button></div>`
+    else if (s.status === 'active' && !s.my_done) { clearInterval(pvpTimer); vsRun = { id, game: s.game, seed: s.seed, opp: s.opp }; R = mkRng(s.seed); toast('⚔️ Match startet gegen ' + s.opp); show(s.game) }
+    else if (s.status === 'active') $('vsbox').innerHTML = `<div class="glass rounded-xl p-4 text-center">Dein Ergebnis: <b>${s.mine}</b> – warte auf ${esc(s.opp)}...</div>`
+    else { clearInterval(pvpTimer); vsResult(s) }
+  }
+  tick(); pvpTimer = setInterval(tick, 2000)
+}
+function vsResult(s) {
+  const t = { me: '🏆 Du gewinnst!', opp: '💀 Du verlierst.', draw: '🤝 Unentschieden' }[s.winner]
+  $('vsbox').innerHTML = `<div class="glass rounded-xl p-5 text-center"><div class="text-2xl font-black mb-2">${t}</div><div class="mb-3">Du: <b>${s.mine ?? '–'}</b> · ${esc(s.opp)}: <b>${s.theirs ?? '–'}</b></div><button class="btn bg-emerald-600" onclick="vsLobby()">Zurück zur Lobby</button></div>`
+}
+async function vsSubmit(sc) { const id = vsRun.id; vsRun = null; R = Math.random; await call('vs_submit', { mid: id, sc }); show('versus') }
+function vsAuto(game) {
+  if (!vsRun || vsRun.game !== game) return
+  const b = $('vsbar'); if (b) b.innerHTML = `<div class="glass rounded-xl px-4 py-2 mb-3 text-sm text-center">⚔️ Match gegen <b>${esc(vsRun.opp)}</b> – es geht in 2 Sekunden los!</div>`
+  setTimeout(() => { if (vsRun && vsRun.game === game) ({ snake: snakeStart, typing: typingStart, trivia: triviaStart, tetris: tetrisStart })[game]() }, 2000)
+}
+
+/* ================= TETRIS ================= */
+const TP = [[[1, 1, 1, 1]], [[1, 1], [1, 1]], [[0, 1, 0], [1, 1, 1]], [[1, 0, 0], [1, 1, 1]], [[0, 0, 1], [1, 1, 1]], [[0, 1, 1], [1, 1, 0]], [[1, 1, 0], [0, 1, 1]]]
+const TC = ['#22d3ee', '#facc15', '#a78bfa', '#3b82f6', '#fb923c', '#34d399', '#f43f5e']
+VIEWS.tetris = () => `<div id="vsbar"></div><div id="cbar"></div><canvas id="ttc" width="200" height="400" class="mx-auto rounded-xl bg-zinc-900 border border-zinc-700 block"></canvas>
+  <div class="text-center my-2"><b>Punkte: <span id="ttscore">0</span></b> · Zeit <span id="tttime">–</span></div>
+  <div class="grid grid-cols-5 gap-2 mb-2"><button class="btn bg-zinc-800" onclick="tetrisKey('l')">◀</button><button class="btn bg-zinc-800" onclick="tetrisKey('rot')">⟳</button><button class="btn bg-zinc-800" onclick="tetrisKey('r')">▶</button><button class="btn bg-zinc-800" onclick="tetrisKey('d')">▼</button><button class="btn bg-zinc-800" onclick="tetrisKey('drop')">⏬</button></div>
+  <button class="btn bg-emerald-600" onclick="tetrisStart()">Start</button><div class="text-xs text-zinc-500 mt-2 text-center">← → bewegen, ↑ drehen, ↓ schneller, Leertaste: fallen lassen. Runde: 2 Minuten.</div><div id="lbox" class="mt-4"></div>`
+PAGEINIT.tetris = () => { FG('tetris'); vsAuto('tetris') }
+function stopTetris() { if (tt) { clearInterval(tt.timer); clearInterval(tt.clock); document.removeEventListener('keydown', tt.key); tt = null } }
+function tetrisKey(k) { if (tt) tt.act(k) }
+function tetrisStart() {
+  stopTetris(); tt = { b: Array.from({ length: 20 }, () => Array(10).fill(0)), score: 0, left: 120 }
+  const hit = (m, x, y) => m.some((r, j) => r.some((v, i) => v && (x + i < 0 || x + i >= 10 || y + j >= 20 || (y + j >= 0 && tt.b[y + j][x + i]))))
+  const draw = () => {
+    const x = $('ttc').getContext('2d'); x.fillStyle = '#18181b'; x.fillRect(0, 0, 200, 400)
+    tt.b.forEach((r, j) => r.forEach((v, i) => { if (v) { x.fillStyle = TC[v - 1]; x.fillRect(i * 20 + 1, j * 20 + 1, 18, 18) } }))
+    x.fillStyle = TC[tt.p.c - 1]; tt.p.m.forEach((r, j) => r.forEach((v, i) => { if (v) x.fillRect((tt.p.x + i) * 20 + 1, (tt.p.y + j) * 20 + 1, 18, 18) }))
+  }
+  const over = () => { const sc = tt.score; stopTetris(); toast('🧱 Ende: ' + sc + ' Punkte'); finishScore('tetris', sc) }
+  const spawn = () => { const i = Math.floor(R() * 7); tt.p = { m: TP[i].map(r => [...r]), c: i + 1, x: 3, y: 0 }; if (hit(tt.p.m, 3, 0)) { over(); return false } return true }
+  const move = (dx, dy) => { if (hit(tt.p.m, tt.p.x + dx, tt.p.y + dy)) return false; tt.p.x += dx; tt.p.y += dy; return true }
+  const lock = () => {
+    tt.p.m.forEach((r, j) => r.forEach((v, i) => { if (v) tt.b[tt.p.y + j][tt.p.x + i] = tt.p.c }))
+    let n = 0; tt.b = tt.b.filter(r => { if (r.every(v => v)) { n++; return false } return true }); while (tt.b.length < 20) tt.b.unshift(Array(10).fill(0))
+    tt.score += [0, 100, 300, 500, 800][n]; $('ttscore').textContent = tt.score; return spawn()
+  }
+  tt.act = k => {
+    if (!tt) return; let alive = true
+    if (k === 'l') move(-1, 0); else if (k === 'r') move(1, 0)
+    else if (k === 'd') { if (!move(0, 1)) alive = lock() }
+    else if (k === 'rot') { const m = tt.p.m[0].map((_, i) => tt.p.m.map(r => r[i]).reverse()); if (!hit(m, tt.p.x, tt.p.y)) tt.p.m = m }
+    else if (k === 'drop') { while (move(0, 1)); alive = lock() }
+    if (alive && tt) draw()
+  }
+  tt.key = e => { const m = { ArrowLeft: 'l', ArrowRight: 'r', ArrowDown: 'd', ArrowUp: 'rot', ' ': 'drop' }[e.key]; if (m) { e.preventDefault(); tt.act(m) } }
+  document.addEventListener('keydown', tt.key)
+  tt.timer = setInterval(() => tt && tt.act('d'), 500)
+  tt.clock = setInterval(() => { if (!tt) return; tt.left--; $('tttime').textContent = tt.left + 's'; if (tt.left <= 0) over() }, 1000)
+  $('ttscore').textContent = 0; if (spawn()) draw()
+}
+
+/* ================= CHAT-CHANNELS ================= */
+const CHANS = [['global', '🌐 Global'], ['gambling', '🎰 Gambling'], ['games', '🎮 Games'], ['offtopic', '💭 Offtopic'], ['clan', '🏰 Clan']]
+VIEWS.chat = () => `<div class="flex gap-1 flex-wrap mb-3">${CHANS.map(([k, l]) => `<button class="px-3 py-1 rounded-lg text-sm ${k === chatChan ? 'bg-cyan-700' : 'bg-zinc-800'}" onclick="chatChan='${k}';show('chat')">${l}</button>`).join('')}</div>
+  <div id="chatbox" class="h-80 overflow-y-auto space-y-1 mb-3 text-sm"></div>
+  <div class="flex gap-2"><input id="chatin" maxlength="200" placeholder="Nachricht..." class="inp flex-1 min-w-0" onkeydown="if(event.key==='Enter')sendChat()"><button class="btn bg-cyan-600" style="width:auto" onclick="sendChat()">Senden</button></div>`
+PAGEINIT.chat = () => { loadChat(); chatTimer = setInterval(loadChat, 4000) }
+async function loadChat() {
+  const { data, error } = await sb.rpc('chat_list', { chan: chatChan }), box = $('chatbox'); if (!box) return
+  if (error) { box.textContent = error.message; return }
+  const bottom = box.scrollHeight - box.scrollTop - box.clientHeight < 60
+  box.innerHTML = data.map(m => `<div><b>${nm(m)}:</b> ${esc(m.msg)}${ROLE === 'mod' || ROLE === 'admin' ? ` <button class="text-red-400" onclick="chatDel(${m.id})">✕</button>` : ''}</div>`).join('')
+  if (bottom) box.scrollTop = box.scrollHeight
+}
+async function sendChat() {
+  const i = $('chatin'), m = i.value.trim(); if (!m) return
+  const { error } = await sb.rpc('chat_send', { m, chan: chatChan }); if (error) return toast(error.message)
+  i.value = ''; await loadChat(); $('chatbox').scrollTop = 1e6
+}
+
+/* ================= CLAN-HQ ================= */
+VIEWS.clanhq = () => '<div id="chq" class="text-zinc-400">Lade...</div>'
+PAGEINIT.clanhq = async () => {
+  const c = await call('clan_hq', {}), box = $('chq'); if (!box) return
+  if (!c) { box.innerHTML = 'Du bist in keinem Clan. Tritt auf der Community-Seite einem Clan bei oder gründe einen.'; return }
+  const f = n => Number(n).toLocaleString('de-DE')
+  box.innerHTML = `<div class="glass rounded-xl p-4 mb-3"><div class="text-xl font-black">[${esc(c.tag)}] ${esc(c.name)} <span class="text-sm text-yellow-400">Lv ${c.level}</span></div>
+    <div class="text-sm text-zinc-400 mb-3">🏦 Kasse: <b class="text-yellow-400">${f(c.bank)} FC</b> · ${c.count}/${c.max_members} Mitglieder</div>
+    <div class="flex gap-2 mb-2"><input id="cdon" type="number" min="1" placeholder="FC spenden" class="inp flex-1 min-w-0"><button class="btn bg-emerald-600" style="width:auto" onclick="clanAct('clan_donate',{amount:+$('cdon').value})">Spenden</button></div>
+    <button class="btn ${c.bonus_ok ? 'bg-yellow-500 text-black' : 'bg-zinc-800'} mb-2" ${c.bonus_ok ? '' : 'disabled'} onclick="clanAct('clan_bonus',{})">🎁 Clan-Tagesbonus +${c.bonus} FC</button>` +
+    (c.is_owner ? `<button class="btn bg-purple-600 mb-2" onclick="clanAct('clan_upgrade',{})">⬆ Clan upgraden (${f(c.upgrade_cost)} FC aus der Kasse)</button>` : '') +
+    `<button class="btn bg-zinc-800" style="font-size:.85rem" onclick="chatChan='clan';show('chat')">💬 Clan-Chat öffnen</button></div>` +
+    c.members.map(m => `<div class="glass rounded-lg px-3 py-2 mb-1 flex justify-between text-sm"><span>${nm(m)} <span class="text-xs text-zinc-500">Lv ${m.level}</span></span><span class="text-zinc-400">${f(m.wagered)} gesetzt</span></div>`).join('')
+}
+async function clanAct(fn, args) { const d = await call(fn, args); if (!d) return; if (d.balance != null) setBalance(d.balance); toast('✔ ' + (d.msg || 'Erledigt')); PAGEINIT.clanhq() }
+
+/* ================= BATTLE PASS & PRESTIGE ================= */
+const BPITEM = { 10: '🔥', 20: '👾', 30: '🏆+Titel' }
+VIEWS.bp = () => '<div id="bpbox" class="text-zinc-400">Lade...</div>'
+PAGEINIT.bp = async () => {
+  const d = await call('bp_info', {}), box = $('bpbox'); if (!d || !box) return
+  const f = n => Number(n).toLocaleString('de-DE'), days = Math.floor(d.secs_left / 86400)
+  const rows = Array.from({ length: 30 }, (_, i) => i + 1).map(t => {
+    const fr = d.free_claimed.includes(t), pr = d.prem_claimed.includes(t), ok = t <= d.tier, it = BPITEM[t] ? ' ' + BPITEM[t] : ''
+    const free = fr ? `<span class="text-zinc-500">✔ ${t * 100}</span>` : ok ? `<button class="btn bg-emerald-700" style="width:auto;padding:.2rem .6rem" onclick="bpClaim(${t},'free')">+${t * 100}</button>` : `<span class="text-zinc-600">${t * 100}</span>`
+    const prem = !d.premium ? '<span class="text-zinc-600">🔒</span>' : pr ? '<span class="text-yellow-500">✔ ⭐</span>' : ok ? `<button class="btn bg-yellow-500 text-black" style="width:auto;padding:.2rem .6rem" onclick="bpClaim(${t},'premium')">⭐ +${t * 200}${it}</button>` : `<span class="text-zinc-600">⭐ ${t * 200}${it}</span>`
+    return `<div class="glass rounded-lg px-3 py-2 mb-1 flex justify-between items-center text-sm ${ok ? '' : 'opacity-60'}"><b>Stufe ${t}</b><span class="flex gap-2 items-center">${free}${prem}</span></div>`
+  }).join('')
+  box.innerHTML = `<div class="glass rounded-xl p-4 mb-3"><div class="font-bold">🎫 Season ${d.season} <span class="text-xs text-zinc-400">(noch ${days} Tage)</span></div>
+    <div class="h-2 rounded bg-zinc-800 my-2"><div class="h-2 rounded bg-cyan-500" style="width:${Math.min(100, (d.xp % 400) / 4)}%"></div></div>
+    <div class="text-xs text-zinc-400">Stufe ${d.tier}/30 · ${f(d.xp)} XP (1 XP je 5 FC Einsatz, 400 XP pro Stufe)</div>
+    ${d.premium ? '<div class="text-yellow-400 text-sm mt-2">⭐ Premium aktiv</div>' : '<button class="btn bg-yellow-500 text-black mt-3" onclick="bpPremium()">⭐ Premium freischalten (25.000 FC)</button>'}</div>
+    <div class="glass rounded-xl p-4 mb-3"><b>👑 Prestige ${d.prestige}</b><div class="text-xs text-zinc-400 mb-2">Ab Level 20: Level zurücksetzen, +10.000 FC. Prestige 1 schaltet die Farbe „Rubin“ frei, Prestige 3 einen Titel.</div>
+    <button class="btn ${d.level >= 20 ? 'bg-purple-600' : 'bg-zinc-800'}" ${d.level >= 20 ? '' : 'disabled'} onclick="prestigeDo()">Prestige (Level ${d.level}/20)</button></div>` + rows
+}
+async function bpClaim(t, track) { const d = await call('bp_claim', { btier: t, btrack: track }); if (!d) return; setBalance(d.balance); toast('🎫 +' + d.reward + ' FC' + (d.item ? ' + neues Cosmetic!' : '')); await loadProfile(); PAGEINIT.bp() }
+async function bpPremium() { if (!confirm('Premium für diese Season kaufen (25.000 FC)?')) return; const d = await call('bp_premium', {}); if (d) { setBalance(d.balance); PAGEINIT.bp() } }
+async function prestigeDo() { if (!confirm('Level wird zurückgesetzt. Prestige jetzt durchführen?')) return; const d = await call('prestige_do', {}); if (d) { setBalance(d.balance); toast('👑 Prestige ' + d.prestige + '!'); await loadProfile(); PAGEINIT.bp() } }
+
+/* ================= ACHIEVEMENTS & FEED ================= */
+VIEWS.ach = () => '<div id="achbox" class="text-zinc-400">Lade...</div>'
+PAGEINIT.ach = async () => {
+  const d = await call('ach_list', {}), box = $('achbox'); if (!d || !box) return
+  const f = n => Number(n).toLocaleString('de-DE')
+  box.innerHTML = d.map(a => `<div class="glass rounded-xl p-3 mb-2"><div class="flex justify-between text-sm mb-1"><span>🏅 ${esc(a.name)}</span><b class="text-yellow-400">+${f(a.reward)} FC</b></div>
+    <div class="h-2 rounded bg-zinc-800 mb-2"><div class="h-2 rounded bg-emerald-500" style="width:${Math.min(100, a.progress / a.target * 100)}%"></div></div>` +
+    (a.claimed ? '<div class="text-xs text-zinc-500">✔ abgeholt</div>' : a.progress >= a.target ? `<button class="btn bg-emerald-600" style="padding:.3rem" onclick="achClaim('${a.id}')">Belohnung abholen</button>` : `<div class="text-xs text-zinc-500">${f(a.progress)} / ${f(a.target)}</div>`) + '</div>').join('')
+}
+async function achClaim(id) { const d = await call('ach_claim', { aid: id }); if (d) { setBalance(d.balance); toast('🏅 +' + d.reward + ' FC'); PAGEINIT.ach() } }
+VIEWS.feed = () => '<div id="fbox" class="text-zinc-400">Lade...</div>'
+PAGEINIT.feed = () => { loadFeed(); pvpTimer = setInterval(loadFeed, 10000) }
+async function loadFeed() {
+  const d = await call('activity_feed', {}), b = $('fbox'); if (!d || !b) return
+  b.innerHTML = d.length ? d.map(x => `<div class="glass rounded-lg px-3 py-2 mb-1 text-sm flex justify-between gap-3"><span>${esc(x.txt)}</span><span class="text-xs text-zinc-500 shrink-0">${new Date(x.ts).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}</span></div>`).join('') : 'Noch nichts passiert.'
+}
+async function saveExtra() { const d = await call('profile_set', { pstatus: $('pst').value, pfav: $('pfv').value }); if (d) { ME.status = $('pst').value; ME.fav_game = $('pfv').value; toast('Profil gespeichert') } }
+
 function setMode(m) { diceMode = m; diceInfo() }
 function diceInfo() {
   const over = diceMode === 'over', ch = over ? 100 - diceTarget : diceTarget - 1
@@ -796,7 +1170,7 @@ function show(g) {
   current = g; busy = false
   $('title').textContent = GAMES[g].icon + ' ' + GAMES[g].name
   $('desc').textContent = GAMES[g].desc
-  wheelRot = 0; $('view').innerHTML = VIEWS[g](); msg(''); renderHist(); clearInterval(chatTimer); clearInterval(dTimer); if (cr) { clearInterval(cr.timer); cr = null }; if (PAGEINIT[g]) PAGEINIT[g]()
+  wheelRot = 0; $('view').innerHTML = VIEWS[g](); msg(''); renderHist(); clearInterval(chatTimer); clearInterval(dTimer); clearInterval(pvpTimer); stopSnake(); stopTetris(); cg_ = null; if (cr) { clearInterval(cr.timer); cr = null }; if (PAGEINIT[g]) PAGEINIT[g]()
   if (g === 'dice') diceInfo()
   { const gr = NAVGROUPS.find(x => x[2].includes(g)); if (gr) delete navOpen[gr[1]] }
   if (!GAMES[g].page && g !== 'lobby') sb.rpc('hint_game', { g })
