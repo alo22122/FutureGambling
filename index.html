@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Future Gambling</title>
+<title>Future Gambling - NextGen Gaming</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
@@ -13,7 +13,7 @@
   .grad{background:linear-gradient(135deg,#22d3ee,#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
   .btn{padding:.75rem 1rem;border-radius:.75rem;font-weight:600;transition:.15s;width:100%}
   .btn:hover{filter:brightness(1.15)} .btn:active{transform:scale(.97)} .btn:disabled{opacity:.5;cursor:not-allowed}
-  .nav{display:flex;align-items:center;gap:.75rem;width:100%;padding:.7rem .9rem;border-radius:.75rem;color:#a1a1aa;text-align:left;transition:.15s;border:1px solid transparent}
+  .nav{display:flex;align-items:center;gap:.75rem;width:100%;padding:.45rem .75rem;border-radius:.75rem;color:#a1a1aa;text-align:left;transition:.15s;border:1px solid transparent;font-size:.9rem}
   .nav:hover{background:#27272a;color:#fff} .nav.on{background:linear-gradient(135deg,rgba(34,211,238,.2),rgba(52,211,153,.2));color:#fff;border-color:#0e7490}
   .inp{background:#18181b;border:1px solid #3f3f46;border-radius:.75rem;padding:.75rem 1rem;outline:none;color:#fff}
   .inp:focus{border-color:#22d3ee}
@@ -25,11 +25,12 @@
   @keyframes fall{to{transform:translateY(110vh) rotate(360deg)}}
   @keyframes shake{0%,100%{transform:translate(0)}25%{transform:translate(-6px,3px)}50%{transform:translate(5px,-4px)}75%{transform:translate(-4px,-2px)}}
   .shake{animation:shake .4s 3}.stop{animation:pop .25s}
-  .nav{padding:.45rem .75rem;font-size:.9rem;gap:.6rem}
   .nhead{display:flex;justify-content:space-between;align-items:center;width:100%;padding:.4rem .6rem;margin-top:.5rem;font-size:.68rem;text-transform:uppercase;letter-spacing:.07em;color:#71717a}
   .nhead:hover{color:#d4d4d8}
   .vpc{width:3.6rem;height:5rem;border-radius:.6rem;background:#fafafa;color:#111;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:800;font-size:1.3rem;cursor:pointer;position:relative}
   .vpc.red{color:#dc2626}.vpc.hold{outline:3px solid #22d3ee;margin-bottom:.3rem}.vpc.hold::after{content:'HOLD';position:absolute;bottom:-1.15rem;font-size:.6rem;color:#22d3ee}
+  .banner-glow{animation:glow 2s infinite alternate}
+  @keyframes glow{from{border-color:#eab308;box-shadow:0 0 10px rgba(234,179,8,.3)}to{border-color:#ef4444;box-shadow:0 0 20px rgba(239,68,68,.5)}}
 </style>
 </head>
 <body>
@@ -38,7 +39,7 @@
 <div id="auth-screen" class="min-h-screen flex items-center justify-center p-4">
   <div class="glass rounded-2xl p-8 w-full max-w-md">
     <h1 class="text-3xl font-bold text-center mb-2 grad">Future Gambling</h1>
-    <p class="text-center text-zinc-400 text-sm mb-6">Nur Fake-Geld • Nur zum Spaß</p>
+    <p class="text-center text-zinc-400 text-sm mb-6">Nur Fake-Geld • Nur zum Spaß • NextGen Web Casino</p>
     <div id="status" class="mb-6 p-4 rounded-xl text-center text-sm font-medium bg-zinc-800 text-zinc-300">Bereit. Drücke einen Button.</div>
     <input id="username" type="text" placeholder="Username" class="inp w-full mb-3" />
     <input id="password" type="password" placeholder="Passwort" class="inp w-full mb-6" />
@@ -51,6 +52,12 @@
 
 <!-- APP -->
 <div id="app" class="hidden">
+  <!-- Server Broadcast Banner -->
+  <div id="serverBanner" class="hidden bg-gradient-to-r from-red-600 via-amber-600 to-red-600 text-white px-4 py-2 text-center text-sm font-bold shadow-lg sticky top-0 z-50 flex items-center justify-between">
+    <div class="flex-1 text-center" id="serverBannerText">📢 Server-Ankündigung</div>
+    <button onclick="$('serverBanner').classList.add('hidden')" class="text-xs bg-black/30 hover:bg-black/50 px-2 py-0.5 rounded">✕</button>
+  </div>
+
   <aside id="sidebar" class="fixed inset-y-0 left-0 w-64 glass z-40 flex flex-col p-4 transition-transform -translate-x-full md:translate-x-0">
     <div class="flex items-center justify-between mb-3">
       <div class="text-xl font-extrabold grad">Future Gambling</div>
@@ -78,7 +85,7 @@
   </header>
 
   <main class="md:ml-64 p-4 md:p-10">
-    <div class="max-w-2xl mx-auto">
+    <div class="max-w-3xl mx-auto">
       <h2 id="title" class="text-3xl font-black mb-1"></h2>
       <p id="desc" class="text-zinc-400 mb-6"></p>
       <div id="view" class="glass rounded-2xl p-6"></div>
@@ -141,8 +148,8 @@ const sfx = {
     const ctx = getAudioCtx(); if (!ctx) return
     const osc = ctx.createOscillator(), g = ctx.createGain()
     osc.type = 'sine'
-    osc.frequency.setValueAtTime(600, ctx.currentTime)
-    osc.frequency.exponentialRampToValueAtTime(300, ctx.currentTime + 0.04)
+    osc.frequency.setValueAtTime(650, ctx.currentTime)
+    osc.frequency.exponentialRampToValueAtTime(320, ctx.currentTime + 0.04)
     g.gain.setValueAtTime(0.12, ctx.currentTime)
     g.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.04)
     osc.connect(g); g.connect(ctx.destination)
@@ -191,7 +198,7 @@ const sfx = {
   win: () => {
     if (!soundEnabled) return
     const ctx = getAudioCtx(); if (!ctx) return
-    const notes = [523.25, 659.25, 783.99, 1046.50] // C5, E5, G5, C6
+    const notes = [523.25, 659.25, 783.99, 1046.50]
     notes.forEach((freq, idx) => {
       const osc = ctx.createOscillator(), g = ctx.createGain()
       osc.type = 'triangle'
@@ -219,18 +226,18 @@ const sfx = {
   jackpot: () => {
     if (!soundEnabled) return
     const ctx = getAudioCtx(); if (!ctx) return
-    for (let i = 0; i < 12; i++) {
+    for (let i = 0; i < 14; i++) {
       setTimeout(() => {
         if (!soundEnabled) return
         const osc = ctx.createOscillator(), g = ctx.createGain()
         osc.type = 'sawtooth'
-        const f = 600 + (i % 2 === 0 ? 350 : 0)
+        const f = 600 + (i % 2 === 0 ? 380 : 0)
         osc.frequency.setValueAtTime(f, ctx.currentTime)
         g.gain.setValueAtTime(0.25, ctx.currentTime)
         g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.12)
         osc.connect(g); g.connect(ctx.destination)
         osc.start(); osc.stop(ctx.currentTime + 0.13)
-      }, i * 110)
+      }, i * 100)
     }
   },
   lose: () => {
@@ -239,7 +246,7 @@ const sfx = {
     const osc = ctx.createOscillator(), g = ctx.createGain()
     osc.type = 'sawtooth'
     osc.frequency.setValueAtTime(260, ctx.currentTime)
-    osc.frequency.exponentialRampToValueAtTime(90, ctx.currentTime + 0.28)
+    osc.frequency.exponentialRampToValueAtTime(80, ctx.currentTime + 0.28)
     g.gain.setValueAtTime(0.18, ctx.currentTime)
     g.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.28)
     osc.connect(g); g.connect(ctx.destination)
@@ -257,37 +264,55 @@ const sfx = {
       osc.connect(g); g.connect(ctx.destination)
       osc.start(ctx.currentTime + idx * 0.07); osc.stop(ctx.currentTime + idx * 0.07 + 0.28)
     })
+  },
+  whistle: () => {
+    if (!soundEnabled) return
+    const ctx = getAudioCtx(); if (!ctx) return
+    const osc = ctx.createOscillator(), g = ctx.createGain()
+    osc.type = 'square'
+    osc.frequency.setValueAtTime(1800, ctx.currentTime)
+    g.gain.setValueAtTime(0.15, ctx.currentTime)
+    g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.25)
+    osc.connect(g); g.connect(ctx.destination)
+    osc.start(); osc.stop(ctx.currentTime + 0.26)
   }
 }
 
-// User-Interaction Unlock for Web Audio
 window.addEventListener('click', () => { if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume() }, { once: true })
 setTimeout(updateSoundIcons, 0)
 
 const GAMES = {
   lobby:    { icon: '🏠', name: 'Lobby', desc: 'Wähle ein Spiel und viel Glück!' },
-  coinflip: { icon: '🪙', name: 'Coinflip', desc: 'Kopf oder Zahl – gewinne das Doppelte (2×).' },
-  dice:     { icon: '🎲', name: 'Dice', desc: 'Wähle deine Zahl. Je riskanter, desto höher der Gewinn.' },
-  slots:    { icon: '🎰', name: 'Slots', desc: 'Wähle eine Slot-Maschine: von Low bis Extreme, plus globaler Jackpot.' },
-  roulette: { icon: '🎡', name: 'Roulette', desc: 'Rot/Schwarz = 2×, Grün (0) = 14×.' },
+  // Beliebt
+  limbo:    { icon: '🎯', name: 'Limbo', desc: 'Beliebter Krypto-Hit! Setze dein Ziel – schieße bis zu 10.000× in die Höhe.' },
+  penalty:  { icon: '⚽', name: 'Elfmeter', desc: 'Schieße ins Tor! Überwinde den Torwart für 1,95× Auszahlung.' },
   crash:    { icon: '🚀', name: 'Crash', desc: 'Die Rakete steigt – drücke rechtzeitig auf Cashout!' },
+  slots:    { icon: '🎰', name: 'Slots', desc: 'Wähle eine Slot-Maschine: von Low bis Extreme, plus globaler Jackpot.' },
   mines:    { icon: '💣', name: 'Mines', desc: 'Decke Diamanten auf, meide die Minen, cashe jederzeit aus.' },
   blackjack:{ icon: '♠️', name: 'Blackjack', desc: 'Schlage den Dealer. Blackjack zahlt 2,5×, Double möglich.' },
+  towers:   { icon: '🗼', name: 'Towers', desc: 'Steige 8 Ebenen auf – wähle deine Schwierigkeit!' },
+  plinko:   { icon: '🟡', name: 'Plinko', desc: 'Ball fallen lassen – die Ränder zahlen bis 5,6×.' },
+  // Tischspiele
+  war:      { icon: '⚔️', name: 'Casino War', desc: 'High-Card War! Höhere Karte schlägt den Dealer (2×), bei Gleichstand WAR (3×).' },
+  roulette: { icon: '🎡', name: 'Roulette', desc: 'Rot/Schwarz = 2×, Grün (0) = 14×.' },
   baccarat: { icon: '🎴', name: 'Baccarat', desc: 'Player, Banker oder Tie – wer kommt näher an 9?' },
   poker:    { icon: '♦️', name: 'Video Poker', desc: 'Jacks or Better: Karten halten, tauschen, bis 800×.' },
   sicbo:    { icon: '🔮', name: 'Sic Bo', desc: 'Drei Würfel: Low, High oder Triple (30×).' },
-  towers:   { icon: '🗼', name: 'Towers', desc: 'Steige 8 Ebenen auf – wähle deine Schwierigkeit!' },
-  plinko:   { icon: '🟡', name: 'Plinko', desc: 'Ball fallen lassen – die Ränder zahlen bis 5,6×.' },
+  dragon:   { icon: '🐉', name: 'Dragon Tiger', desc: 'Höhere Karte gewinnt: Drache, Tiger oder Tie (11×).' },
+  // Schnelle Spiele
+  cyberrace:{ icon: '🏎️', name: 'Cyber Race', desc: 'Wähle einen von 5 Renn-Gleitern. Live-Rennen um bis zu 20× Gewinn!' },
+  coinflip: { icon: '🪙', name: 'Coinflip', desc: 'Kopf oder Zahl – gewinne das Doppelte (2×).' },
+  dice:     { icon: '🎲', name: 'Dice', desc: 'Wähle deine Zahl. Je riskanter, desto höher der Gewinn.' },
   wheel:    { icon: '🎯', name: 'Glücksrad', desc: 'Dreh das Rad – Gewinne bis 4×.' },
   keno:     { icon: '🔢', name: 'Keno', desc: 'Tippe 5 Zahlen von 40 – bis zu 80×.' },
   double:   { icon: '💰', name: 'Double or Nothing', desc: 'Verdopple oder verliere alles. Dein Gewinn wird direkt neu gesetzt.' },
   allin:    { icon: '🔥', name: 'All In', desc: 'Dein ganzes Guthaben auf eine Karte: 48 % für 2×.' },
   hilo:     { icon: '🃏', name: 'Hi-Lo', desc: 'Höher oder niedriger als die Karte? Je riskanter, desto mehr.' },
   lucky7:   { icon: '7️⃣', name: 'Lucky 7', desc: 'Zwei Würfel: unter 7, über 7 oder genau 7 (5,7×).' },
-  dragon:   { icon: '🐉', name: 'Dragon Tiger', desc: 'Höhere Karte gewinnt: Drache, Tiger oder Tie (11×).' },
   doors:    { icon: '🚪', name: 'Schatztüren', desc: 'Drei Türen, hinter einer liegt 2,8×.' },
   number:   { icon: '🔟', name: 'Lucky Number', desc: 'Rate die Zahl von 1 bis 10 – 9×.' },
   rps:      { icon: '✊', name: 'Schere Stein Papier', desc: 'Sieg 2,4×, Unentschieden gibt 0,5× zurück.' },
+  // PvP & Mini-Games
   community:{ icon: '🌍', name: 'Community', desc: 'Community-Ziel, Lotterie und Clans.', page: true },
   duel:     { icon: '⚔️', name: 'Duelle (1v1)', desc: 'Fordere andere Spieler heraus: Coinflip oder Dice um echte Coins.', page: true },
   chess:    { icon: '♟️', name: 'Schach (Elo)', desc: '1v1 Schach mit Elo-Rating und Rangliste.', page: true },
@@ -307,7 +332,7 @@ const GAMES = {
   earn:     { icon: '⛏️', name: 'Coins verdienen', desc: 'Daily-Streak, Stunden-Bonus und Mini-Games.', page: true },
   chat:     { icon: '💬', name: 'Chat', desc: 'Live-Chat mit allen Spielern.', page: true },
   board:    { icon: '🏆', name: 'Leaderboard', desc: 'Die reichsten und aktivsten Spieler.', page: true },
-  admin:    { icon: '🛡️', name: 'Admin Board', desc: 'God Mode: Quoten steuern, Jackpot kontrollieren, Gewinner bestimmen.', page: true, admin: true }
+  admin:    { icon: '🛡️', name: 'Admin God-Mode', desc: 'Master Control: Quoten, Server-Rigging, Jackpot, Spieler-Manipulation.', page: true, admin: true }
 }
 
 /* ---------- UI helpers ---------- */
@@ -337,13 +362,24 @@ async function loadProfile() {
   ME = data; $('welcome').innerHTML = (data.prestige ? '👑' + data.prestige + ' ' : '') + 'Lv ' + data.level + ' · ' + nm(data)
   if (!hb) hb = setInterval(() => sb.rpc('heartbeat'), 60000)
   setBalance(data.balance); renderNav()
+  checkAnnouncement()
+}
+
+async function checkAnnouncement() {
+  const { data } = await sb.rpc('get_announcement')
+  if (data && data.active && data.message) {
+    $('serverBannerText').textContent = '📢 ' + data.message
+    $('serverBanner').classList.remove('hidden')
+  } else {
+    $('serverBanner').classList.add('hidden')
+  }
 }
 
 /* ---------- Navigation ---------- */
 const NAVGROUPS = [
-  ['⭐', 'Beliebt', ['slots', 'crash', 'mines', 'plinko', 'blackjack', 'towers']],
-  ['🃏', 'Tischspiele', ['roulette', 'baccarat', 'sicbo', 'dragon', 'poker', 'hilo']],
-  ['⚡', 'Schnelle Spiele', ['coinflip', 'dice', 'double', 'allin', 'lucky7', 'rps', 'number', 'doors', 'wheel', 'keno']],
+  ['⭐', 'Beliebt', ['limbo', 'penalty', 'slots', 'crash', 'mines', 'blackjack', 'towers', 'plinko']],
+  ['🃏', 'Tischspiele', ['war', 'roulette', 'baccarat', 'sicbo', 'dragon', 'poker', 'hilo']],
+  ['⚡', 'Schnelle Spiele', ['cyberrace', 'coinflip', 'dice', 'double', 'allin', 'lucky7', 'rps', 'number', 'doors', 'wheel', 'keno']],
   ['⚔️', 'PvP', ['duel', 'chess', 'versus']],
   ['🎮', 'Future Games', ['snake', 'typing', 'trivia', 'tetris']],
   ['🌍', 'Community', ['community', 'friends', 'chat', 'clanhq', 'feed', 'players', 'board']],
@@ -397,324 +433,90 @@ const VIEWS = {
 let PM = [5.6, 2.1, 1.1, 1, 0.5, 1, 1.1, 2.1, 5.6]
 const WM = [0, 0.5, 0, 1.5, 0, 2, 0, 1, 0, 4]
 
-VIEWS.lobby = () => `<div class="grid grid-cols-2 md:grid-cols-3 gap-3">${Object.entries(GAMES).filter(([k, g]) => k !== 'lobby' && !g.page).map(([k, g]) =>
-  `<button onclick="sfx.click();show('${k}')" class="glass rounded-2xl p-5 text-left hover:border-cyan-500 transition"><div class="text-4xl mb-2">${g.icon}</div><div class="font-bold">${g.name}</div><div class="text-xs text-zinc-400 mt-1">${g.desc}</div></button>`).join('')}</div>`
+VIEWS.lobby = () => `<div class="grid grid-cols-2 md:grid-cols-4 gap-3">${Object.entries(GAMES).filter(([k, g]) => k !== 'lobby' && !g.page).map(([k, g]) =>
+  `<button onclick="sfx.click();show('${k}')" class="glass rounded-2xl p-4 text-left hover:border-cyan-500 transition"><div class="text-3xl mb-1">${g.icon}</div><div class="font-bold text-sm">${g.name}</div><div class="text-[11px] text-zinc-400 mt-1 line-clamp-2">${g.desc}</div></button>`).join('')}</div>`
 
-VIEWS.crash = () => betBox() + `<div id="stage" class="h-36 flex items-center justify-center text-5xl font-black">🚀 1.00×</div>
-  <label class="text-xs text-zinc-400">Auto-Cashout bei (×)</label>
-  <input id="cash" type="number" step="0.1" min="1.1" max="100" value="2" class="inp w-full mt-1 mb-2" />
-  <div class="text-xs text-zinc-500 mb-4">Je höher das Ziel, desto kleiner die Chance (ca. 98 % ÷ Ziel).</div>
-  <button class="btn play bg-emerald-600" onclick="play($('cash').value)">Start</button>`
+/* ================= NEUE GAMES: LIMBO, PENALTY, WAR, CYBER RACE ================= */
+VIEWS.limbo = () => betBox() + `
+  <div id="stage" class="h-36 flex flex-col items-center justify-center">
+    <div id="limbo-res" class="text-6xl font-black text-cyan-400">1.00×</div>
+    <div class="text-xs text-zinc-500 mt-2">Beliebter Krypto-Hit • Schieße bis zu 10.000×</div>
+  </div>
+  <label class="text-xs text-zinc-400">Ziel-Multiplikator (z.B. 2.00× oder 50.00×)</label>
+  <div class="flex gap-2 mt-1 mb-4">
+    <input id="limbo-tgt" type="number" step="0.1" min="1.05" max="10000" value="2.00" class="inp flex-1" oninput="updateLimboWinChance()" />
+    <span id="limbo-chance" class="text-xs text-zinc-400 flex items-center px-3 glass rounded-xl">Chance: 49.0%</span>
+  </div>
+  <button class="btn play bg-emerald-600 font-bold" onclick="playLimbo()">Rakete starten</button>`
 
-function plinkoBoard() {
-  let h = ''
-  for (let r = 0; r < 8; r++) for (let k = -r; k <= r; k += 2)
-    h += `<i style="position:absolute;left:${50 + k * 5.5}%;top:${(r + 1) * 9}%;width:6px;height:6px;margin:-3px;border-radius:50%;background:#52525b"></i>`
-  PM.forEach((m, k) => h += `<b style="position:absolute;left:${50 + (2 * k - 8) * 5.5}%;top:90%;transform:translateX(-50%);font-size:11px" class="${m >= 2 ? 'text-emerald-400' : m < 1 ? 'text-red-400' : 'text-zinc-300'}">${m}×</b>`)
-  return h + '<span id="ball" style="position:absolute;left:50%;top:0;font-size:18px;transform:translateX(-50%)">🟡</span>'
+function updateLimboWinChance() {
+  const val = Number($('limbo-tgt').value) || 2
+  const ch = Math.max(0.01, Math.min(95, 98 / val)).toFixed(1)
+  if ($('limbo-chance')) $('limbo-chance').textContent = `Chance: ${ch}%`
 }
-VIEWS.plinko = () => betBox() + `<div id="stage" class="relative h-72 mb-4 overflow-hidden">${plinkoBoard()}</div>
-  <button class="btn play bg-emerald-600" onclick="play('drop')">Ball fallen lassen</button>`
-
-VIEWS.wheel = () => betBox() + `<div class="relative w-64 h-64 mx-auto my-6">
-  <div style="position:absolute;left:50%;top:-14px;transform:translateX(-50%);z-index:2;font-size:24px">🔻</div>
-  <div id="wheel" style="width:100%;height:100%;border-radius:50%;border:4px solid #52525b;position:relative;background:conic-gradient(${WM.map((m, i) => (m >= 2 ? '#16a34a' : m >= 1 ? '#0891b2' : m > 0 ? '#ca8a04' : '#3f3f46') + ' ' + i * 36 + 'deg ' + (i + 1) * 36 + 'deg').join(',')})">
-  ${WM.map((m, i) => `<span style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(${i * 36 + 18}deg) translateY(-6.2rem);font-weight:800;font-size:14px">${m}×</span>`).join('')}</div></div>
-  <button class="btn play bg-emerald-600" onclick="play('spin')">Drehen</button>`
-
-VIEWS.keno = () => { kpicks = []; return betBox() + `<div class="grid grid-cols-8 gap-1.5 mb-3">${Array.from({ length: 40 }, (_, i) => `<button id="k${i + 1}" onclick="kpick(${i + 1})" class="kc">${i + 1}</button>`).join('')}</div>
-  <div class="text-xs text-zinc-400 mb-4">Wähle 5 Zahlen • 2 Treffer 1,5× • 3 → 4× • 4 → 15× • 5 → 80×</div>
-  <button class="btn play bg-emerald-600" onclick="kplay()">Ziehen</button>` }
-function kpick(n) {
-  if (busy) return
-  sfx.click()
-  const i = kpicks.indexOf(n)
-  if (i >= 0) kpicks.splice(i, 1); else if (kpicks.length < 5) kpicks.push(n)
-  document.querySelectorAll('.kc').forEach(b => b.classList.remove('on', 'hit', 'drawn'))
-  kpicks.forEach(k => $('k' + k).classList.add('on'))
-}
-function kplay() { if (kpicks.length !== 5) return msg('Wähle genau 5 Zahlen', 'lose'); play(kpicks.join(',')) }
-
-function renderHist() {
-  $('hist').innerHTML = HIST.length ? '<div class="text-xs text-zinc-500 mb-1">Letzte Spiele</div>' + HIST.map(h =>
-    `<div class="glass rounded-lg px-3 py-2 flex justify-between"><span>${h.g}</span><span class="text-zinc-400">${h.bet} FC</span><b class="${h.net > 0 ? 'text-emerald-400' : h.net < 0 ? 'text-red-400' : 'text-zinc-400'}">${h.net > 0 ? '+' : ''}${h.net}</b></div>`).join('') : ''
+function playLimbo() {
+  const tgt = Number($('limbo-tgt').value)
+  if (!tgt || tgt < 1.05) return msg('Ziel muss mindestens 1.05× sein', 'lose')
+  play(tgt.toString())
 }
 
-const RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K']
-const DICE = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'], RP = { rock: '✊', paper: '✋', scissors: '✌️' }
-let dnS = 0, dnBase = 50, hiRef = 1 + Math.floor(Math.random() * 13), lastParam = ''
-const row = a => '<div class="flex gap-3 flex-wrap">' + a.map(([l, p, c]) => `<button class="btn play ${c}" style="flex:1" onclick="play('${p}')">${l}</button>`).join('') + '</div>'
-const stg = (t, h = 'h-32') => `<div id="stage" class="${h} flex items-center justify-center text-6xl font-black gap-4">${t}</div>`
-const say = h => { $('stage').innerHTML = h }
-
-VIEWS.double = () => { dnS = 0; dnBase = lastBet; return betBox() + stg('💰') + '<div id="dn" class="text-center text-sm text-zinc-400 mb-4">Streak: 0 – Gewinne werden automatisch neu gesetzt</div>' + row([['💥 Double or Nothing', 'x', 'bg-orange-600']]) }
-VIEWS.allin = () => `<input id="bet" type="hidden" value="${balance}">` + stg('🔥', 'h-36') + `<div class="text-center text-zinc-400 mb-4">Dein ganzes Guthaben (${balance} FC) – 48 % Chance auf 2×</div><button class="btn play bg-red-600" onclick="$('bet').value=balance;play('x')">🔥 ALL IN</button>`
-VIEWS.hilo = () => {
-  const up = 13 - hiRef, lo = hiRef - 1, m = c => (0.97 * 13 / c).toFixed(2)
-  return betBox() + stg(`<div class="glass rounded-xl px-6 py-4">${RANKS[hiRef - 1]}</div>`) + '<div class="flex gap-3 mb-3">' +
-    (up ? `<button class="btn play bg-emerald-600" onclick="play('higher:${hiRef}')">⬆ Höher ${m(up)}×</button>` : '') +
-    (lo ? `<button class="btn play bg-rose-600" onclick="play('lower:${hiRef}')">⬇ Niedriger ${m(lo)}×</button>` : '') +
-    '</div><button class="btn bg-zinc-800" onclick="sfx.click();newRef()">🔄 Neue Karte</button>'
-}
-function newRef() { lastBet = Math.floor(Number($('bet').value)) || lastBet; hiRef = 1 + Math.floor(Math.random() * 13); show('hilo') }
-VIEWS.lucky7 = () => betBox() + stg('🎲 🎲') + row([['⬇ Unter 7 · 2.3×', 'under', 'bg-cyan-600'], ['7 · 5.7×', 'seven', 'bg-yellow-600'], ['⬆ Über 7 · 2.3×', 'over', 'bg-pink-600']])
-VIEWS.dragon = () => betBox() + stg('🐉 vs 🐅') + row([['🐉 Dragon 2.05×', 'dragon', 'bg-red-600'], ['Tie 11×', 'tie', 'bg-zinc-700'], ['🐅 Tiger 2.05×', 'tiger', 'bg-orange-600']])
-VIEWS.doors = () => betBox() + stg('🚪 🚪 🚪') + row([['Tür 1', '1', 'bg-cyan-600'], ['Tür 2', '2', 'bg-cyan-600'], ['Tür 3', '3', 'bg-cyan-600']])
-VIEWS.number = () => betBox() + stg('🔟') + '<div class="grid grid-cols-5 gap-2">' + Array.from({ length: 10 }, (_, i) => `<button class="btn play bg-zinc-800" onclick="play('${i + 1}')">${i + 1}</button>`).join('') + '</div>'
-VIEWS.rps = () => betBox() + stg('✊ ✋ ✌️') + row([['✊ Stein', 'rock', 'bg-cyan-600'], ['✋ Papier', 'paper', 'bg-pink-600'], ['✌️ Schere', 'scissors', 'bg-emerald-600']])
-
-const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
-const BADGE = { admin: '🛡️', mod: '🔧', vip: '⭐' }
-const PAGEINIT = {}
-
-async function delMe() {
-  if (!confirm('Account und alle Coins endgültig löschen?') || !confirm('Wirklich sicher?')) return
-  const { error } = await sb.rpc('delete_me'); if (error) return toast(error.message)
-  logout()
-}
-
-/* ---- Coins verdienen ---- */
-VIEWS.earn = () => `<div class="grid grid-cols-2 gap-3 mb-5">
-  <div id="dailybox" class="glass rounded-xl p-4 text-center col-span-2">Lade...</div>
-  <button class="btn bg-cyan-600" onclick="claimHourly()">⏰ Stunden-Bonus +50</button></div>
-  <div class="glass rounded-xl p-4 mb-3"><b>👆 Klick-Challenge</b><div class="text-xs text-zinc-400 mb-3">10 Sekunden so oft klicken wie möglich – bis 40 Coins.</div><button id="clickbtn" class="btn bg-emerald-600" onclick="clickGame()">Start</button></div>
-  <div class="glass rounded-xl p-4"><b>⚡ Reaktionstest</b><div class="text-xs text-zinc-400 mb-3">Klick, sobald der Button grün wird – bis 40 Coins.</div><button id="reactbtn" class="btn bg-zinc-700" onclick="reactGame()">Start</button></div>
-  <div id="lvlbox" class="mt-4"></div><div id="missions" class="mt-4"></div><div class="text-xs text-zinc-500 mt-3">Mini-Game-Cooldown: 60 Sekunden. Daily: je mehr Tage in Folge, desto mehr Coins.</div>`
-
-async function claimHourly() {
-  const { data, error } = await sb.rpc('claim_hourly'); if (error) return toast(error.message)
-  sfx.claim()
-  setBalance(data.balance); toast('⏰ +' + data.reward + ' Coins')
-}
-async function mini(kind, score) {
-  const { data, error } = await sb.rpc('claim_mini', { mini_kind: kind, mini_score: score })
-  if (error) return toast(error.message)
-  sfx.claim()
-  setBalance(data.balance); toast('🎉 +' + data.reward + ' Coins')
-}
-function clickGame() {
-  sfx.click()
-  const b = $('clickbtn')
-  if (!cg) { cg = { n: 0 }; b.textContent = 'Klick! 0'; setTimeout(() => { const n = cg.n; cg = null; b.textContent = 'Start'; mini('click', n) }, 10000); return }
-  cg.n++; b.textContent = 'Klick! ' + cg.n
-}
-function reactGame() {
-  sfx.click()
-  const b = $('reactbtn')
-  if (!rg) {
-    b.textContent = 'Warte...'; b.className = 'btn bg-red-700'; rg = { ready: false }
-    rg.to = setTimeout(() => { rg.ready = true; rg.t = performance.now(); b.textContent = 'JETZT!'; b.className = 'btn bg-green-500' }, 1500 + Math.random() * 2500); return
-  }
-  if (!rg.ready) { clearTimeout(rg.to); rg = null; b.textContent = 'Zu früh! Nochmal'; b.className = 'btn bg-zinc-700'; return }
-  const ms = Math.round(performance.now() - rg.t); rg = null
-  b.textContent = ms + ' ms – nochmal?'; b.className = 'btn bg-zinc-700'; mini('reaction', ms)
-}
-
-/* ---- Leaderboard ---- */
-VIEWS.board = () => '<div id="lb" class="text-zinc-400">Lade...</div>'
-PAGEINIT.board = async () => {
-  const { data, error } = await sb.rpc('leaderboard'); if (error) return $('lb').textContent = error.message
-  const list = (t, a, u) => `<div class="font-bold mb-2 mt-4">${t}</div>` + a.map((x, i) =>
-    `<div class="flex justify-between glass rounded-lg px-3 py-2 mb-1"><span>${['🥇', '🥈', '🥉'][i] || (i + 1) + '.'} ${nm(x)}</span><b class="text-emerald-400">${Number(x.balance).toLocaleString('de-DE')} ${u}</b></div>`).join('')
-  $('lb').innerHTML = (await tournamentHtml()) + list('💰 Reichste Spieler', data.rich, 'FC') + list('🎰 Meist gesetzt', data.wager, 'FC')
-}
-
-/* ---- Chat ---- */
-const CHANS = [['global', '🌐 Global'], ['gambling', '🎰 Gambling'], ['games', '🎮 Games'], ['offtopic', '💭 Offtopic'], ['clan', '🏰 Clan']]
-let chatChan = 'global'
-VIEWS.chat = () => `<div class="flex gap-1 flex-wrap mb-3">${CHANS.map(([k, l]) => `<button class="px-3 py-1 rounded-lg text-sm ${k === chatChan ? 'bg-cyan-700' : 'bg-zinc-800'}" onclick="chatChan='${k}';show('chat')">${l}</button>`).join('')}</div>
-  <div id="chatbox" class="h-80 overflow-y-auto space-y-1 mb-3 text-sm"></div>
-  <div class="flex gap-2"><input id="chatin" maxlength="200" placeholder="Nachricht..." class="inp flex-1 min-w-0" onkeydown="if(event.key==='Enter')sendChat()"><button class="btn bg-cyan-600" style="width:auto" onclick="sendChat()">Senden</button></div>`
-PAGEINIT.chat = () => { loadChat(); chatTimer = setInterval(loadChat, 4000) }
-async function loadChat() {
-  const { data, error } = await sb.rpc('chat_list', { chan: chatChan }); const box = $('chatbox'); if (error || !box) return
-  const bottom = box.scrollHeight - box.scrollTop - box.clientHeight < 60
-  box.innerHTML = data.map(m => `<div><b>${nm(m)}:</b> ${esc(m.msg)}${ROLE === 'mod' || ROLE === 'admin' ? ` <button class="text-red-400" onclick="chatDel(${m.id})">✕</button>` : ''}</div>`).join('')
-  if (bottom) box.scrollTop = box.scrollHeight
-}
-async function sendChat() {
-  const i = $('chatin'), m = i.value.trim(); if (!m) return
-  sfx.click()
-  const { error } = await sb.rpc('chat_send', { m, chan: chatChan }); if (error) return toast(error.message)
-  i.value = ''; await loadChat(); $('chatbox').scrollTop = 1e6
-}
-async function chatDel(id) { await sb.rpc('chat_delete', { msg_id: id }); loadChat() }
-
-/* ================= GOD-MODE ADMIN BOARD ================= */
-VIEWS.admin = () => `
-<div class="space-y-6">
-  <!-- Global Server Controls -->
-  <div class="glass rounded-xl p-5 border border-purple-500/40">
-    <div class="flex items-center gap-2 mb-3">
-      <span class="text-2xl">⚡</span>
-      <h3 class="text-lg font-black text-purple-400">Server & Quoten God-Mode</h3>
+// 2. PENALTY SHOOTOUT
+VIEWS.penalty = () => betBox() + `
+  <div class="relative w-full max-w-md mx-auto h-52 glass rounded-2xl border-4 border-zinc-700 p-2 flex flex-col justify-between mb-4" style="background:radial-gradient(#15803d,#064e3b)">
+    <div class="flex justify-between">
+      <button class="pen-btn btn bg-black/40 hover:bg-yellow-500 hover:text-black text-xs py-2 px-3 w-auto" onclick="playPenalty('tl')">↖ Oben Links</button>
+      <button class="pen-btn btn bg-black/40 hover:bg-yellow-500 hover:text-black text-xs py-2 px-3 w-auto" onclick="playPenalty('tr')">↗ Oben Rechts</button>
     </div>
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
-      <div>
-        <label class="text-xs text-zinc-400 font-semibold">Server Glück / Quoten-Modus</label>
-        <select id="adm_global_rig" class="inp w-full mt-1 text-sm py-2" onchange="setGlobalRig(this.value)">
-          <option value="0">🟢 Normal (Faires RNG)</option>
-          <option value="1">🍀 Haus-Glück (Alle gewinnen / Win Rain)</option>
-          <option value="-1">😈 Haus gewinnt immer (Alle verlieren)</option>
-        </select>
-      </div>
-      <div>
-        <label class="text-xs text-zinc-400 font-semibold">Jackpot Pool (FC)</label>
-        <div class="flex gap-1 mt-1">
-          <input id="adm_pot_in" type="number" min="0" placeholder="z.B. 100000" class="inp w-full text-sm py-2">
-          <button class="btn bg-yellow-500 text-black text-xs px-3" style="width:auto" onclick="admSetPot()">Setzen</button>
-        </div>
-      </div>
-      <div>
-        <label class="text-xs text-zinc-400 font-semibold">Jackpot Cut (% von Verlusten)</label>
-        <div class="flex gap-1 mt-1">
-          <input id="adm_cut_in" type="number" min="0" max="100" placeholder="5" class="inp w-full text-sm py-2">
-          <button class="btn bg-cyan-600 text-xs px-3" style="width:auto" onclick="admSetCut()">Setzen</button>
-        </div>
-      </div>
-    </div>
-    <div class="flex gap-2 flex-wrap">
-      <button class="btn bg-sky-600 text-xs" style="width:auto" onclick="admRain()">🌧️ Coin Rain starten</button>
-      <button class="btn bg-yellow-600 text-xs" style="width:auto" onclick="admPayWeek()">🏆 Wochenpreise auszahlen</button>
-      <button class="btn bg-pink-600 text-xs" style="width:auto" onclick="admBroadcast()">📢 Broadcast-Nachricht</button>
+    <div id="penalty-goalie" class="text-6xl text-center transition-all duration-300">🧤</div>
+    <div class="flex justify-between items-end">
+      <button class="pen-btn btn bg-black/40 hover:bg-yellow-500 hover:text-black text-xs py-2 px-3 w-auto" onclick="playPenalty('bl')">↙ Unten Links</button>
+      <button class="pen-btn btn bg-black/40 hover:bg-yellow-500 hover:text-black text-xs py-2 px-3 w-auto" onclick="playPenalty('mid')">⬆ Mitte</button>
+      <button class="pen-btn btn bg-black/40 hover:bg-yellow-500 hover:text-black text-xs py-2 px-3 w-auto" onclick="playPenalty('br')">↘ Unten Rechts</button>
     </div>
   </div>
+  <div class="text-xs text-zinc-400 text-center">Wähle eine Ecke zum Schießen! Trifft der Ball am Torwart vorbei: <b>1,95× Auszahlung</b>.</div>`
 
-  <!-- User Manipulation & Rigging -->
-  <div class="glass rounded-xl p-5">
-    <div class="flex items-center justify-between mb-3">
-      <div class="flex items-center gap-2">
-        <span class="text-2xl">👥</span>
-        <h3 class="text-lg font-black text-white">Spieler-Manipulation & Rigging</h3>
-      </div>
-      <input id="adm_user_search" placeholder="Spieler suchen..." class="inp text-xs py-1.5 px-3 w-40" oninput="filterAdminUsers()">
-    </div>
-    <p class="text-xs text-zinc-400 mb-4">Hier kannst du für jeden einzelnen Spieler bestimmen, wer gewinnt, verliert oder den nächsten Jackpot zieht.</p>
-    <div id="adm_user_list" class="space-y-2">Lade Benutzer...</div>
+function playPenalty(slot) { play(slot) }
+
+// 3. CASINO WAR
+VIEWS.war = () => betBox() + stg(`
+  <div class="flex items-center gap-6">
+    <div class="text-center"><div class="text-xs text-zinc-400 mb-1">DU</div><div id="war-p" class="glass rounded-xl px-5 py-4 text-3xl font-black">?</div></div>
+    <div class="text-2xl font-black text-zinc-500">VS</div>
+    <div class="text-center"><div class="text-xs text-zinc-400 mb-1">DEALER</div><div id="war-d" class="glass rounded-xl px-5 py-4 text-3xl font-black">?</div></div>
+  </div>`) + `<button class="btn play bg-emerald-600" onclick="play('war')">In die Schlacht (War) ziehen</button>
+  <div class="text-xs text-zinc-500 mt-3 text-center">Höhere Karte gewinnt 2,0× • Gleichstand = WAR (3,0× Auszahlung)!</div>`
+
+// 4. CYBER RACE
+const RACERS = [
+  { id: 1, name: 'Neon Blade', col: '#22d3ee', odds: 2.0, ch: '45%' },
+  { id: 2, name: 'Quantum Ghost', col: '#a78bfa', odds: 3.2, ch: '25%' },
+  { id: 3, name: 'Solar Flash', col: '#facc15', odds: 5.0, ch: '15%' },
+  { id: 4, name: 'Void Walker', col: '#f43f5e', odds: 9.0, ch: '10%' },
+  { id: 5, name: 'Hyper Nova', col: '#34d399', odds: 20.0, ch: '5%' }
+]
+let chosenRacer = 1
+VIEWS.cyberrace = () => betBox() + `
+  <div id="race-track" class="space-y-2 mb-4 glass rounded-2xl p-4">
+    ${RACERS.map(r => `
+      <div class="space-y-1">
+        <div class="flex justify-between text-xs font-bold" style="color:${r.col}">
+          <span>🏎️ ${r.name} (${r.odds}×)</span>
+          <span>Chance ~${r.ch}</span>
+        </div>
+        <div class="h-3 bg-zinc-800 rounded-full overflow-hidden">
+          <div id="racer-bar-${r.id}" class="h-full rounded-full transition-all duration-300" style="background:${r.col};width:4%"></div>
+        </div>
+      </div>`).join('')}
   </div>
-</div>`
-
-let ADMIN_USERS_CACHE = []
-
-PAGEINIT.admin = () => { loadAdminOverview(); loadAdmin() }
-
-async function loadAdminOverview() {
-  const d = await call('admin_get_overview', {})
-  if (!d) return
-  if ($('adm_pot_in')) $('adm_pot_in').value = d.jackpot
-  if ($('adm_cut_in')) $('adm_cut_in').value = d.jackpot_cut_percent
-  if ($('adm_global_rig')) $('adm_global_rig').value = d.global_rig_mode
-}
-
-async function loadAdmin() {
-  const { data, error } = await sb.rpc('admin_users')
-  if (error) return $('adm_user_list').textContent = error.message
-  ADMIN_USERS_CACHE = data
-  renderAdminUsers(data)
-}
-
-function filterAdminUsers() {
-  const q = ($('adm_user_search').value || '').toLowerCase().trim()
-  const filtered = ADMIN_USERS_CACHE.filter(u => u.username.toLowerCase().includes(q))
-  renderAdminUsers(filtered)
-}
-
-function renderAdminUsers(data) {
-  const box = $('adm_user_list'); if (!box) return
-  const sm = 'style="width:auto;padding:.3rem .7rem"'
-  box.innerHTML = `<div class="text-xs text-zinc-400 mb-2">${data.length} Spieler registriert</div>` + data.map(u => `
-    <div class="glass rounded-xl p-3 flex flex-wrap items-center gap-2 text-sm border border-zinc-800">
-      <div class="flex-1 min-w-[7rem]">
-        <b class="text-white">${esc(u.username)}</b>
-        ${u.banned ? '<span class="text-red-400 text-xs ml-1">🚫 Gesperrt</span>' : ''}
-        <div class="text-xs text-emerald-400 font-bold">${Number(u.balance).toLocaleString('de-DE')} FC</div>
-      </div>
-      
-      <!-- Rigging Controller -->
-      <div class="flex items-center gap-1">
-        <label class="text-[10px] text-zinc-400 uppercase tracking-wider">Rig:</label>
-        <select class="inp text-xs py-1 px-2 ${u.rig_mode === 'force_win' ? 'border-emerald-500 text-emerald-300' : u.rig_mode === 'force_lose' ? 'border-red-500 text-red-300' : u.rig_mode === 'force_jackpot' ? 'border-yellow-400 text-yellow-300 font-bold' : ''}" 
-          onchange="admUserRig('${u.id}', this.value)">
-          <option value="default" ${u.rig_mode === 'default' ? 'selected' : ''}>🟢 Normal</option>
-          <option value="force_win" ${u.rig_mode === 'force_win' ? 'selected' : ''}>🍀 Immer Win</option>
-          <option value="force_lose" ${u.rig_mode === 'force_lose' ? 'selected' : ''}>💀 Immer Lose</option>
-          <option value="force_jackpot" ${u.rig_mode === 'force_jackpot' ? 'selected' : ''}>💰 Nächster Jackpot!</option>
-        </select>
-      </div>
-
-      <!-- Role Selector -->
-      <select class="inp text-xs py-1 px-2" onchange="adm('admin_role',{target:'${u.id}',new_role:this.value})">
-        ${['user', 'vip', 'mod', 'admin'].map(r => `<option ${r === u.role ? 'selected' : ''}>${r}</option>`).join('')}
-      </select>
-
-      <button class="btn bg-cyan-700 text-xs" ${sm} onclick="admCoins('${u.id}')">± Coins</button>
-      <button class="btn bg-purple-700 text-xs" ${sm} onclick="admSetExactBalance('${u.id}')">Setzen</button>
-      <button class="btn ${u.banned ? 'bg-green-700' : 'bg-orange-700'} text-xs" ${sm} onclick="adm('admin_ban',{target:'${u.id}',is_banned:${!u.banned}})">
-        ${u.banned ? 'Entsperren' : 'Sperren'}
-      </button>
-      <button class="btn bg-red-800 text-xs" ${sm} onclick="admDel('${u.id}')">🗑</button>
-    </div>`).join('')
-}
-
-async function setGlobalRig(val) {
-  const d = await call('admin_set_setting', { skey: 'global_rig_mode', sval: Number(val) })
-  if (d) toast('⚡ Globaler Quoten-Modus aktualisiert!')
-}
-
-async function admSetPot() {
-  const val = Number($('adm_pot_in').value)
-  if (isNaN(val) || val < 0) return toast('Ungültiger Betrag')
-  const d = await call('admin_set_pot', { amount: val })
-  if (d) { toast('💰 Jackpot Pool gesetzt: ' + Number(d.pool).toLocaleString('de-DE') + ' FC'); sfx.claim() }
-}
-
-async function admSetCut() {
-  const val = Number($('adm_cut_in').value)
-  if (isNaN(val) || val < 0 || val > 100) return toast('Cut muss zwischen 0 und 100 % liegen')
-  const d = await call('admin_set_setting', { skey: 'jackpot_cut_percent', sval: val })
-  if (d) toast('✂️ Jackpot Cut auf ' + val + '% geändert')
-}
-
-async function admUserRig(userId, mode) {
-  const d = await call('admin_set_rig', { target: userId, mode })
-  if (d) toast('🎯 Spieler-Rigging gespeichert: ' + mode)
-}
-
-async function admSetExactBalance(id) {
-  const a = prompt('Neuer genauer Kontostand (FC):')
-  if (a !== null && a !== '') {
-    const num = Number(a)
-    if (!isNaN(num) && num >= 0) adm('admin_set_balance', { target: id, amount: num })
-  }
-}
-
-async function admBroadcast() {
-  const txt = prompt('Server-Ankündigung (erscheint im Chat):')
-  if (txt) {
-    const d = await call('admin_broadcast', { msg: txt })
-    if (d) toast('📢 Ankündigung gesendet!')
-  }
-}
-
-async function adm(fn, args) { const { error } = await sb.rpc(fn, args); error ? toast(error.message) : loadAdmin() }
-function admCoins(id) { const a = Number(prompt('Coins (negativ = abziehen):')); if (a) adm('admin_give', { target: id, amount: a }) }
-function admDel(id) { if (confirm('Account endgültig löschen?')) adm('admin_delete', { target: id }) }
-
-/* ================= Helfer ================= */
-async function call(fn, args) { const { data, error } = await sb.rpc(fn, args); if (error) { toast(error.message); return null } return data }
-function readBet() {
-  const bet = Math.floor(Number($('bet').value))
-  if (!(bet >= 1)) { msg('Ungültiger Einsatz', 'lose'); return 0 }
-  if (bet > balance) { msg('Nicht genug Coins', 'lose'); return 0 }
-  return bet
-}
-function logRound(net) { HIST.unshift({ g: GAMES[current].icon + ' ' + GAMES[current].name, bet: lastBet, net }); HIST.length = Math.min(HIST.length, 8); renderHist() }
-
-/* ================= PLINKO mit Risiko ================= */
-const PMS = { low: [3, 1.5, 1.2, 1, 0.65, 1, 1.2, 1.5, 3], mid: [5.6, 2.1, 1.1, 1, 0.5, 1, 1.1, 2.1, 5.6], high: [26, 4, 1.5, 0.3, 0.2, 0.3, 1.5, 4, 26] }
-VIEWS.plinko = () => { PM = PMS[plinkoRisk]; return betBox() + `<div class="flex gap-2 mb-3">${['low', 'mid', 'high'].map(r =>
-  `<button class="btn bg-zinc-800 ${r === plinkoRisk ? 'sel' : ''}" onclick="sfx.click();lastBet=Math.floor(+$('bet').value)||lastBet;plinkoRisk='${r}';show('plinko')">${{ low: '🟢 Niedrig', mid: '🟡 Mittel', high: '🔴 Hoch' }[r]}</button>`).join('')}</div>
-  <div id="stage" class="relative h-72 mb-4 overflow-hidden">${plinkoBoard()}</div><button class="btn play bg-emerald-600" onclick="play('drop')">Ball fallen lassen</button>` }
+  <label class="text-xs text-zinc-400">Wähle deinen Gewinner</label>
+  <div class="grid grid-cols-2 md:grid-cols-5 gap-2 my-2">
+    ${RACERS.map(r => `
+      <button class="btn text-xs py-2 ${chosenRacer === r.id ? 'sel' : 'bg-zinc-800'}" style="color:${r.col}" onclick="sfx.click();chosenRacer=${r.id};show('cyberrace')">
+        ${r.name}<br><b>${r.odds}×</b>
+      </button>`).join('')}
+  </div>
+  <button class="btn play bg-emerald-600 mt-2 font-bold" onclick="play(chosenRacer.toString())">Rennen starten</button>`
 
 /* ================= CRASH (interaktiv) ================= */
 VIEWS.crash = () => betBox() + stg('🚀 1.00×', 'h-36') + `<button id="crbtn" class="btn bg-emerald-600" onclick="crashBtn()">Start</button>
@@ -760,6 +562,19 @@ function crashEnd(d) {
   }
 }
 
+/* ================= PLINKO ================= */
+function plinkoBoard() {
+  let h = ''
+  for (let r = 0; r < 8; r++) for (let k = -r; k <= r; k += 2)
+    h += `<i style="position:absolute;left:${50 + k * 5.5}%;top:${(r + 1) * 9}%;width:6px;height:6px;margin:-3px;border-radius:50%;background:#52525b"></i>`
+  PM.forEach((m, k) => h += `<b style="position:absolute;left:${50 + (2 * k - 8) * 5.5}%;top:90%;transform:translateX(-50%);font-size:11px" class="${m >= 2 ? 'text-emerald-400' : m < 1 ? 'text-red-400' : 'text-zinc-300'}">${m}×</b>`)
+  return h + '<span id="ball" style="position:absolute;left:50%;top:0;font-size:18px;transform:translateX(-50%)">🟡</span>'
+}
+const PMS = { low: [3, 1.5, 1.2, 1, 0.65, 1, 1.2, 1.5, 3], mid: [5.6, 2.1, 1.1, 1, 0.5, 1, 1.1, 2.1, 5.6], high: [26, 4, 1.5, 0.3, 0.2, 0.3, 1.5, 4, 26] }
+VIEWS.plinko = () => { PM = PMS[plinkoRisk]; return betBox() + `<div class="flex gap-2 mb-3">${['low', 'mid', 'high'].map(r =>
+  `<button class="btn bg-zinc-800 ${r === plinkoRisk ? 'sel' : ''}" onclick="sfx.click();lastBet=Math.floor(+$('bet').value)||lastBet;plinkoRisk='${r}';show('plinko')">${{ low: '🟢 Niedrig', mid: '🟡 Mittel', high: '🔴 Hoch' }[r]}</button>`).join('')}</div>
+  <div id="stage" class="relative h-72 mb-4 overflow-hidden">${plinkoBoard()}</div><button class="btn play bg-emerald-600" onclick="play('drop')">Ball fallen lassen</button>` }
+
 /* ================= MINES ================= */
 VIEWS.mines = () => { mn = null; return betBox() + `<div class="flex items-center gap-2 mb-4"><label class="text-xs text-zinc-400">Minen</label>
   <select id="mcount" class="inp py-2">${[[1, '🟢 Leicht · 1 Mine'], [3, '🟡 Mittel · 3 Minen'], [5, '🟠 Schwer · 5 Minen'], [10, '🔴 Extrem · 10 Minen'], [15, '💀 Wahnsinn · 15'], [20, '☠️ Unmöglich · 20']].map(([n, l]) => `<option value="${n}" ${n === 3 ? 'selected' : ''}>${l}</option>`).join('')}</select><div id="minfo" class="flex-1 text-right text-sm text-zinc-400"></div></div>
@@ -804,6 +619,7 @@ function mineEnd(d, won) {
 }
 
 /* ================= BLACKJACK ================= */
+const RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K']
 const card = c => `<span class="glass rounded-lg px-3 py-2 text-xl font-bold">${RANKS[c - 1]}</span>`
 VIEWS.blackjack = () => betBox() + `<div id="bjt" class="space-y-4 mb-4 min-h-[9rem]"><div class="text-center text-zinc-500 pt-6">Setze und teile aus</div></div>
   <div id="bjb" class="flex gap-3 flex-wrap"><button class="btn bg-emerald-600" onclick="bj('start')">Austeilen</button></div>`
@@ -832,87 +648,97 @@ function renderBj(d) {
   }
 }
 
-/* ================= Cosmetics / Profile ================= */
-const nm = u => `<span class="cursor-pointer" data-u="${esc(u.username)}" onclick="showProfile(this.dataset.u)" style="color:${/^#[0-9a-f]{6}$/i.test(u.color) ? u.color : '#fff'}">${esc(u.avatar || '')} ${esc(u.username)}</span>${BADGE[u.role] || ''}${u.title ? ` <i class="text-xs text-zinc-400">${esc(u.title)}</i>` : ''}`
+/* ================= WHEEL, KENO, TOWERS, ROULETTE ETC ================= */
+VIEWS.wheel = () => betBox() + `<div class="relative w-64 h-64 mx-auto my-6">
+  <div style="position:absolute;left:50%;top:-14px;transform:translateX(-50%);z-index:2;font-size:24px">🔻</div>
+  <div id="wheel" style="width:100%;height:100%;border-radius:50%;border:4px solid #52525b;position:relative;background:conic-gradient(${WM.map((m, i) => (m >= 2 ? '#16a34a' : m >= 1 ? '#0891b2' : m > 0 ? '#ca8a04' : '#3f3f46') + ' ' + i * 36 + 'deg ' + (i + 1) * 36 + 'deg').join(',')})">
+  ${WM.map((m, i) => `<span style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(${i * 36 + 18}deg) translateY(-6.2rem);font-weight:800;font-size:14px">${m}×</span>`).join('')}</div></div>
+  <button class="btn play bg-emerald-600" onclick="play('spin')">Drehen</button>`
 
-/* ---- Daily mit Streak-Kalender & Countdown ---- */
-PAGEINIT.earn = async () => {
-  loadMissions(); loadLevel()
-  const box = $('dailybox'); if (!box) return
-  const { data: d, error: derr } = await sb.rpc('daily_status')
-  if (derr) { box.innerHTML = '⚠️ Daily-Fehler: ' + esc(derr.message); return }
-  if (!d) { box.innerHTML = '<button class="btn bg-yellow-500 text-black" onclick="claimDaily()">🎁 Daily abholen</button>'; return }
-  const t0 = Date.now(), cur = d.streak % 7 || (d.streak ? 7 : 0)
-  const draw = () => {
-    const left = Math.max(0, d.secs_left - Math.floor((Date.now() - t0) / 1000))
-    if (!left && !d.can_claim) { clearInterval(dTimer); return PAGEINIT.earn() }
-    box.innerHTML = `<div class="font-bold mb-2">🎁 Daily Streak: ${d.streak} 🔥</div><div class="flex justify-center gap-1 mb-3">${[1, 2, 3, 4, 5, 6, 7].map(i =>
-      `<span class="w-8 h-8 rounded-full flex items-center justify-center text-xs ${i <= cur ? 'bg-emerald-600' : 'bg-zinc-800'}">${i}</span>`).join('')}</div>` +
-      (d.can_claim ? `<button class="btn bg-yellow-500 text-black" onclick="claimDaily()">Abholen +${d.reward} FC</button>`
-        : `<div class="text-zinc-400 text-sm">Nächstes Daily in ${Math.floor(left / 3600)}h ${Math.floor(left % 3600 / 60)}m ${left % 60}s (dann +${d.reward} FC)</div>`) +
-      '<div class="text-xs text-zinc-500 mt-2">Jeden Tag abholen = mehr Coins. Tag 7 gibt +500 Bonus!</div>'
-  }
-  clearInterval(dTimer); draw(); dTimer = setInterval(draw, 1000)
-}
-
-/* ---- Spieler, Profile, Geschenke ---- */
-VIEWS.players = () => `<div class="glass rounded-xl p-4 mb-4"><b>🎁 Coins verschenken</b>
-  <div class="flex gap-2 mt-2"><input id="gto" placeholder="Username" class="inp flex-1 min-w-0"><input id="gam" type="number" min="1" placeholder="FC" class="inp w-24"><button class="btn bg-pink-600" style="width:auto" onclick="gift()">Senden</button></div>
-  <div class="text-xs text-zinc-500 mt-1">Limit: 5.000 FC pro Tag</div></div>
-  <input id="pq" placeholder="Spieler suchen..." class="inp w-full mb-3" oninput="loadPlayers()"><div id="plist"></div>`
-PAGEINIT.players = () => loadPlayers()
-async function loadPlayers() {
-  const d = await call('players_list', { q: ($('pq') || {}).value || '' }); if (!d || !$('plist')) return
-  $('plist').innerHTML = d.map(u => `<div class="glass rounded-lg px-3 py-2 mb-1 flex justify-between items-center"><span>${u.online ? '🟢' : '⚪'} ${nm(u)} <span class="text-xs text-zinc-500">Lv ${u.level}</span></span>
-    <button class="text-pink-400" data-u="${esc(u.username)}" onclick="$('gto').value=this.dataset.u;$('gam').focus()">🎁</button></div>`).join('')
-}
-async function gift() {
+VIEWS.keno = () => { kpicks = []; return betBox() + `<div class="grid grid-cols-8 gap-1.5 mb-3">${Array.from({ length: 40 }, (_, i) => `<button id="k${i + 1}" onclick="kpick(${i + 1})" class="kc">${i + 1}</button>`).join('')}</div>
+  <div class="text-xs text-zinc-400 mb-4">Wähle 5 Zahlen • 2 Treffer 1,5× • 3 → 4× • 4 → 15× • 5 → 80×</div>
+  <button class="btn play bg-emerald-600" onclick="kplay()">Ziehen</button>` }
+function kpick(n) {
+  if (busy) return
   sfx.click()
-  const d = await call('send_coins', { to_user: $('gto').value.trim(), amount: +$('gam').value }); if (!d) return
-  sfx.claim()
-  setBalance(d.balance); toast('🎁 Gesendet!'); $('gam').value = ''
+  const i = kpicks.indexOf(n)
+  if (i >= 0) kpicks.splice(i, 1); else if (kpicks.length < 5) kpicks.push(n)
+  document.querySelectorAll('.kc').forEach(b => b.classList.remove('on', 'hit', 'drawn'))
+  kpicks.forEach(k => $('k' + k).classList.add('on'))
 }
-async function showProfile(name) {
-  sfx.click()
-  const u = await call('get_profile', { uname: name }); if (!u) return toast('Profil nicht gefunden')
-  clearInterval(chatTimer); $('title').textContent = '🙍 ' + u.username; $('desc').textContent = 'Spielerprofil'; msg('')
-  $('view').innerHTML = `<div class="text-center"><div class="text-7xl mb-2">${esc(u.avatar)}</div><div class="text-2xl font-black" style="color:${/^#[0-9a-f]{6}$/i.test(u.color) ? u.color : '#fff'}">${esc(u.username)} ${BADGE[u.role] || ''}</div>
-    <div class="text-zinc-400 text-sm">${u.clan ? '🛡️ [' + esc(u.clan) + '] · ' : ''}${esc(u.title || 'Spieler')} · Level ${u.level} · ${u.online ? '🟢 online' : '⚪ offline'}</div>
-    <div class="text-sm text-zinc-300 mt-2">${u.status ? '💬 ' + esc(u.status) : ''}${u.fav_game ? ' · 🎮 ' + esc(u.fav_game) : ''}</div>
-    <div class="text-xs text-zinc-400">${u.prestige ? '👑 Prestige ' + u.prestige + ' · ' : ''}${u.clan ? '🏰 [' + esc(u.clan) + '] · ' : ''}♟️ Elo ${u.elo} (${u.chess_w}S/${u.chess_d}R/${u.chess_l}N)</div>
-    <div class="my-4 italic text-zinc-300">${esc(u.bio || 'Keine Bio.')}</div>
-    <div class="grid grid-cols-3 gap-2 text-sm mb-4"><div class="glass rounded-lg p-2">🪙<br><b>${Number(u.balance).toLocaleString('de-DE')}</b></div><div class="glass rounded-lg p-2">🎰 gesetzt<br><b>${Number(u.wagered).toLocaleString('de-DE')}</b></div><div class="glass rounded-lg p-2">🔥 Streak<br><b>${u.streak}</b></div></div>
-    <div class="flex flex-wrap justify-center gap-2 mb-3">${ACH.map(([i, n, f]) => `<span class="text-xs px-2 py-1 rounded-full ${f(u) ? 'bg-emerald-900 text-emerald-300' : 'bg-zinc-800 text-zinc-600'}">${i} ${n}</span>`).join('')}</div>
-    <div class="text-xs text-zinc-500 mb-4">Dabei seit ${new Date(u.joined).toLocaleDateString('de-DE')}</div>
-    <button class="btn bg-pink-600" data-u="${esc(u.username)}" onclick="show('players');$('gto').value=this.dataset.u">🎁 Coins schenken</button></div>`
-}
+function kplay() { if (kpicks.length !== 5) return msg('Wähle genau 5 Zahlen', 'lose'); play(kpicks.join(',')) }
 
-/* ---- Shop & Profil ---- */
-VIEWS.shop = () => '<div id="shop" class="text-zinc-400">Lade...</div>'
-PAGEINIT.shop = async () => {
-  const cat = await call('shop_catalog', {}); if (!cat || !$('shop')) return
-  const owned = ME.owned || [], eq = { avatar: ME.avatar, color: ME.color, title: ME.title }
-  const sec = (slot, label) => `<div class="flex justify-between items-center mt-5 mb-2"><b>${label}</b><button class="text-xs text-zinc-500" onclick="shopAct('equip','reset_${slot}')">zurücksetzen</button></div><div class="grid grid-cols-2 gap-2">` +
-    cat.filter(i => i.slot === slot).map(i => {
-      const has = owned.includes(i.id), on = eq[slot] === i.v
-      const show_ = slot === 'color' ? `<span style="color:${i.v}">■ ${esc(i.name)}</span>` : esc(i.v)
-      return `<div class="glass rounded-xl p-3 text-center ${on ? 'sel' : ''}"><div class="${slot === 'avatar' ? 'text-3xl' : 'font-bold'} mb-2">${show_}</div>` +
-        (has ? `<button class="btn bg-cyan-700" style="padding:.3rem" onclick="shopAct('equip','${i.id}')">${on ? '✔ Aktiv' : 'Anlegen'}</button>`
-          : i.rare ? `<div class="text-xs text-purple-300 py-1">🔒 ${esc(i.how)}</div>` : `<button class="btn bg-yellow-500 text-black" style="padding:.3rem" onclick="shopAct('shop_buy','${i.id}')">${i.price.toLocaleString('de-DE')} FC</button>`) + '</div>'
+const TDIFF = { easy: [4, '🟢 Leicht · 4 Felder, 1 Bombe'], medium: [3, '🟡 Mittel · 3 Felder, 1 Bombe'], hard: [2, '🔴 Schwer · 2 Felder, 1 Bombe'], extreme: [3, '💀 Extrem · 3 Felder, 2 Bomben'] }
+VIEWS.towers = () => { tw = null; return betBox() + `<select id="tdiff" class="inp w-full mb-3">${Object.entries(TDIFF).map(([k, v]) => `<option value="${k}">${v[1]}</option>`).join('')}</select>
+  <div id="tgrid" class="space-y-1 mb-3 min-h-[3rem]"></div><div id="tinfo" class="text-sm text-zinc-400 text-center mb-3">8 Ebenen – je höher, desto mehr Multiplikator</div>
+  <button id="tbtn" class="btn bg-emerald-600" onclick="towersBtn()">Start</button>` }
+function towersDraw(rev) {
+  const cols = TDIFF[tw.diff][0]; let h = ''
+  for (let l = 7; l >= 0; l--) {
+    h += '<div class="flex gap-1">' + Array.from({ length: cols }, (_, c) => {
+      const picked = tw.path[l] === c, bomb = rev && ((rev[l] >> c) & 1), act = l === tw.lvl && !rev
+      return `<button class="kc flex-1 ${picked && !bomb ? 'hit' : ''}" style="padding:.55rem 0" ${act ? `onclick="towersPick(${c})"` : 'disabled'}>${bomb ? '💣' : picked ? '💎' : act ? '?' : '·'}</button>`
     }).join('') + '</div>'
-  $('shop').innerHTML = `<div class="glass rounded-xl p-4"><b>Bio</b><div class="flex gap-2 mt-2"><input id="bio" maxlength="80" value="${esc(ME.bio || '')}" class="inp flex-1 min-w-0"><button class="btn bg-cyan-600" style="width:auto" onclick="saveBio()">Speichern</button></div></div>
-    <div class="glass rounded-xl p-4 mt-2"><b>Profil</b><div class="flex gap-2 mt-2 flex-wrap"><input id="pst" maxlength="40" placeholder="Status" value="${esc(ME.status || '')}" class="inp flex-1 min-w-0"><input id="pfv" maxlength="30" placeholder="Lieblingsspiel" value="${esc(ME.fav_game || '')}" class="inp w-40"><button class="btn bg-cyan-600" style="width:auto" onclick="saveExtra()">Speichern</button></div></div>` +
-    sec('avatar', '😎 Avatare') + sec('color', '🎨 Namensfarben') + sec('title', '🏷️ Titel')
+  }
+  $('tgrid').innerHTML = h
 }
-async function shopAct(fn, id) {
-  sfx.click()
-  const d = await call(fn, { item: id }); if (!d) return
+async function towersBtn() {
+  const b = $('tbtn')
+  if (!tw) {
+    const bet = readBet(); if (!bet) return
+    sfx.bet()
+    const diff = $('tdiff').value, d = await call('towers_start', { b: bet, tdiff: diff }); if (!d) return
+    lastBet = bet; setBalance(d.balance); msg(''); tw = { diff, lvl: 0, path: [], lock: false }
+    b.textContent = '💸 Cashout'; b.className = 'btn bg-yellow-500 text-black'; b.disabled = true
+    $('tinfo').textContent = 'Wähle ein Feld in der untersten Reihe'; towersDraw(); return
+  }
+  const d = await call('towers_cash', {}); if (d) towersEnd(d, true)
+}
+async function towersPick(c) {
+  if (!tw || tw.lock) return
+  tw.lock = true; const d = await call('towers_pick', { tcol: c })
+  if (!d) { tw.lock = false; return }
+  tw.path[tw.lvl] = c
+  if (d.boom) { sfx.lose(); return towersEnd(d, false) }
   sfx.claim()
-  setBalance(d.balance); await loadProfile(); show('shop')
+  tw.lvl++; tw.lock = false; towersDraw()
+  $('tinfo').textContent = Number(d.mult).toFixed(2) + '× • nächste Ebene ' + (d.next ? Number(d.next).toFixed(2) + '×' : '–')
+  const b = $('tbtn'); b.disabled = false; b.textContent = '💸 Cashout ' + Math.floor(lastBet * d.mult) + ' FC'
+  if (d.done) towersEnd(d, true)
 }
-async function saveBio() { const d = await call('set_bio', { t: $('bio').value }); if (d) { ME.bio = $('bio').value; toast('Bio gespeichert') } }
+function towersEnd(d, won) {
+  towersDraw(d.bombs); tw = null; setBalance(d.balance)
+  const b = $('tbtn'); b.textContent = 'Start'; b.className = 'btn bg-emerald-600'; b.disabled = false
+  const net = won ? d.payout - lastBet : -lastBet
+  if (won) sfx.win(); else sfx.lose()
+  msg(won ? `🎉 +${net} FC` : `💥 −${lastBet} FC`, won ? 'win' : 'lose'); logRound(net)
+}
 
-/* ================= SLOT-MENÜ ================= */
+const DICE = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'], RP = { rock: '✊', paper: '✋', scissors: '✌️' }
+let dnS = 0, dnBase = 50, hiRef = 1 + Math.floor(Math.random() * 13), lastParam = ''
+const row = a => '<div class="flex gap-3 flex-wrap">' + a.map(([l, p, c]) => `<button class="btn play ${c}" style="flex:1" onclick="play('${p}')">${l}</button>`).join('') + '</div>'
+const stg = (t, h = 'h-32') => `<div id="stage" class="${h} flex items-center justify-center text-6xl font-black gap-4">${t}</div>`
+const say = h => { $('stage').innerHTML = h }
+
+VIEWS.double = () => { dnS = 0; dnBase = lastBet; return betBox() + stg('💰') + '<div id="dn" class="text-center text-sm text-zinc-400 mb-4">Streak: 0 – Gewinne werden automatisch neu gesetzt</div>' + row([['💥 Double or Nothing', 'x', 'bg-orange-600']]) }
+VIEWS.allin = () => `<input id="bet" type="hidden" value="${balance}">` + stg('🔥', 'h-36') + `<div class="text-center text-zinc-400 mb-4">Dein ganzes Guthaben (${balance} FC) – 48 % Chance auf 2×</div><button class="btn play bg-red-600" onclick="$('bet').value=balance;play('x')">🔥 ALL IN</button>`
+VIEWS.hilo = () => {
+  const up = 13 - hiRef, lo = hiRef - 1, m = c => (0.97 * 13 / c).toFixed(2)
+  return betBox() + stg(`<div class="glass rounded-xl px-6 py-4">${RANKS[hiRef - 1]}</div>`) + '<div class="flex gap-3 mb-3">' +
+    (up ? `<button class="btn play bg-emerald-600" onclick="play('higher:${hiRef}')">⬆ Höher ${m(up)}×</button>` : '') +
+    (lo ? `<button class="btn play bg-rose-600" onclick="play('lower:${hiRef}')">⬇ Niedriger ${m(lo)}×</button>` : '') +
+    '</div><button class="btn bg-zinc-800" onclick="sfx.click();newRef()">🔄 Neue Karte</button>'
+}
+function newRef() { lastBet = Math.floor(Number($('bet').value)) || lastBet; hiRef = 1 + Math.floor(Math.random() * 13); show('hilo') }
+VIEWS.lucky7 = () => betBox() + stg('🎲 🎲') + row([['⬇ Unter 7 · 2.3×', 'under', 'bg-cyan-600'], ['7 · 5.7×', 'seven', 'bg-yellow-600'], ['⬆ Über 7 · 2.3×', 'over', 'bg-pink-600']])
+VIEWS.dragon = () => betBox() + stg('🐉 vs 🐅') + row([['🐉 Dragon 2.05×', 'dragon', 'bg-red-600'], ['Tie 11×', 'tie', 'bg-zinc-700'], ['🐅 Tiger 2.05×', 'tiger', 'bg-orange-600']])
+VIEWS.doors = () => betBox() + stg('🚪 🚪 🚪') + row([['Tür 1', '1', 'bg-cyan-600'], ['Tür 2', '2', 'bg-cyan-600'], ['Tür 3', '3', 'bg-cyan-600']])
+VIEWS.number = () => betBox() + stg('🔟') + '<div class="grid grid-cols-5 gap-2">' + Array.from({ length: 10 }, (_, i) => `<button class="btn play bg-zinc-800" onclick="play('${i + 1}')">${i + 1}</button>`).join('') + '</div>'
+VIEWS.rps = () => betBox() + stg('✊ ✋ ✌️') + row([['✊ Stein', 'rock', 'bg-cyan-600'], ['✋ Papier', 'paper', 'bg-pink-600'], ['✌️ Schere', 'scissors', 'bg-emerald-600']])
+VIEWS.baccarat = () => betBox() + stg('👤 vs 🏦') + row([['👤 Player 2.05×', 'player', 'bg-cyan-600'], ['Tie 9×', 'tie', 'bg-zinc-700'], ['🏦 Banker 2.05×', 'banker', 'bg-red-600']])
+VIEWS.sicbo = () => betBox() + stg('🎲🎲🎲') + row([['⬇ Low ≤10 · 2×', 'low', 'bg-cyan-600'], ['Triple 30×', 'triple', 'bg-yellow-600'], ['⬆ High ≥11 · 2×', 'high', 'bg-pink-600']])
+
+/* ================= SLOTS ================= */
 const SLOTS = {
   classic: { name: 'Classic 777', icon: '🍒', n: 3, tag: 'Low', col: '#22d3ee', sym: ['🍒', '🍋', '🔔', '⭐', '💎', '🍀'], desc: '3 Walzen, klassisch. Ein Paar zahlt schon.', pay: 'Paar 0,72× · Drilling 22×' },
   fruit: { name: 'Fruit Party', icon: '🍇', n: 5, tag: 'Low', col: '#34d399', sym: ['🍒', '🍋', '🍇', '🍉', '🍓'], desc: 'Fast jede Drehung trifft – bis 40×.', pay: '2 gleiche 0,3× · 3: 1,5× · 4: 8× · 5: 40×' },
@@ -921,8 +747,6 @@ const SLOTS = {
   jackpot: { name: 'Global Jackpot', icon: '💰', n: 3, tag: 'Jackpot', col: '#facc15', sym: ['🍒', '🍋', '🔔', '⭐', '🍀', '💰'], desc: '5 % aller Verluste füllen den Pot. Drei 💰 knacken ihn!', pay: 'Paar 0,8× · Drilling 17× · 💰💰💰 = JACKPOT' },
   scratch: { name: 'Rubbellos', icon: '🎟️', n: 6, tag: 'Scratch', col: '#a78bfa', sym: ['🍒', '🍋', '⭐', '💎', '🍀', '🎁'], desc: 'Rubbel 6 Felder frei. 3 gleiche gewinnen, bis 340×.', pay: '3 gleiche 1,35× · 4: 6,8× · 5: 34× · 6: 340×' }
 }
-const ACH = [['🎰', 'Zocker', u => u.wagered >= 10000], ['🐳', 'Whale', u => u.wagered >= 500000], ['💰', 'Reich', u => u.balance >= 100000], ['🔥', '7er-Streak', u => u.streak >= 7], ['⭐', 'Level 5', u => u.level >= 5], ['👑', 'Level 10', u => u.level >= 10]]
-
 VIEWS.slots = () => {
   slotCur = null; scr = null
   return `<div class="grid grid-cols-2 gap-3">${Object.entries(SLOTS).map(([k, m]) =>
@@ -930,6 +754,7 @@ VIEWS.slots = () => {
     <span class="text-xs px-2 py-0.5 rounded-full" style="background:${m.col}33;color:${m.col}">${m.tag}</span><div class="text-xs text-zinc-400 mt-2">${m.desc}</div>
     ${k === 'jackpot' ? '<div class="text-yellow-400 font-bold mt-1">Pot: <span id="jp">…</span> FC</div>' : ''}</button>`).join('')}</div>`
 }
+const PAGEINIT = {}
 PAGEINIT.slots = () => refreshPool()
 async function refreshPool() { const p = await call('jackpot_pool', {}); if (p != null && $('jp')) $('jp').textContent = Number(p).toLocaleString('de-DE') }
 
@@ -990,532 +815,340 @@ function bigWin(text, jp) {
   document.body.appendChild(o); const mn_ = document.querySelector('main'); mn_.classList.add('shake')
   setTimeout(() => { o.remove(); mn_.classList.remove('shake') }, 3300)
 }
-
-/* ================= Missionen & Rain ================= */
-async function loadMissions() {
-  const d = await call('missions_list', {}); if (!d || !$('missions')) return
-  $('missions').innerHTML = '<div class="font-bold mb-2">📋 Tagesmissionen</div>' + d.map(m => `<div class="glass rounded-xl p-3 mb-2"><div class="flex justify-between text-sm mb-1"><span>${m.label}</span><b class="text-yellow-400">+${m.reward} FC</b></div>
-    <div class="h-2 rounded bg-zinc-800 mb-2"><div class="h-2 rounded bg-emerald-500" style="width:${Math.min(100, m.progress / m.target * 100)}%"></div></div>` +
-    (m.claimed ? '<div class="text-xs text-zinc-500">✔ abgeholt</div>' : m.progress >= m.target ? `<button class="btn bg-emerald-600" style="padding:.3rem" onclick="claimMission('${m.kind}')">Belohnung abholen</button>` : `<div class="text-xs text-zinc-500">${Math.floor(m.progress)} / ${m.target}</div>`) + '</div>').join('')
-}
-async function claimMission(k) { const d = await call('mission_claim', { k }); if (d) { sfx.claim(); setBalance(d.balance); toast('📋 Belohnung erhalten!'); loadMissions() } }
-async function admRain() { const t = Number(prompt('Gesamtsumme für alle Online-Spieler (FC):')); if (t > 0) { const d = await call('admin_rain', { total: t }); if (d) toast('🌧️ ' + d.each + ' FC an ' + d.count + ' Spieler') } }
-
-/* ================= Slot-Tempo ================= */
 let slotSpeed = 'normal'; try { slotSpeed = localStorage.getItem('slotSpeed') || 'normal' } catch (e) { }
 const speedBox = () => `<div class="flex gap-1 justify-end items-center mb-3 text-xs"><span class="text-zinc-500 mr-1">Tempo:</span>${[['normal', 'Normal'], ['fast', 'Schnell'], ['turbo', '⚡ Turbo']].map(([k, l]) =>
   `<button class="px-2 py-1 rounded-lg bg-zinc-800 ${slotSpeed === k ? 'sel' : ''}" onclick="setSpeed('${k}')">${l}</button>`).join('')}</div>`
 function setSpeed(k) { sfx.click(); slotSpeed = k; try { localStorage.setItem('slotSpeed', k) } catch (e) { } lastBet = Math.floor(+$('bet').value) || lastBet; openSlot(slotCur) }
 
-/* ================= Live-Gewinne (Lobby) ================= */
-const _lobby = VIEWS.lobby
-VIEWS.lobby = () => _lobby() + '<div id="feed" class="mt-5"></div>'
-PAGEINIT.lobby = () => { loadFeed(); chatTimer = setInterval(loadFeed, 8000) }
-async function loadFeed() {
-  const d = await call('recent_wins', {}); if (!d || !$('feed')) return
-  $('feed').innerHTML = '<div class="font-bold mb-2">🔥 Live-Gewinne</div>' + (d.map(w => `<div class="glass rounded-lg px-3 py-2 mb-1 text-sm flex justify-between"><span>${esc(w.username)}${w.game !== 'Spiel' ? ' · ' + esc(w.game) : ''}</span><b class="text-emerald-400">+${Number(w.payout).toLocaleString('de-DE')} FC (${Math.round(w.payout / w.bet)}×)</b></div>`).join('') || '<div class="text-zinc-500 text-sm">Noch keine großen Gewinne – du könntest der Erste sein!</div>')
-}
+/* ================= MEGA GOD-MODE ADMIN BOARD ================= */
+VIEWS.admin = () => `
+<div class="space-y-6">
+  <!-- Metrics Header -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+    <div class="glass rounded-xl p-3 border-l-4 border-cyan-500">
+      <div class="text-xs text-zinc-400">Registrierte Spieler</div>
+      <div id="adm_stat_users" class="text-2xl font-black text-white">…</div>
+    </div>
+    <div class="glass rounded-xl p-3 border-l-4 border-emerald-500">
+      <div class="text-xs text-zinc-400">Gesamt im Umlauf</div>
+      <div id="adm_stat_coins" class="text-2xl font-black text-emerald-400">…</div>
+    </div>
+    <div class="glass rounded-xl p-3 border-l-4 border-yellow-500">
+      <div class="text-xs text-zinc-400">Global Jackpot Pot</div>
+      <div id="adm_stat_jp" class="text-2xl font-black text-yellow-400">…</div>
+    </div>
+    <div class="glass rounded-xl p-3 border-l-4 border-purple-500">
+      <div class="text-xs text-zinc-400">Total Wagered</div>
+      <div id="adm_stat_wager" class="text-2xl font-black text-purple-400">…</div>
+    </div>
+  </div>
 
-/* ================= TOWERS ================= */
-const TDIFF = { easy: [4, '🟢 Leicht · 4 Felder, 1 Bombe'], medium: [3, '🟡 Mittel · 3 Felder, 1 Bombe'], hard: [2, '🔴 Schwer · 2 Felder, 1 Bombe'], extreme: [3, '💀 Extrem · 3 Felder, 2 Bomben'] }
-VIEWS.towers = () => { tw = null; return betBox() + `<select id="tdiff" class="inp w-full mb-3">${Object.entries(TDIFF).map(([k, v]) => `<option value="${k}">${v[1]}</option>`).join('')}</select>
-  <div id="tgrid" class="space-y-1 mb-3 min-h-[3rem]"></div><div id="tinfo" class="text-sm text-zinc-400 text-center mb-3">8 Ebenen – je höher, desto mehr Multiplikator</div>
-  <button id="tbtn" class="btn bg-emerald-600" onclick="towersBtn()">Start</button>` }
-function towersDraw(rev) {
-  const cols = TDIFF[tw.diff][0]; let h = ''
-  for (let l = 7; l >= 0; l--) {
-    h += '<div class="flex gap-1">' + Array.from({ length: cols }, (_, c) => {
-      const picked = tw.path[l] === c, bomb = rev && ((rev[l] >> c) & 1), act = l === tw.lvl && !rev
-      return `<button class="kc flex-1 ${picked && !bomb ? 'hit' : ''}" style="padding:.55rem 0" ${act ? `onclick="towersPick(${c})"` : 'disabled'}>${bomb ? '💣' : picked ? '💎' : act ? '?' : '·'}</button>`
-    }).join('') + '</div>'
+  <!-- Global Server Controls -->
+  <div class="glass rounded-xl p-5 border border-purple-500/40">
+    <div class="flex items-center gap-2 mb-3">
+      <span class="text-2xl">⚡</span>
+      <h3 class="text-lg font-black text-purple-400">Server & Quoten God-Mode</h3>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+      <div>
+        <label class="text-xs text-zinc-400 font-semibold">Server Glück / Quoten-Modus</label>
+        <select id="adm_global_rig" class="inp w-full mt-1 text-sm py-2" onchange="setGlobalRig(this.value)">
+          <option value="0">🟢 Normal (Faires RNG)</option>
+          <option value="1">🍀 Haus-Glück (Alle gewinnen / Win Rain)</option>
+          <option value="2">🚀 MEGA-RAIN (3× Multiplikator auf alles)</option>
+          <option value="-1">😈 Haus gewinnt immer (100% House Edge)</option>
+        </select>
+      </div>
+      <div>
+        <label class="text-xs text-zinc-400 font-semibold">Jackpot Pool (FC)</label>
+        <div class="flex gap-1 mt-1">
+          <input id="adm_pot_in" type="number" min="0" placeholder="z.B. 100000" class="inp w-full text-sm py-2">
+          <button class="btn bg-yellow-500 text-black text-xs px-3" style="width:auto" onclick="admSetPot()">Setzen</button>
+        </div>
+      </div>
+      <div>
+        <label class="text-xs text-zinc-400 font-semibold">Jackpot Cut (% von Verlusten)</label>
+        <div class="flex gap-1 mt-1">
+          <input id="adm_cut_in" type="number" min="0" max="100" placeholder="5" class="inp w-full text-sm py-2">
+          <button class="btn bg-cyan-600 text-xs px-3" style="width:auto" onclick="admSetCut()">Setzen</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Next Game Outcome Forcers -->
+    <div class="p-4 rounded-xl bg-zinc-900/60 border border-zinc-700/60 mb-4">
+      <div class="text-xs font-bold text-yellow-400 mb-2">🎯 Nächste Spielrunden manipulieren (Forced Outcomes)</div>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs">
+        <div>
+          <label class="text-zinc-400">Nächster Crash Multiplier:</label>
+          <div class="flex gap-1 mt-1">
+            <input id="f_crash_in" type="number" step="0.1" placeholder="z.B. 50.0 oder 1.0" class="inp py-1 px-2 text-xs w-full">
+            <button class="btn bg-emerald-700 px-2 py-1 text-xs" style="width:auto" onclick="forceNext('crash')">Force</button>
+          </div>
+        </div>
+        <div>
+          <label class="text-zinc-400">Nächste Roulette Zahl (0-36):</label>
+          <div class="flex gap-1 mt-1">
+            <input id="f_roul_in" type="number" min="0" max="36" placeholder="z.B. 0" class="inp py-1 px-2 text-xs w-full">
+            <button class="btn bg-red-700 px-2 py-1 text-xs" style="width:auto" onclick="forceNext('roulette')">Force</button>
+          </div>
+        </div>
+        <div>
+          <label class="text-zinc-400">Nächster Dice Wurf (1-100):</label>
+          <div class="flex gap-1 mt-1">
+            <input id="f_dice_in" type="number" min="1" max="100" placeholder="z.B. 77" class="inp py-1 px-2 text-xs w-full">
+            <button class="btn bg-cyan-700 px-2 py-1 text-xs" style="width:auto" onclick="forceNext('dice')">Force</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Server Announcement Banner Controller -->
+    <div class="p-4 rounded-xl bg-zinc-900/60 border border-zinc-700/60 mb-4">
+      <div class="text-xs font-bold text-cyan-400 mb-2">📢 Server-Ankündigungs-Banner (oben für alle)</div>
+      <div class="flex gap-2">
+        <input id="adm_ann_text" placeholder="Text für alle Spieler eingeben..." class="inp flex-1 text-xs py-2">
+        <button class="btn bg-amber-600 text-xs px-3" style="width:auto" onclick="setAnn(true)">Aktivieren</button>
+        <button class="btn bg-zinc-800 text-xs px-3" style="width:auto" onclick="setAnn(false)">Ausblenden</button>
+      </div>
+    </div>
+
+    <div class="flex gap-2 flex-wrap">
+      <button class="btn bg-sky-600 text-xs" style="width:auto" onclick="admRain()">🌧️ Coin Rain starten</button>
+      <button class="btn bg-yellow-600 text-xs" style="width:auto" onclick="admPayWeek()">🏆 Wochenpreise auszahlen</button>
+      <button class="btn bg-pink-600 text-xs" style="width:auto" onclick="admBroadcast()">💬 Chat-Ankündigung</button>
+    </div>
+  </div>
+
+  <!-- User Manipulation & God-Mode Table -->
+  <div class="glass rounded-xl p-5">
+    <div class="flex items-center justify-between mb-3">
+      <div class="flex items-center gap-2">
+        <span class="text-2xl">👥</span>
+        <h3 class="text-lg font-black text-white">Spieler-Manipulation & God-Mode</h3>
+      </div>
+      <input id="adm_user_search" placeholder="Spieler suchen..." class="inp text-xs py-1.5 px-3 w-48" oninput="filterAdminUsers()">
+    </div>
+    <p class="text-xs text-zinc-400 mb-4">Vollständige Kontrolle über jeden Spieler: Quoten manipulieren, Kontostand setzen, Multiplikator tunen, Jackpot sofort auslösen.</p>
+    <div id="adm_user_list" class="space-y-3">Lade Benutzer...</div>
+  </div>
+</div>`
+
+let ADMIN_USERS_CACHE = []
+
+PAGEINIT.admin = () => { loadAdminFullDashboard() }
+
+async function loadAdminFullDashboard() {
+  const d = await call('admin_get_full_dashboard', {})
+  if (!d) return
+  if ($('adm_pot_in')) $('adm_pot_in').value = d.jackpot
+  if ($('adm_cut_in')) $('adm_cut_in').value = d.jackpot_cut_percent
+  if ($('adm_global_rig')) $('adm_global_rig').value = d.global_rig_mode
+  if ($('f_crash_in') && d.forced_crash_next > 0) $('f_crash_in').value = d.forced_crash_next
+  if ($('f_roul_in') && d.forced_roulette_next >= 0) $('f_roul_in').value = d.forced_roulette_next
+  if ($('f_dice_in') && d.forced_dice_next > 0) $('f_dice_in').value = d.forced_dice_next
+  if ($('adm_ann_text') && d.announcement) $('adm_ann_text').value = d.announcement.message || ''
+
+  if (d.stats) {
+    if ($('adm_stat_users')) $('adm_stat_users').textContent = d.stats.user_count
+    if ($('adm_stat_coins')) $('adm_stat_coins').textContent = Number(d.stats.total_balance).toLocaleString('de-DE') + ' FC'
+    if ($('adm_stat_jp')) $('adm_stat_jp').textContent = Number(d.jackpot).toLocaleString('de-DE') + ' FC'
+    if ($('adm_stat_wager')) $('adm_stat_wager').textContent = Number(d.stats.total_wagered).toLocaleString('de-DE') + ' FC'
   }
-  $('tgrid').innerHTML = h
-}
-async function towersBtn() {
-  const b = $('tbtn')
-  if (!tw) {
-    const bet = readBet(); if (!bet) return
-    sfx.bet()
-    const diff = $('tdiff').value, d = await call('towers_start', { b: bet, tdiff: diff }); if (!d) return
-    lastBet = bet; setBalance(d.balance); msg(''); tw = { diff, lvl: 0, path: [], lock: false }
-    b.textContent = '💸 Cashout'; b.className = 'btn bg-yellow-500 text-black'; b.disabled = true
-    $('tinfo').textContent = 'Wähle ein Feld in der untersten Reihe'; towersDraw(); return
-  }
-  const d = await call('towers_cash', {}); if (d) towersEnd(d, true)
-}
-async function towersPick(c) {
-  if (!tw || tw.lock) return
-  tw.lock = true; const d = await call('towers_pick', { tcol: c })
-  if (!d) { tw.lock = false; return }
-  tw.path[tw.lvl] = c
-  if (d.boom) { sfx.lose(); return towersEnd(d, false) }
-  sfx.claim()
-  tw.lvl++; tw.lock = false; towersDraw()
-  $('tinfo').textContent = Number(d.mult).toFixed(2) + '× • nächste Ebene ' + (d.next ? Number(d.next).toFixed(2) + '×' : '–')
-  const b = $('tbtn'); b.disabled = false; b.textContent = '💸 Cashout ' + Math.floor(lastBet * d.mult) + ' FC'
-  if (d.done) towersEnd(d, true)
-}
-function towersEnd(d, won) {
-  towersDraw(d.bombs); tw = null; setBalance(d.balance)
-  const b = $('tbtn'); b.textContent = 'Start'; b.className = 'btn bg-emerald-600'; b.disabled = false
-  const net = won ? d.payout - lastBet : -lastBet
-  if (won) sfx.win(); else sfx.lose()
-  msg(won ? `🎉 +${net} FC` : `💥 −${lastBet} FC`, won ? 'win' : 'lose'); logRound(net)
+
+  ADMIN_USERS_CACHE = d.users || []
+  renderAdminUsers(ADMIN_USERS_CACHE)
 }
 
-/* ================= COMMUNITY ================= */
-VIEWS.community = () => '<div id="comm" class="text-zinc-400">Lade...</div>'
-PAGEINIT.community = () => loadCommunity()
-async function loadCommunity() {
-  const [g, l, c] = await Promise.all([call('goal_info', {}), call('lottery_info', {}), call('clans_list', {})])
-  if (!$('comm')) return; let h = ''
-  if (g) {
-    const pct = Math.min(100, g.total / g.target * 100), ok = g.total >= g.target
-    h += `<div class="glass rounded-xl p-4 mb-3"><b>🎯 Community-Ziel (heute)</b><div class="text-xs text-zinc-400 my-2">Alle Spieler zusammen setzen ${g.target.toLocaleString('de-DE')} FC → jeder aktive Spieler (mind. 500 FC selbst gesetzt) bekommt +500 FC. Du: ${Math.floor(g.mine)} FC.</div>
-    <div class="h-3 rounded bg-zinc-800 mb-2"><div class="h-3 rounded bg-cyan-500" style="width:${pct}%"></div></div><div class="text-xs mb-2">${Math.floor(g.total).toLocaleString('de-DE')} / ${g.target.toLocaleString('de-DE')} FC</div>
-    ${g.claimed ? '✔ heute abgeholt' : ok && g.mine >= 500 ? '<button class="btn bg-emerald-600" onclick="goalClaim()">+500 FC abholen</button>' : ''}</div>`
-  }
-  if (l) h += `<div class="glass rounded-xl p-4 mb-3"><b>🎟️ Stündliche Lotterie</b><div class="text-xs text-zinc-400 my-2">Ticket = ${l.price} FC. Ein Gewinner zieht 90 % des Pots. Ziehung in ${Math.floor(l.secs / 60)} Min.</div>
-    <div class="text-2xl font-black text-yellow-400 mb-1">Pot: ${Number(l.pot).toLocaleString('de-DE')} FC</div><div class="text-xs text-zinc-400 mb-3">Deine Tickets: ${l.mine} · Gesamt: ${l.total}</div>
-    <div class="flex gap-2">${[1, 5, 10].map(n => `<button class="btn bg-yellow-500 text-black" onclick="lotBuy(${n})">${n}× (${n * l.price})</button>`).join('')}</div></div>`
-  if (c) {
-    const mine = c.find(x => x.mine)
-    h += `<div class="glass rounded-xl p-4"><b>🛡️ Clans</b>` + (mine ? `<div class="text-sm my-2">Du bist in <b>[${esc(mine.tag)}] ${esc(mine.name)}</b> <button class="text-red-400 text-xs ml-2" onclick="clanLeave()">verlassen</button></div>`
-      : `<div class="flex gap-2 my-2"><input id="cname" maxlength="20" placeholder="Clan-Name" class="inp flex-1 min-w-0"><input id="ctag" maxlength="4" placeholder="TAG" class="inp w-20"><button class="btn bg-pink-600" style="width:auto" onclick="clanCreate()">Gründen (5.000)</button></div>`) +
-      c.map((x, i) => `<div class="flex justify-between items-center glass rounded-lg px-3 py-2 mt-1 text-sm"><span>${i + 1}. <b>[${esc(x.tag)}]</b> ${esc(x.name)} <span class="text-xs text-zinc-500">${x.members}/20 · ${Math.floor(x.w).toLocaleString('de-DE')} FC gesetzt</span></span>${mine ? '' : `<button class="text-cyan-400" onclick="clanJoin(${x.id})">Beitreten</button>`}</div>`).join('') + '</div>'
-  }
-  $('comm').innerHTML = h
-}
-async function goalClaim() { const d = await call('goal_claim', {}); if (d) { sfx.claim(); setBalance(d.balance); toast('🎯 +500 FC!'); loadCommunity() } }
-async function lotBuy(n) { const d = await call('lottery_buy', { cnt: n }); if (d) { sfx.bet(); setBalance(d.balance); toast('🎟️ Tickets gekauft – viel Glück!'); loadCommunity() } }
-async function clanCreate() { const d = await call('clan_create', { cname: $('cname').value, ctag: $('ctag').value }); if (d) { sfx.claim(); setBalance(d.balance); toast('🛡️ Clan gegründet!'); loadCommunity() } }
-async function clanJoin(id) { const { error } = await sb.rpc('clan_join', { cid: id }); error ? toast(error.message) : loadCommunity() }
-async function clanLeave() { await sb.rpc('clan_leave'); loadCommunity() }
-
-/* ================= Level-Belohnung & Wochenturnier ================= */
-async function loadLevel() {
-  const d = await call('level_info', {}); if (!d || !$('lvlbox')) return
-  $('lvlbox').innerHTML = `<div class="glass rounded-xl p-3 flex justify-between items-center"><div><b>⭐ Level ${d.level}</b><div class="text-xs text-zinc-400">Jedes neue Level: Level × 200 FC</div></div>` +
-    (d.reward > 0 ? `<button class="btn bg-yellow-500 text-black" style="width:auto" onclick="claimLevel()">+${Number(d.reward).toLocaleString('de-DE')} FC</button>` : '<span class="text-xs text-zinc-500">Nichts offen</span>') + '</div>'
-}
-async function claimLevel() { const d = await call('level_claim', {}); if (d) { sfx.claim(); setBalance(d.balance); toast('⭐ +' + d.reward + ' FC'); loadLevel() } }
-async function tournamentHtml() {
-  const t = await call('tournament_board', {}); if (!t) return ''
-  const h = Math.floor(t.secs_left / 3600), f = n => Number(n).toLocaleString('de-DE')
-  return `<div class="glass rounded-xl p-4 mb-2"><div class="font-bold">🏆 Wochenturnier <span class="text-xs text-zinc-400">(endet in ${Math.floor(h / 24)}d ${h % 24}h)</span></div>
-    <div class="text-xs text-zinc-500 mb-2">Wer diese Woche am meisten setzt: 🥇 5.000 · 🥈 2.500 · 🥉 1.000 FC</div>` +
-    t.board.map((x, i) => `<div class="flex justify-between text-sm py-1"><span>${['🥇', '🥈', '🥉'][i] || (i + 1) + '.'} ${nm(x)}</span><b>${f(x.score)}</b></div>`).join('') +
-    `<div class="text-xs text-zinc-400 mt-2">Du: Platz ${t.rank} · ${f(t.score)} FC gesetzt</div></div>`
-}
-async function admPayWeek() { const d = await call('admin_pay_week', {}); if (d) toast('🏆 ' + d.winners + ' Gewinner bezahlt') }
-
-/* ================= VIDEO POKER ================= */
-const RK = '23456789TJQKA', SU = ['♠', '♥', '♦', '♣']
-let vp = null
-VIEWS.poker = () => { vp = null; return betBox() + `<div id="vph" class="flex justify-center gap-2 mt-6 mb-8">${Array.from({ length: 5 }, () => '<div class="vpc"><div>?</div></div>').join('')}</div>
-  <div id="vpinfo" class="text-center text-sm text-zinc-400 mb-3">Austeilen, Karten halten, tauschen.</div>
-  <button id="vpbtn" class="btn bg-emerald-600" onclick="vpBtn()">Austeilen</button>
-  <div class="text-xs text-zinc-500 mt-3 text-center">Paar (J+) 1× · 2 Paare 2× · Drilling 3× · Straße 4× · Flush 5× · Full House 8× · Vierling 25× · Straight Flush 50× · Royal Flush 800×</div>` }
-const vpCard = (c, i) => `<div class="vpc ${[1, 2].includes(Math.floor(c / 13)) ? 'red' : ''} ${vp && vp.hold.has(i) ? 'hold' : ''}" onclick="vpHold(${i})"><div>${RK[c % 13] === 'T' ? '10' : RK[c % 13]}</div><div>${SU[Math.floor(c / 13)]}</div></div>`
-const vpRender = hand => { $('vph').innerHTML = hand.map(vpCard).join('') }
-function vpHold(i) { if (!vp || vp.done) return; sfx.click(); vp.hold.has(i) ? vp.hold.delete(i) : vp.hold.add(i); vpRender(vp.hand) }
-async function vpBtn() {
-  const b = $('vpbtn')
-  if (!vp || vp.done) {
-    const bet = readBet(); if (!bet) return
-    sfx.bet()
-    const d = await call('vp_deal', { b: bet }); if (!d) return
-    lastBet = bet; setBalance(d.balance); msg(''); vp = { hand: d.hand, hold: new Set(), done: false }
-    vpRender(d.hand); b.textContent = '🔄 Tauschen'; $('vpinfo').textContent = 'Tippe die Karten an, die du behalten willst.'; return
-  }
-  b.disabled = true; sfx.click()
-  const d = await call('vp_draw', { holds: [...vp.hold] }); b.disabled = false; if (!d) return
-  vp.hand = d.hand; vp.done = true; vp.hold = new Set(); vpRender(d.hand); setBalance(d.balance)
-  b.textContent = 'Neue Runde'; $('vpinfo').textContent = d.name
-  const net = d.payout - lastBet
-  if (net > 0) sfx.win(); else if (net < 0) sfx.lose(); else sfx.click()
-  msg(net > 0 ? `🎉 ${d.name}! +${net} FC` : net === 0 ? 'Einsatz zurück' : `−${lastBet} FC`, net > 0 ? 'win' : 'lose'); logRound(net)
-  if (d.mult >= 25) { sfx.bigwin(); bigWin(d.name + ' ×' + d.mult) }
+function filterAdminUsers() {
+  const q = ($('adm_user_search').value || '').toLowerCase().trim()
+  const filtered = ADMIN_USERS_CACHE.filter(u => u.username.toLowerCase().includes(q))
+  renderAdminUsers(filtered)
 }
 
-/* ================= STATISTIKEN ================= */
-VIEWS.stats = () => '<div id="st" class="text-zinc-400">Lade...</div>'
-PAGEINIT.stats = async () => {
-  const d = await call('stats_me', {}); if (!d || !$('st')) return
-  const f = n => Number(n).toLocaleString('de-DE'), t = d.total
-  const label = g => g.startsWith('slot:') ? (SLOTS[g.slice(5)] ? SLOTS[g.slice(5)].icon + ' ' + SLOTS[g.slice(5)].name : g) : (GAMES[g] ? GAMES[g].icon + ' ' + GAMES[g].name : g)
-  const rtp = t.wagered > 0 ? (t.won / t.wagered * 100).toFixed(1) + ' %' : '–'
-  $('st').innerHTML = `<div class="grid grid-cols-2 gap-2 mb-4">${[['🎲 Runden', f(t.plays)], ['💸 Gesetzt', f(t.wagered)], ['💰 Ausgezahlt', f(t.won)], ['📈 Rückzahlung', rtp], ['🏅 Beste Auszahlung', f(t.best)]].map(([a, b]) =>
-    `<div class="glass rounded-xl p-3"><div class="text-xs text-zinc-400">${a}</div><div class="text-xl font-black text-white">${b}</div></div>`).join('')}</div>` +
-    (d.games.length ? '<div class="font-bold mb-2">Nach Spiel</div>' + d.games.map(g => `<div class="glass rounded-lg px-3 py-2 mb-1 text-sm flex justify-between"><span>${label(g.game)} <span class="text-zinc-500">· ${f(g.plays)}×</span></span><span class="text-zinc-400">${f(g.wagered)} → <b class="${g.won >= g.wagered ? 'text-emerald-400' : 'text-red-400'}">${f(g.won)}</b></span></div>`).join('') : '<div>Noch keine Daten – spiel ein paar Runden!</div>') +
-    '<div class="text-xs text-zinc-500 mt-3">Gezählt ab diesem Update.</div>'
+function renderAdminUsers(data) {
+  const box = $('adm_user_list'); if (!box) return
+  const sm = 'style="width:auto;padding:.25rem .6rem"'
+  box.innerHTML = `<div class="text-xs text-zinc-400 mb-2">${data.length} Spieler geladen</div>` + data.map(u => `
+    <div class="glass rounded-xl p-3 flex flex-wrap items-center justify-between gap-3 text-sm border border-zinc-800 hover:border-zinc-700 transition">
+      <div class="flex-1 min-w-[10rem]">
+        <div class="flex items-center gap-1.5">
+          <span class="text-xl">${esc(u.avatar || '🙂')}</span>
+          <b class="text-white text-base" style="color:${/^#[0-9a-f]{6}$/i.test(u.color) ? u.color : '#fff'}">${esc(u.username)}</b>
+          ${u.banned ? '<span class="text-[10px] bg-red-900/60 text-red-300 px-1.5 py-0.5 rounded">GESPERRT</span>' : ''}
+          ${u.is_muted ? '<span class="text-[10px] bg-zinc-700 text-zinc-300 px-1.5 py-0.5 rounded">STUMM</span>' : ''}
+        </div>
+        <div class="text-xs text-emerald-400 font-black mt-0.5">${Number(u.balance).toLocaleString('de-DE')} FC <span class="text-zinc-500 font-normal">(${Number(u.wagered).toLocaleString('de-DE')} gesetzt)</span></div>
+        <div class="text-[11px] text-zinc-400">${u.title ? '🏷️ ' + esc(u.title) + ' · ' : ''}Mult: <b>${u.custom_payout_mult}×</b></div>
+      </div>
+      
+      <!-- Rigging Controller -->
+      <div class="flex flex-col gap-1">
+        <label class="text-[10px] text-zinc-400 uppercase tracking-wider font-bold">Rigging Modus:</label>
+        <select class="inp text-xs py-1 px-2 ${u.rig_mode === 'force_win' ? 'border-emerald-500 text-emerald-300' : u.rig_mode === 'force_lose' ? 'border-red-500 text-red-300' : u.rig_mode === 'force_jackpot' ? 'border-yellow-400 text-yellow-300 font-bold' : ''}" 
+          onchange="admGodEdit('${u.id}', { p_rig: this.value })">
+          <option value="default" ${u.rig_mode === 'default' ? 'selected' : ''}>🟢 Normal</option>
+          <option value="force_win" ${u.rig_mode === 'force_win' ? 'selected' : ''}>🍀 Immer Win</option>
+          <option value="force_lose" ${u.rig_mode === 'force_lose' ? 'selected' : ''}>💀 Immer Lose</option>
+          <option value="force_jackpot" ${u.rig_mode === 'force_jackpot' ? 'selected' : ''}>💰 Nächster Jackpot!</option>
+        </select>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="flex items-center gap-1.5 flex-wrap">
+        <!-- Role -->
+        <select class="inp text-xs py-1 px-2" onchange="admGodEdit('${u.id}', { p_role: this.value })">
+          ${['user', 'vip', 'mod', 'admin'].map(r => `<option ${r === u.role ? 'selected' : ''}>${r}</option>`).join('')}
+        </select>
+
+        <!-- Trigger Jackpot immediately for this user -->
+        <button class="btn bg-yellow-500 text-black text-xs font-bold" ${sm} onclick="admTriggerJp('${u.id}', '${esc(u.username)}')">💰 JP Geben</button>
+        <button class="btn bg-cyan-700 text-xs" ${sm} onclick="admCoins('${u.id}')">± Coins</button>
+        <button class="btn bg-purple-700 text-xs" ${sm} onclick="admSetExactBalance('${u.id}')">Exakt</button>
+        <button class="btn bg-indigo-700 text-xs" ${sm} onclick="admSetCustomMult('${u.id}')">Mult ×</button>
+        <button class="btn ${u.is_muted ? 'bg-zinc-600' : 'bg-zinc-800'} text-xs" ${sm} onclick="admGodEdit('${u.id}', { p_muted: ${!u.is_muted} })">
+          ${u.is_muted ? 'Entstummen' : 'Stummschalten'}
+        </button>
+        <button class="btn ${u.banned ? 'bg-green-700' : 'bg-orange-700'} text-xs" ${sm} onclick="admGodEdit('${u.id}', { p_banned: ${!u.banned} })">
+          ${u.banned ? 'Entsperren' : 'Sperren'}
+        </button>
+        <button class="btn bg-red-800 text-xs" ${sm} onclick="admDel('${u.id}')">🗑</button>
+      </div>
+    </div>`).join('')
 }
 
-/* ================= DUELLE ================= */
-VIEWS.duel = () => `<div class="glass rounded-xl p-4 mb-3"><b>⚔️ Duell erstellen</b>
-  <div class="flex gap-2 mt-2 flex-wrap"><select id="dgame" class="inp py-2"><option value="coinflip">🪙 Coinflip</option><option value="dice">🎲 Dice (höchster Wurf)</option></select>
-  <input id="dbet" type="number" min="10" value="100" class="inp flex-1 min-w-0"><button class="btn bg-pink-600" style="width:auto" onclick="duelCreate()">Erstellen</button></div>
-  <div class="text-xs text-zinc-500 mt-1">Dein Einsatz wird reserviert. Der Gewinner bekommt 95 % des Pots.</div></div><div id="dlist"></div><div id="drecent" class="mt-4"></div>`
-PAGEINIT.duel = () => { loadDuels(); pvpTimer = setInterval(loadDuels, 4000) }
-async function loadDuels() {
-  const d = await call('duel_list', {}); if (!d || !$('dlist')) return
-  const f = n => Number(n).toLocaleString('de-DE'), G = { coinflip: '🪙 Coinflip', dice: '🎲 Dice' }
-  $('dlist').innerHTML = '<div class="font-bold mb-2">Offene Duelle</div>' + (d.open.length ? d.open.map(x => `<div class="glass rounded-lg px-3 py-2 mb-1 flex justify-between items-center text-sm"><span>${nm(x)} · ${G[x.game]} · <b class="text-yellow-400">${f(x.bet)} FC</b></span>` +
-    (x.mine ? `<button class="btn bg-zinc-700" style="width:auto;padding:.25rem .8rem" onclick="duelAct('duel_cancel',${x.id})">Zurückziehen</button>` : `<button class="btn bg-pink-600" style="width:auto;padding:.25rem .8rem" onclick="duelAct('duel_accept',${x.id})">Annehmen</button>`) + '</div>').join('') : '<div class="text-zinc-500 text-sm">Keine offenen Duelle – erstelle eins!</div>')
-  $('drecent').innerHTML = '<div class="font-bold mb-2">Letzte Duelle</div>' + d.recent.map(r => `<div class="text-sm text-zinc-400 py-0.5">⚔️ <b class="text-white">${esc(r.winner)}</b> besiegt ${esc(r.loser)} · +${f(r.prize)} FC</div>`).join('')
-}
-async function duelCreate() { sfx.bet(); const d = await call('duel_create', { dgame: $('dgame').value, b: Math.floor(+$('dbet').value) }); if (d) { setBalance(d.balance); toast('⚔️ Duell erstellt'); loadDuels() } }
-async function duelAct(fn, id) {
-  sfx.click()
-  const d = await call(fn, { did: id }); if (!d) return; setBalance(d.balance)
-  if (fn === 'duel_accept') {
-    const rolls = d.game === 'dice' ? ` (du ${d.mine} · Gegner ${d.theirs})` : ''
-    if (d.win) { sfx.win(); toast(`🎉 Gewonnen! +${d.prize} FC${rolls}`) } else { sfx.lose(); toast(`💀 Verloren${rolls}`) }
-    if (d.win && d.prize >= 500) bigWin('DUELL GEWONNEN<br>+' + d.prize + ' FC')
-  }
-  loadDuels()
+async function setGlobalRig(val) {
+  const d = await call('admin_force_game_next', { game: 'global_rig', val: Number(val) })
+  if (d) toast('⚡ Globaler Quoten-Modus aktualisiert!')
 }
 
-/* ================= SCHACH ================= */
-const PC = { p: '♟', n: '♞', b: '♝', r: '♜', q: '♛', k: '♚' }
-VIEWS.chess = () => '<div id="chessbox" class="text-zinc-400">Lade...</div>'
-PAGEINIT.chess = () => chessLobby()
-async function chessLobby() {
-  const d = await call('chess_lobby', {}); if (!d || !$('chessbox')) return
-  clearInterval(pvpTimer); cg_ = null
-  if (d.mine) return chessOpen(d.mine)
-  $('chessbox').innerHTML = `<div class="glass rounded-xl p-4 mb-3 flex justify-between items-center"><div><b>♟️ Dein Elo: ${d.me.elo}</b><div class="text-xs text-zinc-400">${d.me.w} Siege · ${d.me.d} Remis · ${d.me.l} Niederlagen</div></div><button class="btn bg-emerald-600" style="width:auto" onclick="chessNew()">Neue Partie</button></div>
-    <div class="font-bold mb-2">Offene Partien</div>` + (d.open.length ? d.open.map(g => `<div class="glass rounded-lg px-3 py-2 mb-1 flex justify-between items-center text-sm"><span>${nm(g)} <span class="text-zinc-500">Elo ${g.elo}</span></span><button class="btn bg-cyan-700" style="width:auto;padding:.25rem .8rem" onclick="chessJoin(${g.id})">Annehmen</button></div>`).join('') : '<div class="text-zinc-500 text-sm">Keine offenen Partien – erstelle eine!</div>') +
-    '<div class="font-bold mt-4 mb-2">🏆 Elo-Rangliste</div>' + (d.top.length ? d.top.map((x, i) => `<div class="flex justify-between glass rounded-lg px-3 py-2 mb-1 text-sm"><span>${['🥇', '🥈', '🥉'][i] || (i + 1) + '.'} ${nm(x)}</span><b>${x.elo}</b></div>`).join('') : '<div class="text-zinc-500 text-sm">Noch keine gewerteten Partien.</div>')
-  pvpTimer = setInterval(chessLobby, 5000)
-}
-async function chessNew() { sfx.click(); const d = await call('chess_create', {}); if (d) chessOpen(d.id) }
-async function chessJoin(id) { sfx.click(); const d = await call('chess_join', { gid: id }); if (d) chessOpen(d.id) }
-async function chessCancel() { await call('chess_cancel', { gid: cg_.id }); chessLobby() }
-function chessLeave() { clearInterval(pvpTimer); cg_ = null; chessLobby() }
-async function chessEnd(kind) { if (kind === 'resign' && !confirm('Wirklich aufgeben?')) return; const d = await call('chess_end', { gid: cg_.id, kind }); if (d) chessPoll() }
-async function chessOpen(id) { clearInterval(pvpTimer); cg_ = { id, ch: new Chess(), sel: null, n: -1 }; await chessPoll(); pvpTimer = setInterval(chessPoll, 2000) }
-async function chessPoll() {
-  if (!cg_) return
-  const s = await call('chess_state', { gid: cg_.id }); if (!s || !cg_ || !$('chessbox')) return
-  cg_.s = s
-  if (s.moves.length !== cg_.n) {
-    cg_.ch = new Chess(); cg_.sel = null; cg_.n = s.moves.length
-    s.moves.forEach(m => { if (!cg_.ch.move(m) && !cg_.warned) { cg_.warned = 1; toast('⚠️ Ungültiger Zug erkannt.') } })
-    sfx.click()
-  }
-  chessRender()
-  if (s.status === 'active' && s.turn === s.my_color && !cg_.rep) {
-    if (cg_.ch.in_checkmate()) { cg_.rep = 1; await call('chess_end', { gid: cg_.id, kind: 'mated' }); chessPoll() }
-    else if (cg_.ch.in_draw()) { cg_.rep = 1; await call('chess_end', { gid: cg_.id, kind: 'draw' }); chessPoll() }
-  }
-}
-function chessRender() {
-  const s = cg_.s, box = $('chessbox'), mine = s.my_color, ch = cg_.ch
-  if (s.status === 'open') { box.innerHTML = '<div class="glass rounded-xl p-4 text-center">⏳ Warte auf einen Gegner...<br><button class="btn bg-zinc-800 mt-3" onclick="chessCancel()">Abbrechen</button></div>'; return }
-  const board = ch.board(), flip = mine === 'b', sqs = []
-  const targets = cg_.sel ? ch.moves({ square: cg_.sel, verbose: true }).map(m => m.to) : []
-  for (let r = 0; r < 8; r++) for (let f = 0; f < 8; f++) {
-    const rr = flip ? 7 - r : r, ff = flip ? 7 - f : f, pc = board[rr][ff], name = 'abcdefgh'[ff] + (8 - rr)
-    const bg = cg_.sel === name ? '#0e7490' : (rr + ff) % 2 ? '#52525b' : '#a1a1aa', w = pc && pc.color === 'w'
-    sqs.push(`<div onclick="chessClick('${name}')" style="aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:clamp(1.5rem,7vw,2.3rem);cursor:pointer;background:${bg};${targets.includes(name) ? 'box-shadow:inset 0 0 0 3px #34d399;' : ''}color:${w ? '#fff' : '#111'};text-shadow:${w ? '0 0 3px #000' : 'none'}">${pc ? PC[pc.type] : ''}</div>`)
-  }
-  const over = s.status === 'done'
-  const status = over ? { white: '⬜ Weiß gewinnt', black: '⬛ Schwarz gewinnt', draw: '½ Remis' }[s.result] : (s.turn === mine ? '🟢 Du bist am Zug' : '⏳ Gegner ist am Zug')
-  box.innerHTML = `<div class="flex justify-between text-sm mb-2"><span>⬛ ${esc(s.black.username)} (${s.black.elo})</span><span>⬜ ${esc(s.white.username)} (${s.white.elo})</span></div>
-    <div class="grid grid-cols-8 mx-auto rounded-lg overflow-hidden" style="max-width:24rem">${sqs.join('')}</div><div class="text-center font-bold my-3">${status}</div><div class="flex gap-2 justify-center flex-wrap">` +
-    (over ? '<button class="btn bg-emerald-600" style="width:auto" onclick="chessLeave()">Zur Lobby</button>' :
-      `<button class="btn bg-red-700" style="width:auto" onclick="chessEnd('resign')">🏳️ Aufgeben</button>` + (s.turn !== mine && s.secs > 180 ? `<button class="btn bg-yellow-600" style="width:auto" onclick="chessEnd('timeout')">⏱ Zeit abgelaufen – Sieg</button>` : '')) + '</div>'
-}
-async function chessClick(name) {
-  const s = cg_ && cg_.s; if (!s || s.status !== 'active' || s.turn !== s.my_color) return
-  if (cg_.sel && cg_.sel !== name) {
-    const t = new Chess(cg_.ch.fen()), m = t.move({ from: cg_.sel, to: name, promotion: 'q' })
-    if (m) { sfx.click(); cg_.sel = null; const d = await call('chess_move', { gid: cg_.id, san: m.san }); if (d) chessPoll(); return }
-  }
-  const pc = cg_.ch.get(name); cg_.sel = pc && pc.color === s.my_color ? name : null; chessRender()
+async function forceNext(g) {
+  let val = 0
+  if (g === 'crash') val = Number($('f_crash_in').value)
+  if (g === 'roulette') val = Number($('f_roul_in').value)
+  if (g === 'dice') val = Number($('f_dice_in').value)
+  if (isNaN(val)) return toast('Ungültiger Wert')
+  const d = await call('admin_force_game_next', { game: g, val })
+  if (d) toast(`🎯 Nächste Runde für ${g.toUpperCase()} erzwungen: ${val}!`)
 }
 
-/* ================= FREUNDE & DMs ================= */
-VIEWS.friends = () => `<div class="flex gap-2 mb-3"><input id="fadd" placeholder="Username" class="inp flex-1 min-w-0"><button class="btn bg-cyan-600" style="width:auto" onclick="friendAct('friend_request',{uname:$('fadd').value})">Anfrage senden</button></div><div id="flist"></div><div id="dmbox" class="mt-4"></div>`
-PAGEINIT.friends = () => { dmWith = null; loadFriends(); pvpTimer = setInterval(() => { loadFriends(); if (dmWith) loadDm() }, 4000) }
-async function friendAct(fn, args) { const d = await call(fn, args); if (d) { sfx.click(); toast('✔ Erledigt'); loadFriends() } }
-async function loadFriends() {
-  const d = await call('friends_list', {}); if (!d || !$('flist')) return
-  const sm = 'style="width:auto;padding:.2rem .7rem"'
-  $('flist').innerHTML = (d.incoming.length ? '<div class="font-bold mb-2">📨 Anfragen</div>' + d.incoming.map(u => `<div class="glass rounded-lg px-3 py-2 mb-1 flex justify-between items-center text-sm"><span>${nm(u)}</span><span class="flex gap-2">
-    <button class="btn bg-emerald-700" ${sm} data-u="${esc(u.username)}" onclick="friendAct('friend_respond',{uname:this.dataset.u,accept:true})">✔</button>
-    <button class="btn bg-red-800" ${sm} data-u="${esc(u.username)}" onclick="friendAct('friend_respond',{uname:this.dataset.u,accept:false})">✖</button></span></div>`).join('') : '') +
-    '<div class="font-bold mt-3 mb-2">Freunde</div>' + (d.friends.length ? d.friends.map(u => `<div class="glass rounded-lg px-3 py-2 mb-1 flex justify-between items-center text-sm"><span>${u.online ? '🟢' : '⚪'} ${nm(u)}</span><span class="flex gap-3 items-center">
-    <button data-u="${esc(u.username)}" onclick="openDm(this.dataset.u)">💬${u.unread > 0 ? ' <b class="text-pink-400">' + u.unread + '</b>' : ''}</button>
-    <button class="text-zinc-500" data-u="${esc(u.username)}" onclick="if(confirm('Freund entfernen?'))friendAct('friend_remove',{uname:this.dataset.u})">✖</button></span></div>`).join('') : '<div class="text-zinc-500 text-sm">Noch keine Freunde – füge jemanden über den Usernamen hinzu.</div>')
-}
-function openDm(name) {
-  sfx.click()
-  dmWith = name
-  $('dmbox').innerHTML = `<div class="glass rounded-xl p-3"><div class="font-bold mb-2">💬 ${esc(name)}</div><div id="dmmsgs" class="h-56 overflow-y-auto space-y-1 mb-2 text-sm"></div>
-    <div class="flex gap-2"><input id="dmin" maxlength="300" class="inp flex-1 min-w-0" placeholder="Nachricht..." onkeydown="if(event.key==='Enter')dmSend()"><button class="btn bg-cyan-600" style="width:auto" onclick="dmSend()">Senden</button></div></div>`
-  loadDm()
-}
-async function loadDm() {
-  const d = await call('dm_list', { with_user: dmWith }), b = $('dmmsgs'); if (!d || !b) return
-  b.innerHTML = d.map(m => `<div class="${m.mine ? 'text-right text-cyan-300' : 'text-zinc-200'}">${esc(m.msg)}</div>`).join(''); b.scrollTop = b.scrollHeight
-}
-async function dmSend() { const i = $('dmin'), m = i.value.trim(); if (!m) return; sfx.click(); const d = await call('dm_send', { to_user: dmWith, m }); if (d) { i.value = ''; loadDm() } }
-
-/* ================= FUTURE GAMES ================= */
-async function submitScore(game, sc) {
-  const d = await call('submit_score', { sgame: game, sc }); if (!d) return
-  if (d.reward) { sfx.claim(); setBalance(d.balance); toast('🎯 Daily Challenge geschafft! +' + d.reward + ' FC') } else if (d.new_best) toast('🏅 Neuer Rekord: ' + sc)
-  loadScores(game); loadChallenge()
-}
-async function loadScores(game) {
-  const d = await call('scores_top', { sgame: game }), b = $('lbox'); if (!d || !b) return
-  b.innerHTML = '<div class="font-bold mb-2">🏆 Bestenliste</div>' + (d.length ? d.map((x, i) => `<div class="flex justify-between glass rounded-lg px-3 py-2 mb-1 text-sm"><span>${['🥇', '🥈', '🥉'][i] || (i + 1) + '.'} ${nm(x)}</span><b>${x.best}</b></div>`).join('') : '<div class="text-zinc-500 text-sm">Noch keine Einträge.</div>')
-}
-async function loadChallenge() {
-  const d = await call('challenge_info', {}), b = $('cbar'); if (!d || !b) return
-  const label = { snake: 'Snake: ' + d.target + ' Punkte', typing: 'Typing Race: ' + d.target + ' WPM', trivia: 'Trivia: ' + d.target + ' von 10' }[d.game]
-  b.innerHTML = `<div class="glass rounded-xl px-4 py-2 mb-3 text-sm flex justify-between"><span>🎯 Daily Challenge: <b>${label}</b></span><span>${d.done ? '✔ geschafft' : '+250 FC'}</span></div>`
-}
-const FG = g => { loadScores(g); loadChallenge() }
-
-/* ---- Snake ---- */
-VIEWS.snake = () => `<div id="vsbar"></div><div id="cbar"></div><canvas id="snk" width="300" height="300" class="mx-auto rounded-xl bg-zinc-900 border border-zinc-700 block"></canvas>
-  <div class="text-center my-3"><b>Punkte: <span id="snkscore">0</span></b></div><button class="btn bg-emerald-600" onclick="snakeStart()">Start</button>
-  <div class="text-xs text-zinc-500 mt-2 text-center">Pfeiltasten / WASD oder auf dem Handy wischen.</div><div id="lbox" class="mt-4"></div>`
-PAGEINIT.snake = () => { FG('snake'); vsAuto('snake') }
-function stopSnake() { if (snk) { clearInterval(snk.timer); document.removeEventListener('keydown', snk.key); snk = null } }
-let snk = null
-function snakeStart() {
-  sfx.click()
-  stopSnake(); const c = $('snk'), x = c.getContext('2d'), N = 15, S = 20; $('snkscore').textContent = 0
-  snk = { body: [[7, 7], [6, 7]], dir: [1, 0], nd: [1, 0], food: [10, 7], score: 0 }
-  const place = () => { do { snk.food = [Math.floor(R() * N), Math.floor(R() * N)] } while (snk.body.some(b => b[0] === snk.food[0] && b[1] === snk.food[1])) }
-  const ok = m => m[0] !== -snk.dir[0] || m[1] !== -snk.dir[1]
-  snk.key = e => { const m = { ArrowUp: [0, -1], w: [0, -1], ArrowDown: [0, 1], s: [0, 1], ArrowLeft: [-1, 0], a: [-1, 0], ArrowRight: [1, 0], d: [1, 0] }[e.key]; if (m && ok(m)) { snk.nd = m; e.preventDefault() } }
-  document.addEventListener('keydown', snk.key)
-  let t0; c.ontouchstart = e => { t0 = e.touches[0] }
-  c.ontouchend = e => { if (!snk) return; const t = e.changedTouches[0], dx = t.clientX - t0.clientX, dy = t.clientY - t0.clientY, m = Math.abs(dx) > Math.abs(dy) ? [Math.sign(dx), 0] : [0, Math.sign(dy)]; if (ok(m)) snk.nd = m }
-  snk.timer = setInterval(() => {
-    snk.dir = snk.nd; const h = [snk.body[0][0] + snk.dir[0], snk.body[0][1] + snk.dir[1]]
-    if (h[0] < 0 || h[1] < 0 || h[0] >= N || h[1] >= N || snk.body.some(b => b[0] === h[0] && b[1] === h[1])) { const sc = snk.score; stopSnake(); sfx.lose(); toast('💥 Game Over: ' + sc + ' Punkte'); return finishScore('snake', sc) }
-    snk.body.unshift(h)
-    if (h[0] === snk.food[0] && h[1] === snk.food[1]) { sfx.claim(); snk.score++; $('snkscore').textContent = snk.score; place() } else snk.body.pop()
-    x.fillStyle = '#18181b'; x.fillRect(0, 0, 300, 300); x.fillStyle = '#f43f5e'; x.fillRect(snk.food[0] * S + 2, snk.food[1] * S + 2, S - 4, S - 4)
-    x.fillStyle = '#34d399'; snk.body.forEach(b => x.fillRect(b[0] * S + 1, b[1] * S + 1, S - 2, S - 2))
-  }, 110)
+async function setAnn(active) {
+  const txt = $('adm_ann_text').value.trim()
+  const d = await call('admin_set_announcement', { txt, is_active: active })
+  if (d) { toast(active ? '📢 Banner aktiviert!' : 'Banner ausgeblendet'); checkAnnouncement() }
 }
 
-/* ---- Typing Race ---- */
-const TTEXT = ['Die schnelle braune Katze springt über den faulen Hund und läuft weiter durch den dunklen Wald',
-  'Wer zuletzt lacht lacht am besten aber wer zuerst tippt gewinnt am Ende das Rennen',
-  'Heute ist ein guter Tag um ein paar Coins zu gewinnen und neue Freunde zu finden',
-  'Ein kleiner Schritt nach dem anderen bringt dich weiter als ein großer Sprung ohne Plan']
-let ty = null
-VIEWS.typing = () => `<div id="vsbar"></div><div id="cbar"></div><div id="tprompt" class="glass rounded-xl p-4 mb-3 text-lg leading-relaxed">Drücke Start und tippe den Text so schnell du kannst.</div>
-  <input id="tin" class="inp w-full mb-3" disabled autocomplete="off" oninput="typingInput()"><button class="btn bg-emerald-600" onclick="typingStart()">Start</button><div id="lbox" class="mt-4"></div>`
-PAGEINIT.typing = () => { FG('typing'); vsAuto('typing') }
-function typingRender(v) { $('tprompt').innerHTML = [...ty.t].map((c, k) => `<span style="color:${k >= v.length ? '#a1a1aa' : v[k] === c ? '#34d399' : '#f87171'}">${c}</span>`).join('') }
-function typingStart() { sfx.click(); ty = { t: TTEXT[Math.floor(R() * TTEXT.length)], t0: 0 }; const i = $('tin'); i.value = ''; i.disabled = false; i.focus(); typingRender('') }
-function typingInput() {
-  if (!ty) return; const v = $('tin').value; if (!ty.t0) ty.t0 = Date.now(); sfx.click(); typingRender(v)
-  if (v === ty.t) {
-    const wpm = Math.min(220, Math.round(ty.t.length / 5 / ((Date.now() - ty.t0) / 60000)))
-    $('tin').disabled = true; $('tprompt').innerHTML += `<div class="mt-3 text-xl font-black text-emerald-400">${wpm} WPM</div>`; ty = null; sfx.win(); finishScore('typing', wpm)
+async function admGodEdit(userId, params) {
+  const d = await call('admin_set_user_god', Object.assign({ target: userId }, params))
+  if (d) { toast('✔ Spieler-Daten aktualisiert!'); loadAdminFullDashboard() }
+}
+
+async function admTriggerJp(userId, uname) {
+  if (!confirm(`Soll der gesamte globale Jackpot SOFORT an ${uname} ausgezahlt werden?`)) return
+  const d = await call('admin_trigger_jackpot_now', { target_user: userId })
+  if (d) { sfx.jackpot(); toast(`💰 BAAAM! Jackpot an ${uname} ausgezahlt!`); loadAdminFullDashboard() }
+}
+
+async function admSetCustomMult(userId) {
+  const m = prompt('Persönlicher Gewinn-Multiplikator für diesen Spieler (z.B. 2.0 für doppelte Gewinne, 5.0 oder 0.5):')
+  if (m !== null && m !== '') {
+    const num = parseFloat(m)
+    if (!isNaN(num) && num > 0) admGodEdit(userId, { p_mult: num })
   }
 }
 
-/* ---- Trivia ---- */
-const QS = [['Hauptstadt von Australien?', ['Sydney', 'Canberra', 'Melbourne', 'Perth'], 1], ['Wie viele Planeten hat unser Sonnensystem?', ['7', '8', '9', '10'], 1],
-  ['Welches Element hat das Symbol Au?', ['Silber', 'Gold', 'Aluminium', 'Argon'], 1], ['Wer malte die Mona Lisa?', ['Michelangelo', 'Raffael', 'Leonardo da Vinci', 'Rembrandt'], 2],
-  ['Wie viele Spieler hat eine Fußballmannschaft auf dem Feld?', ['9', '10', '11', '12'], 2], ['Größter Ozean der Erde?', ['Atlantik', 'Indischer Ozean', 'Pazifik', 'Arktis'], 2],
-  ['Hauptstadt von Kanada?', ['Toronto', 'Ottawa', 'Vancouver', 'Montreal'], 1], ['Wie viele Kontinente gibt es?', ['5', '6', '7', '8'], 2],
-  ['Schnellstes Landtier?', ['Löwe', 'Gepard', 'Pferd', 'Antilope'], 1], ['In welchem Jahr fiel die Berliner Mauer?', ['1985', '1987', '1989', '1991'], 2],
-  ['Was ist 7 × 8?', ['54', '56', '58', '64'], 1], ['Welche Farbe entsteht aus Blau und Gelb?', ['Grün', 'Orange', 'Lila', 'Braun'], 0],
-  ['Welcher Fluss ist in Deutschland am längsten?', ['Elbe', 'Rhein', 'Donau', 'Main'], 1], ['Welches Gas macht den größten Teil der Luft aus?', ['Sauerstoff', 'Stickstoff', 'Kohlendioxid', 'Wasserstoff'], 1]]
-let tv = null
-VIEWS.trivia = () => `<div id="vsbar"></div><div id="cbar"></div><div id="tvbox" class="glass rounded-xl p-5 mb-3 text-center"><button class="btn bg-emerald-600" onclick="triviaStart()">10 Fragen starten</button></div><div id="lbox"></div>`
-PAGEINIT.trivia = () => { FG('trivia'); vsAuto('trivia') }
-function triviaStart() { sfx.click(); tv = { q: shuffle([...QS]).slice(0, 10), i: 0, s: 0 }; triviaShow() }
-function triviaShow() {
-  const [q, o] = tv.q[tv.i]
-  $('tvbox').innerHTML = `<div class="text-xs text-zinc-400 mb-2">Frage ${tv.i + 1}/10 · ${tv.s} Punkte</div><div class="text-lg font-bold mb-4">${q}</div>` + o.map((t, k) => `<button class="btn bg-zinc-800 mb-2" onclick="triviaAnswer(${k})">${t}</button>`).join('')
-}
-function triviaAnswer(k) {
-  const [, o, c] = tv.q[tv.i]; if (k === c) { tv.s++; sfx.win() } else sfx.lose()
-  toast(k === c ? '✅ Richtig!' : '❌ Richtig wäre: ' + o[c]); tv.i++
-  if (tv.i < 10) return triviaShow()
-  const sc = tv.s; tv = null
-  $('tvbox').innerHTML = `<div class="text-4xl font-black mb-3">${sc}/10 🎉</div><button class="btn bg-emerald-600" onclick="triviaStart()">Nochmal</button>`; finishScore('trivia', sc)
+async function admSetPot() {
+  const val = Number($('adm_pot_in').value)
+  if (isNaN(val) || val < 0) return toast('Ungültiger Betrag')
+  const d = await call('admin_set_pot', { amount: val })
+  if (d) { toast('💰 Jackpot Pool gesetzt: ' + Number(d.pool).toLocaleString('de-DE') + ' FC'); sfx.claim(); loadAdminFullDashboard() }
 }
 
-/* ================= VERSUS (seeded) ================= */
-let vsRun = null, vsMid = null, R = Math.random, tt = null
-function mkRng(seed) { let a = seed >>> 0; return () => { a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296 } }
-function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(R() * (i + 1)); [a[i], a[j]] = [a[j], a[i]] } return a }
-function finishScore(game, sc) { if (vsRun && vsRun.game === game) vsSubmit(sc); else submitScore(game, sc) }
-const VSG = [['snake', '🐍 Snake'], ['typing', '⌨️ Typing Race'], ['trivia', '🧠 Trivia Battle'], ['tetris', '🧱 Tetris']]
-const VSN = Object.fromEntries(VSG)
-VIEWS.versus = () => '<div id="vsbox" class="text-zinc-400">Lade...</div>'
-PAGEINIT.versus = () => vsLobby()
-async function vsLobby() {
-  clearInterval(pvpTimer); vsRun = null; R = Math.random
-  const d = await call('vs_lobby', {}); if (!d || !$('vsbox')) return
-  if (d.mine) return vsWait(d.mine)
-  $('vsbox').innerHTML = `<div class="glass rounded-xl p-4 mb-3"><b>🎮 Match erstellen</b><div class="flex gap-2 mt-2"><select id="vsg" class="inp py-2 flex-1">${VSG.map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select><button class="btn bg-emerald-600" style="width:auto" onclick="vsCreate()">Erstellen</button></div>
-    <div class="text-xs text-zinc-500 mt-1">Beide spielen dieselbe Runde (gleicher Seed). Die höhere Punktzahl gewinnt.</div></div><div class="font-bold mb-2">Offene Matches</div>` +
-    (d.open.length ? d.open.map(m => `<div class="glass rounded-lg px-3 py-2 mb-1 flex justify-between items-center text-sm"><span>${nm(m)} · ${VSN[m.game]}</span><button class="btn bg-cyan-700" style="width:auto;padding:.25rem .8rem" onclick="vsJoin(${m.id})">Annehmen</button></div>`).join('') : '<div class="text-zinc-500 text-sm">Keine offenen Matches.</div>') +
-    '<div class="font-bold mt-4 mb-2">Letzte Matches</div>' + d.recent.map(r => `<div class="text-sm text-zinc-400 py-0.5">${VSN[r.game]}: <b class="text-white">${esc(r.a)}</b> ${r.s1} : ${r.s2} <b class="text-white">${esc(r.b)}</b></div>`).join('')
-  pvpTimer = setInterval(vsLobby, 5000)
+async function admSetCut() {
+  const val = Number($('adm_cut_in').value)
+  if (isNaN(val) || val < 0 || val > 100) return toast('Cut muss zwischen 0 und 100 % liegen')
+  const d = await call('admin_set_setting', { skey: 'jackpot_cut_percent', sval: val })
+  if (d) toast('✂️ Jackpot Cut auf ' + val + '% geändert')
 }
-async function vsCreate() { sfx.click(); const d = await call('vs_create', { vgame: $('vsg').value }); if (d) vsWait(d.id) }
-async function vsJoin(id) { sfx.click(); const d = await call('vs_join', { mid: id }); if (d) vsWait(id) }
-async function vsCancel() { await call('vs_cancel', { mid: vsMid }); vsLobby() }
-function vsWait(id) {
-  clearInterval(pvpTimer); vsMid = id
-  const tick = async () => {
-    const s = await call('vs_state', { mid: id }); if (!s || !$('vsbox')) return
-    if (s.status === 'open') $('vsbox').innerHTML = `<div class="glass rounded-xl p-4 text-center">⏳ Warte auf einen Gegner (${VSN[s.game]})...<br><button class="btn bg-zinc-800 mt-3" onclick="vsCancel()">Abbrechen</button></div>`
-    else if (s.status === 'active' && !s.my_done) { clearInterval(pvpTimer); vsRun = { id, game: s.game, seed: s.seed, opp: s.opp }; R = mkRng(s.seed); toast('⚔️ Match startet gegen ' + s.opp); show(s.game) }
-    else if (s.status === 'active') $('vsbox').innerHTML = `<div class="glass rounded-xl p-4 text-center">Dein Ergebnis: <b>${s.mine}</b> – warte auf ${esc(s.opp)}...</div>`
-    else { clearInterval(pvpTimer); vsResult(s) }
+
+async function admSetExactBalance(id) {
+  const a = prompt('Neuer genauer Kontostand (FC):')
+  if (a !== null && a !== '') {
+    const num = Number(a)
+    if (!isNaN(num) && num >= 0) admGodEdit(id, { p_balance: num })
   }
-  tick(); pvpTimer = setInterval(tick, 2000)
-}
-function vsResult(s) {
-  const t = { me: '🏆 Du gewinnst!', opp: '💀 Du verlierst.', draw: '🤝 Unentschieden' }[s.winner]
-  if (s.winner === 'me') sfx.bigwin(); else if (s.winner === 'opp') sfx.lose()
-  $('vsbox').innerHTML = `<div class="glass rounded-xl p-5 text-center"><div class="text-2xl font-black mb-2">${t}</div><div class="mb-3">Du: <b>${s.mine ?? '–'}</b> · ${esc(s.opp)}: <b>${s.theirs ?? '–'}</b></div><button class="btn bg-emerald-600" onclick="vsLobby()">Zurück zur Lobby</button></div>`
-}
-async function vsSubmit(sc) { const id = vsRun.id; vsRun = null; R = Math.random; await call('vs_submit', { mid: id, sc }); show('versus') }
-function vsAuto(game) {
-  if (!vsRun || vsRun.game !== game) return
-  const b = $('vsbar'); if (b) b.innerHTML = `<div class="glass rounded-xl px-4 py-2 mb-3 text-sm text-center">⚔️ Match gegen <b>${esc(vsRun.opp)}</b> – es geht in 2 Sekunden los!</div>`
-  setTimeout(() => { if (vsRun && vsRun.game === game) ({ snake: snakeStart, typing: typingStart, trivia: triviaStart, tetris: tetrisStart })[game]() }, 2000)
 }
 
-/* ================= TETRIS ================= */
-const TP = [[[1, 1, 1, 1]], [[1, 1], [1, 1]], [[0, 1, 0], [1, 1, 1]], [[1, 0, 0], [1, 1, 1]], [[0, 0, 1], [1, 1, 1]], [[0, 1, 1], [1, 1, 0]], [[1, 1, 0], [0, 1, 1]]]
-const TC = ['#22d3ee', '#facc15', '#a78bfa', '#3b82f6', '#fb923c', '#34d399', '#f43f5e']
-VIEWS.tetris = () => `<div id="vsbar"></div><div id="cbar"></div><canvas id="ttc" width="200" height="400" class="mx-auto rounded-xl bg-zinc-900 border border-zinc-700 block"></canvas>
-  <div class="text-center my-2"><b>Punkte: <span id="ttscore">0</span></b> · Zeit <span id="tttime">–</span></div>
-  <div class="grid grid-cols-5 gap-2 mb-2"><button class="btn bg-zinc-800" onclick="tetrisKey('l')">◀</button><button class="btn bg-zinc-800" onclick="tetrisKey('rot')">⟳</button><button class="btn bg-zinc-800" onclick="tetrisKey('r')">▶</button><button class="btn bg-zinc-800" onclick="tetrisKey('d')">▼</button><button class="btn bg-zinc-800" onclick="tetrisKey('drop')">⏬</button></div>
-  <button class="btn bg-emerald-600" onclick="tetrisStart()">Start</button><div class="text-xs text-zinc-500 mt-2 text-center">← → bewegen, ↑ drehen, ↓ schneller, Leertaste: fallen lassen. Runde: 2 Minuten.</div><div id="lbox" class="mt-4"></div>`
-PAGEINIT.tetris = () => { FG('tetris'); vsAuto('tetris') }
-function stopTetris() { if (tt) { clearInterval(tt.timer); clearInterval(tt.clock); document.removeEventListener('keydown', tt.key); tt = null } }
-function tetrisKey(k) { if (tt) tt.act(k) }
-function tetrisStart() {
-  sfx.click()
-  stopTetris(); tt = { b: Array.from({ length: 20 }, () => Array(10).fill(0)), score: 0, left: 120 }
-  const hit = (m, x, y) => m.some((r, j) => r.some((v, i) => v && (x + i < 0 || x + i >= 10 || y + j >= 20 || (y + j >= 0 && tt.b[y + j][x + i]))))
-  const draw = () => {
-    const x = $('ttc').getContext('2d'); x.fillStyle = '#18181b'; x.fillRect(0, 0, 200, 400)
-    tt.b.forEach((r, j) => r.forEach((v, i) => { if (v) { x.fillStyle = TC[v - 1]; x.fillRect(i * 20 + 1, j * 20 + 1, 18, 18) } }))
-    x.fillStyle = TC[tt.p.c - 1]; tt.p.m.forEach((r, j) => r.forEach((v, i) => { if (v) x.fillRect((tt.p.x + i) * 20 + 1, (tt.p.y + j) * 20 + 1, 18, 18) }))
+async function admBroadcast() {
+  const txt = prompt('Chat-Ankündigung (erscheint für alle im Chat):')
+  if (txt) {
+    const d = await call('admin_broadcast', { msg: txt })
+    if (d) toast('📢 Chat-Ankündigung gesendet!')
   }
-  const over = () => { const sc = tt.score; stopTetris(); sfx.lose(); toast('🧱 Ende: ' + sc + ' Punkte'); finishScore('tetris', sc) }
-  const spawn = () => { const i = Math.floor(R() * 7); tt.p = { m: TP[i].map(r => [...r]), c: i + 1, x: 3, y: 0 }; if (hit(tt.p.m, 3, 0)) { over(); return false } return true }
-  const move = (dx, dy) => { if (hit(tt.p.m, tt.p.x + dx, tt.p.y + dy)) return false; tt.p.x += dx; tt.p.y += dy; return true }
-  const lock = () => {
-    tt.p.m.forEach((r, j) => r.forEach((v, i) => { if (v) tt.b[tt.p.y + j][tt.p.x + i] = tt.p.c }))
-    let n = 0; tt.b = tt.b.filter(r => { if (r.every(v => v)) { n++; return false } return true }); while (tt.b.length < 20) tt.b.unshift(Array(10).fill(0))
-    if (n > 0) sfx.win()
-    tt.score += [0, 100, 300, 500, 800][n]; $('ttscore').textContent = tt.score; return spawn()
-  }
-  tt.act = k => {
-    if (!tt) return; let alive = true
-    if (k === 'l') move(-1, 0); else if (k === 'r') move(1, 0)
-    else if (k === 'd') { if (!move(0, 1)) alive = lock() }
-    else if (k === 'rot') { sfx.click(); const m = tt.p.m[0].map((_, i) => tt.p.m.map(r => r[i]).reverse()); if (!hit(m, tt.p.x, tt.p.y)) tt.p.m = m }
-    else if (k === 'drop') { while (move(0, 1)); alive = lock() }
-    if (alive && tt) draw()
-  }
-  tt.key = e => { const m = { ArrowLeft: 'l', ArrowRight: 'r', ArrowDown: 'd', ArrowUp: 'rot', ' ': 'drop' }[e.key]; if (m) { e.preventDefault(); tt.act(m) } }
-  document.addEventListener('keydown', tt.key)
-  tt.timer = setInterval(() => tt && tt.act('d'), 500)
-  tt.clock = setInterval(() => { if (!tt) return; tt.left--; $('tttime').textContent = tt.left + 's'; if (tt.left <= 0) over() }, 1000)
-  $('ttscore').textContent = 0; if (spawn()) draw()
 }
 
-/* ================= CLAN-HQ ================= */
-VIEWS.clanhq = () => '<div id="chq" class="text-zinc-400">Lade...</div>'
-PAGEINIT.clanhq = async () => {
-  const c = await call('clan_hq', {}), box = $('chq'); if (!box) return
-  if (!c) { box.innerHTML = 'Du bist in keinem Clan. Tritt auf der Community-Seite einem Clan bei oder gründe einen.'; return }
-  const f = n => Number(n).toLocaleString('de-DE')
-  box.innerHTML = `<div class="glass rounded-xl p-4 mb-3"><div class="text-xl font-black">[${esc(c.tag)}] ${esc(c.name)} <span class="text-sm text-yellow-400">Lv ${c.level}</span></div>
-    <div class="text-sm text-zinc-400 mb-3">🏦 Kasse: <b class="text-yellow-400">${f(c.bank)} FC</b> · ${c.count}/${c.max_members} Mitglieder</div>
-    <div class="flex gap-2 mb-2"><input id="cdon" type="number" min="1" placeholder="FC spenden" class="inp flex-1 min-w-0"><button class="btn bg-emerald-600" style="width:auto" onclick="clanAct('clan_donate',{amount:+$('cdon').value})">Spenden</button></div>
-    <button class="btn ${c.bonus_ok ? 'bg-yellow-500 text-black' : 'bg-zinc-800'} mb-2" ${c.bonus_ok ? '' : 'disabled'} onclick="clanAct('clan_bonus',{})">🎁 Clan-Tagesbonus +${c.bonus} FC</button>` +
-    (c.is_owner ? `<button class="btn bg-purple-600 mb-2" onclick="clanAct('clan_upgrade',{})">⬆ Clan upgraden (${f(c.upgrade_cost)} FC aus der Kasse)</button>` : '') +
-    `<button class="btn bg-zinc-800" style="font-size:.85rem" onclick="chatChan='clan';show('chat')">💬 Clan-Chat öffnen</button></div>` +
-    c.members.map(m => `<div class="glass rounded-lg px-3 py-2 mb-1 flex justify-between text-sm"><span>${nm(m)} <span class="text-xs text-zinc-500">Lv ${m.level}</span></span><span class="text-zinc-400">${f(m.wagered)} gesetzt</span></div>`).join('')
-}
-async function clanAct(fn, args) { sfx.click(); const d = await call(fn, args); if (!d) return; if (d.balance != null) setBalance(d.balance); sfx.claim(); toast('✔ ' + (d.msg || 'Erledigt')); PAGEINIT.clanhq() }
+async function adm(fn, args) { const { error } = await sb.rpc(fn, args); error ? toast(error.message) : loadAdminFullDashboard() }
+function admCoins(id) { const a = Number(prompt('Coins (negativ = abziehen):')); if (a) adm('admin_give', { target: id, amount: a }) }
+function admDel(id) { if (confirm('Account endgültig löschen?')) adm('admin_delete', { target: id }) }
 
-/* ================= BATTLE PASS & PRESTIGE ================= */
-const BPITEM = { 10: '🔥', 20: '👾', 30: '🏆+Titel' }
-VIEWS.bp = () => '<div id="bpbox" class="text-zinc-400">Lade...</div>'
-PAGEINIT.bp = async () => {
-  const d = await call('bp_info', {}), box = $('bpbox'); if (!d || !box) return
-  const f = n => Number(n).toLocaleString('de-DE'), days = Math.floor(d.secs_left / 86400)
-  const rows = Array.from({ length: 30 }, (_, i) => i + 1).map(t => {
-    const fr = d.free_claimed.includes(t), pr = d.prem_claimed.includes(t), ok = t <= d.tier, it = BPITEM[t] ? ' ' + BPITEM[t] : ''
-    const free = fr ? `<span class="text-zinc-500">✔ ${t * 100}</span>` : ok ? `<button class="btn bg-emerald-700" style="width:auto;padding:.2rem .6rem" onclick="bpClaim(${t},'free')">+${t * 100}</button>` : `<span class="text-zinc-600">${t * 100}</span>`
-    const prem = !d.premium ? '<span class="text-zinc-600">🔒</span>' : pr ? '<span class="text-yellow-500">✔ ⭐</span>' : ok ? `<button class="btn bg-yellow-500 text-black" style="width:auto;padding:.2rem .6rem" onclick="bpClaim(${t},'premium')">⭐ +${t * 200}${it}</button>` : `<span class="text-zinc-600">⭐ ${t * 200}${it}</span>`
-    return `<div class="glass rounded-lg px-3 py-2 mb-1 flex justify-between items-center text-sm ${ok ? '' : 'opacity-60'}"><b>Stufe ${t}</b><span class="flex gap-2 items-center">${free}${prem}</span></div>`
-  }).join('')
-  box.innerHTML = `<div class="glass rounded-xl p-4 mb-3"><div class="font-bold">🎫 Season ${d.season} <span class="text-xs text-zinc-400">(noch ${days} Tage)</span></div>
-    <div class="h-2 rounded bg-zinc-800 my-2"><div class="h-2 rounded bg-cyan-500" style="width:${Math.min(100, (d.xp % 400) / 4)}%"></div></div>
-    <div class="text-xs text-zinc-400">Stufe ${d.tier}/30 · ${f(d.xp)} XP (1 XP je 5 FC Einsatz, 400 XP pro Stufe)</div>
-    ${d.premium ? '<div class="text-yellow-400 text-sm mt-2">⭐ Premium aktiv</div>' : '<button class="btn bg-yellow-500 text-black mt-3" onclick="bpPremium()">⭐ Premium freischalten (25.000 FC)</button>'}</div>
-    <div class="glass rounded-xl p-4 mb-3"><b>👑 Prestige ${d.prestige}</b><div class="text-xs text-zinc-400 mb-2">Ab Level 20: Level zurücksetzen, +10.000 FC. Prestige 1 schaltet die Farbe „Rubin“ frei, Prestige 3 einen Titel.</div>
-    <button class="btn ${d.level >= 20 ? 'bg-purple-600' : 'bg-zinc-800'}" ${d.level >= 20 ? '' : 'disabled'} onclick="prestigeDo()">Prestige (Level ${d.level}/20)</button></div>` + rows
+/* ================= Helfer ================= */
+async function call(fn, args) { const { data, error } = await sb.rpc(fn, args); if (error) { toast(error.message); return null } return data }
+function readBet() {
+  const bet = Math.floor(Number($('bet').value))
+  if (!(bet >= 1)) { msg('Ungültiger Einsatz', 'lose'); return 0 }
+  if (bet > balance) { msg('Nicht genug Coins', 'lose'); return 0 }
+  return bet
 }
-async function bpClaim(t, track) { const d = await call('bp_claim', { btier: t, btrack: track }); if (!d) return; sfx.claim(); setBalance(d.balance); toast('🎫 +' + d.reward + ' FC' + (d.item ? ' + neues Cosmetic!' : '')); await loadProfile(); PAGEINIT.bp() }
-async function bpPremium() { if (!confirm('Premium für diese Season kaufen (25.000 FC)?')) return; const d = await call('bp_premium', {}); if (d) { sfx.bigwin(); setBalance(d.balance); PAGEINIT.bp() } }
-async function prestigeDo() { if (!confirm('Level wird zurückgesetzt. Prestige jetzt durchführen?')) return; const d = await call('prestige_do', {}); if (d) { sfx.bigwin(); setBalance(d.balance); toast('👑 Prestige ' + d.prestige + '!'); await loadProfile(); PAGEINIT.bp() } }
+function logRound(net) { HIST.unshift({ g: GAMES[current].icon + ' ' + GAMES[current].name, bet: lastBet, net }); HIST.length = Math.min(HIST.length, 8); renderHist() }
 
-/* ================= ACHIEVEMENTS & FEED ================= */
-VIEWS.ach = () => '<div id="achbox" class="text-zinc-400">Lade...</div>'
-PAGEINIT.ach = async () => {
-  const d = await call('ach_list', {}), box = $('achbox'); if (!d || !box) return
-  const f = n => Number(n).toLocaleString('de-DE')
-  box.innerHTML = d.map(a => `<div class="glass rounded-xl p-3 mb-2"><div class="flex justify-between text-sm mb-1"><span>🏅 ${esc(a.name)}</span><b class="text-yellow-400">+${f(a.reward)} FC</b></div>
-    <div class="h-2 rounded bg-zinc-800 mb-2"><div class="h-2 rounded bg-emerald-500" style="width:${Math.min(100, a.progress / a.target * 100)}%"></div></div>` +
-    (a.claimed ? '<div class="text-xs text-zinc-500">✔ abgeholt</div>' : a.progress >= a.target ? `<button class="btn bg-emerald-600" style="padding:.3rem" onclick="achClaim('${a.id}')">Belohnung abholen</button>` : `<div class="text-xs text-zinc-500">${f(a.progress)} / ${f(a.target)}</div>`) + '</div>').join('')
-}
-async function achClaim(id) { const d = await call('ach_claim', { aid: id }); if (d) { sfx.claim(); setBalance(d.balance); toast('🏅 +' + d.reward + ' FC'); PAGEINIT.ach() } }
-VIEWS.feed = () => '<div id="fbox" class="text-zinc-400">Lade...</div>'
-PAGEINIT.feed = () => { loadFeed(); pvpTimer = setInterval(loadFeed, 10000) }
-async function loadFeed() {
-  const d = await call('activity_feed', {}), b = $('fbox'); if (!d || !b) return
-  b.innerHTML = d.length ? d.map(x => `<div class="glass rounded-lg px-3 py-2 mb-1 text-sm flex justify-between gap-3"><span>${esc(x.txt)}</span><span class="text-xs text-zinc-500 shrink-0">${new Date(x.ts).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}</span></div>`).join('') : 'Noch nichts passiert.'
-}
-async function saveExtra() { const d = await call('profile_set', { pstatus: $('pst').value, pfav: $('pfv').value }); if (d) { ME.status = $('pst').value; ME.fav_game = $('pfv').value; toast('Profil gespeichert') } }
-
-function setMode(m) { diceMode = m; sfx.click(); diceInfo() }
-function diceInfo() {
-  const over = diceMode === 'over', ch = over ? 100 - diceTarget : diceTarget - 1
-  $('dice-info').innerHTML = `Würfel ${over ? 'über' : 'unter'} <b class="text-white">${diceTarget}</b> • Chance <b class="text-white">${ch}%</b> • Gewinn <b class="text-emerald-400">${(98 / ch).toFixed(2)}×</b>`
-  $('m-over').classList.toggle('sel', over); $('m-under').classList.toggle('sel', !over)
-}
-
-function show(g) {
-  current = g; busy = false
-  $('title').textContent = GAMES[g].icon + ' ' + GAMES[g].name
-  $('desc').textContent = GAMES[g].desc
-  wheelRot = 0; $('view').innerHTML = VIEWS[g](); msg(''); renderHist(); clearInterval(chatTimer); clearInterval(dTimer); clearInterval(pvpTimer); stopSnake(); stopTetris(); cg_ = null; if (cr) { clearInterval(cr.timer); cr = null }; if (PAGEINIT[g]) PAGEINIT[g]()
-  if (g === 'dice') diceInfo()
-  { const gr = NAVGROUPS.find(x => x[2].includes(g)); if (gr) delete navOpen[gr[1]] }
-  if (!GAMES[g].page && g !== 'lobby') sb.rpc('hint_game', { g })
-  renderNav()
-  $('sidebar').classList.add('-translate-x-full')
-}
-
-/* ---------- Spiel-Animationen ---------- */
+/* ================= SPIEL-ANIMATIONEN & REVEALS ================= */
 const REVEAL = {
+  limbo: async d => {
+    sfx.spin()
+    const tgt = parseFloat(lastParam), cp = parseFloat(d.result)
+    const el = $('limbo-res')
+    let x = 1.00
+    while (x < Math.min(cp, 20)) {
+      x = +(x * 1.15 + 0.05).toFixed(2)
+      el.textContent = x.toFixed(2) + '×'
+      sfx.click()
+      await sleep(35)
+    }
+    el.textContent = cp.toFixed(2) + '×'
+    el.style.color = d.win ? '#34d399' : '#f87171'
+  },
+  penalty: async d => {
+    sfx.whistle()
+    const goalie = $('penalty-goalie')
+    const moves = { tl: 'translate(-100px, -40px)', tr: 'translate(100px, -40px)', bl: 'translate(-100px, 40px)', br: 'translate(100px, 40px)', mid: 'translate(0, 0)' }
+    if (goalie) goalie.style.transform = moves[d.result] || 'translate(0, 0)'
+    await sleep(600)
+    if (d.win) { sfx.win(); say('⚽ TOOOOOOOR! 🎉 1,95×') } else { sfx.lose(); say('🧤 GEHALTEN! 💥') }
+  },
+  war: async d => {
+    const [p, dl] = d.result.split(' ').map(Number)
+    sfx.spin()
+    await sleep(400)
+    $('war-p').textContent = RANKS[p - 1]
+    $('war-d').textContent = RANKS[dl - 1]
+    if (p === dl) { sfx.bigwin(); say('⚔️ WAAAAAAR! GLEICHSTAND ×3!') }
+  },
+  cyberrace: async d => {
+    const winnerId = Number(d.result)
+    for (let step = 1; step <= 8; step++) {
+      RACERS.forEach(r => {
+        const bar = $('racer-bar-' + r.id)
+        if (bar) {
+          const progress = step === 8 ? (r.id === winnerId ? 100 : Math.floor(60 + Math.random() * 30)) : Math.min(90, step * 11 + Math.floor(Math.random() * 15))
+          bar.style.width = progress + '%'
+        }
+      })
+      sfx.spin()
+      await sleep(150)
+    }
+    const winName = (RACERS.find(r => r.id === winnerId) || {}).name
+    say(`🏁 Sieger: <b>${winName}</b>!`)
+  },
   coinflip: async d => {
     sfx.spin()
     $('stage').innerHTML = '<span class="animate-spin inline-block">🪙</span>'; await sleep(700)
@@ -1538,15 +1171,6 @@ const REVEAL = {
     const [n, col] = d.result.split(' '), c = { red: '#dc2626', black: '#27272a', green: '#16a34a' }[col]
     $('stage').innerHTML = '<div class="text-5xl animate-spin">🎡</div>'; await sleep(900)
     $('stage').innerHTML = `<div class="w-24 h-24 rounded-full flex items-center justify-center text-4xl font-black border-4 border-zinc-500" style="background:${c}">${n}</div>`
-  }
-}
-
-Object.assign(REVEAL, {
-  crash: async d => {
-    const cp = parseFloat(d.result), s = $('stage'); let x = 1
-    s.style.color = '#e4e4e7'
-    while (x < cp) { x = Math.min(cp, x * 1.07 + 0.01); s.textContent = '🚀 ' + x.toFixed(2) + '×'; sfx.spin(); await sleep(40) }
-    s.textContent = (d.win ? '✅ ' : '💥 ') + cp.toFixed(2) + '×'; s.style.color = d.win ? '#34d399' : '#f87171'
   },
   plinko: async d => {
     const b = $('ball'); let pos = 0
@@ -1568,10 +1192,7 @@ Object.assign(REVEAL, {
   keno: async d => {
     document.querySelectorAll('.kc').forEach(b => b.classList.remove('hit', 'drawn'))
     for (const n of d.result.split(',')) { await sleep(150); sfx.click(); $('k' + n).classList.add(kpicks.includes(+n) ? 'hit' : 'drawn') }
-  }
-})
-
-Object.assign(REVEAL, {
+  },
   double: async d => {
     if (!dnS) dnBase = lastBet
     await sleep(500)
@@ -1594,18 +1215,10 @@ Object.assign(REVEAL, {
   dragon: async d => { const [a, b] = d.result.split(' '); await sleep(600); say(`🐉 ${RANKS[a - 1]} <span class="text-3xl">vs</span> 🐅 ${RANKS[b - 1]}`) },
   doors: async d => { const [a] = [d.result]; await sleep(600); say([1, 2, 3].map(i => i == d.result ? '💎' : '💀').join(' ')) },
   number: async d => { await sleep(600); say(`<span class="${d.win ? 'text-emerald-400' : 'text-red-400'}">${d.result}</span>`) },
-  rps: async d => { await sleep(500); say(`${RP[lastParam]} <span class="text-3xl">vs</span> ${RP[d.result]}`) }
-})
-
-VIEWS.baccarat = () => betBox() + stg('👤 vs 🏦') + row([['👤 Player 2.05×', 'player', 'bg-cyan-600'], ['Tie 9×', 'tie', 'bg-zinc-700'], ['🏦 Banker 2.05×', 'banker', 'bg-red-600']])
-VIEWS.sicbo = () => betBox() + stg('🎲🎲🎲') + row([['⬇ Low ≤10 · 2×', 'low', 'bg-cyan-600'], ['Triple 30×', 'triple', 'bg-yellow-600'], ['⬆ High ≥11 · 2×', 'high', 'bg-pink-600']])
-Object.assign(REVEAL, {
+  rps: async d => { await sleep(500); say(`${RP[lastParam]} <span class="text-3xl">vs</span> ${RP[d.result]}`) },
   baccarat: async d => { const [a, b] = d.result.split(' '); await sleep(600); say(`👤 ${a} <span class="text-3xl">vs</span> 🏦 ${b}`) },
   sicbo: async d => { sfx.dice(); const x = d.result.split(' '); await sleep(700); say(x.map(n => DICE[n - 1]).join('') + `<span class="text-3xl">= ${x.reduce((t, n) => t + +n, 0)}</span>`) }
-})
-
-/* ---------- Spielen ---------- */
-function setBtns(dis) { document.querySelectorAll('.play').forEach(b => b.disabled = dis) }
+}
 
 async function play(param) {
   if (busy) return
@@ -1616,26 +1229,281 @@ async function play(param) {
   busy = true; lastBet = bet; lastParam = param; setBtns(true); msg('')
   const { data, error } = current === 'plinko' ? await sb.rpc('play_plinko', { bet_amount: bet, risk: plinkoRisk }) : await sb.rpc(current === 'baccarat' || current === 'sicbo' ? 'play_game2' : 'play_game_d', { game_name: current, bet_amount: bet, param })
   if (error) { msg(error.message, 'lose'); sfx.lose(); busy = false; setBtns(false); return }
-  await REVEAL[current](data)
+  if (REVEAL[current]) await REVEAL[current](data)
   setBalance(data.balance)
   const net = data.payout - bet
   if (net > 0) sfx.win(); else if (net < 0) sfx.lose(); else sfx.click()
-  msg(net > 0 ? `🎉 +${net} FC` : net === 0 ? 'Einsatz zurück' : `−${bet - data.payout} FC`, net > 0 ? 'win' : 'lose')
+  msg(net > 0 ? `🎉 +${net.toLocaleString('de-DE')} FC` : net === 0 ? 'Einsatz zurück' : `−${bet - data.payout} FC`, net > 0 ? 'win' : 'lose')
   HIST.unshift({ g: GAMES[current].icon + ' ' + GAMES[current].name, bet, net }); HIST.length = Math.min(HIST.length, 8); renderHist()
   busy = false; setBtns(false)
 }
 
-async function claimDaily() {
-  sfx.click()
-  const { data, error } = await sb.rpc('claim_daily')
-  if (error) return toast(error.message)
-  sfx.claim()
-  setBalance(data.balance); toast('🎁 +' + data.reward + ' Coins • Streak ' + data.streak + ' 🔥'); if (current === 'earn') show('earn')
+function setBtns(dis) { document.querySelectorAll('.play').forEach(b => b.disabled = dis) }
+function setMode(m) { diceMode = m; sfx.click(); diceInfo() }
+function diceInfo() {
+  const over = diceMode === 'over', ch = over ? 100 - diceTarget : diceTarget - 1
+  $('dice-info').innerHTML = `Würfel ${over ? 'über' : 'unter'} <b class="text-white">${diceTarget}</b> • Chance <b class="text-white">${ch}%</b> • Gewinn <b class="text-emerald-400">${(98 / ch).toFixed(2)}×</b>`
+  $('m-over').classList.toggle('sel', over); $('m-under').classList.toggle('sel', !over)
 }
+
+function show(g) {
+  current = g; busy = false
+  $('title').textContent = GAMES[g].icon + ' ' + GAMES[g].name
+  $('desc').textContent = GAMES[g].desc
+  wheelRot = 0; $('view').innerHTML = VIEWS[g](); msg(''); renderHist(); clearInterval(chatTimer); clearInterval(dTimer); clearInterval(pvpTimer); stopSnake(); stopTetris(); cg_ = null; if (cr) { clearInterval(cr.timer); cr = null }; if (PAGEINIT[g]) PAGEINIT[g]()
+  if (g === 'dice') diceInfo()
+  if (g === 'limbo') updateLimboWinChance()
+  { const gr = NAVGROUPS.find(x => x[2].includes(g)); if (gr) delete navOpen[gr[1]] }
+  if (!GAMES[g].page && g !== 'lobby') sb.rpc('hint_game', { g })
+  renderNav()
+  $('sidebar').classList.add('-translate-x-full')
+}
+
+/* ================= CHAT, EARN, BOARD, COMMUNITY ETC ================= */
+const CHANS = [['global', '🌐 Global'], ['gambling', '🎰 Gambling'], ['games', '🎮 Games'], ['offtopic', '💭 Offtopic'], ['clan', '🏰 Clan']]
+let chatChan = 'global'
+VIEWS.chat = () => `<div class="flex gap-1 flex-wrap mb-3">${CHANS.map(([k, l]) => `<button class="px-3 py-1 rounded-lg text-sm ${k === chatChan ? 'bg-cyan-700' : 'bg-zinc-800'}" onclick="chatChan='${k}';show('chat')">${l}</button>`).join('')}</div>
+  <div id="chatbox" class="h-80 overflow-y-auto space-y-1 mb-3 text-sm"></div>
+  <div class="flex gap-2"><input id="chatin" maxlength="200" placeholder="Nachricht..." class="inp flex-1 min-w-0" onkeydown="if(event.key==='Enter')sendChat()"><button class="btn bg-cyan-600" style="width:auto" onclick="sendChat()">Senden</button></div>`
+PAGEINIT.chat = () => { loadChat(); chatTimer = setInterval(loadChat, 4000) }
+async function loadChat() {
+  const { data, error } = await sb.rpc('chat_list', { chan: chatChan }); const box = $('chatbox'); if (error || !box) return
+  const bottom = box.scrollHeight - box.scrollTop - box.clientHeight < 60
+  box.innerHTML = data.map(m => `<div><b>${nm(m)}:</b> ${esc(m.msg)}${ROLE === 'mod' || ROLE === 'admin' ? ` <button class="text-red-400" onclick="chatDel(${m.id})">✕</button>` : ''}</div>`).join('')
+  if (bottom) box.scrollTop = box.scrollHeight
+}
+async function sendChat() {
+  const i = $('chatin'), m = i.value.trim(); if (!m) return
+  sfx.click()
+  const { error } = await sb.rpc('chat_send', { m, chan: chatChan }); if (error) return toast(error.message)
+  i.value = ''; await loadChat(); $('chatbox').scrollTop = 1e6
+}
+async function chatDel(id) { await sb.rpc('chat_delete', { msg_id: id }); loadChat() }
+
+const nm = u => `<span class="cursor-pointer" data-u="${esc(u.username)}" onclick="showProfile(this.dataset.u)" style="color:${/^#[0-9a-f]{6}$/i.test(u.color) ? u.color : '#fff'}">${esc(u.avatar || '')} ${esc(u.username)}</span>${BADGE[u.role] || ''}${u.title ? ` <i class="text-xs text-zinc-400">${esc(u.title)}</i>` : ''}`
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
+const BADGE = { admin: '🛡️', mod: '🔧', vip: '⭐' }
+
+VIEWS.earn = () => `<div class="grid grid-cols-2 gap-3 mb-5">
+  <div id="dailybox" class="glass rounded-xl p-4 text-center col-span-2">Lade...</div>
+  <button class="btn bg-cyan-600" onclick="claimHourly()">⏰ Stunden-Bonus +50</button></div>
+  <div class="glass rounded-xl p-4 mb-3"><b>👆 Klick-Challenge</b><div class="text-xs text-zinc-400 mb-3">10 Sekunden so oft klicken wie möglich – bis 40 Coins.</div><button id="clickbtn" class="btn bg-emerald-600" onclick="clickGame()">Start</button></div>
+  <div class="glass rounded-xl p-4"><b>⚡ Reaktionstest</b><div class="text-xs text-zinc-400 mb-3">Klick, sobald der Button grün wird – bis 40 Coins.</div><button id="reactbtn" class="btn bg-zinc-700" onclick="reactGame()">Start</button></div>
+  <div id="lvlbox" class="mt-4"></div><div id="missions" class="mt-4"></div>`
+
+async function claimHourly() { const { data, error } = await sb.rpc('claim_hourly'); if (error) return toast(error.message); sfx.claim(); setBalance(data.balance); toast('⏰ +' + data.reward + ' Coins') }
+async function mini(kind, score) { const { data, error } = await sb.rpc('claim_mini', { mini_kind: kind, mini_score: score }); if (error) return toast(error.message); sfx.claim(); setBalance(data.balance); toast('🎉 +' + data.reward + ' Coins') }
+function clickGame() { sfx.click(); const b = $('clickbtn'); if (!cg) { cg = { n: 0 }; b.textContent = 'Klick! 0'; setTimeout(() => { const n = cg.n; cg = null; b.textContent = 'Start'; mini('click', n) }, 10000); return } cg.n++; b.textContent = 'Klick! ' + cg.n }
+function reactGame() { sfx.click(); const b = $('reactbtn'); if (!rg) { b.textContent = 'Warte...'; b.className = 'btn bg-red-700'; rg = { ready: false }; rg.to = setTimeout(() => { rg.ready = true; rg.t = performance.now(); b.textContent = 'JETZT!'; b.className = 'btn bg-green-500' }, 1500 + Math.random() * 2500); return } if (!rg.ready) { clearTimeout(rg.to); rg = null; b.textContent = 'Zu früh! Nochmal'; b.className = 'btn bg-zinc-700'; return } const ms = Math.round(performance.now() - rg.t); rg = null; b.textContent = ms + ' ms – nochmal?'; b.className = 'btn bg-zinc-700'; mini('reaction', ms) }
+
+PAGEINIT.earn = async () => {
+  loadMissions(); loadLevel()
+  const box = $('dailybox'); if (!box) return
+  const { data: d, error: derr } = await sb.rpc('daily_status')
+  if (derr) { box.innerHTML = '⚠️ Daily-Fehler: ' + esc(derr.message); return }
+  if (!d) { box.innerHTML = '<button class="btn bg-yellow-500 text-black" onclick="claimDaily()">🎁 Daily abholen</button>'; return }
+  const t0 = Date.now(), cur = d.streak % 7 || (d.streak ? 7 : 0)
+  const draw = () => {
+    const left = Math.max(0, d.secs_left - Math.floor((Date.now() - t0) / 1000))
+    if (!left && !d.can_claim) { clearInterval(dTimer); return PAGEINIT.earn() }
+    box.innerHTML = `<div class="font-bold mb-2">🎁 Daily Streak: ${d.streak} 🔥</div><div class="flex justify-center gap-1 mb-3">${[1, 2, 3, 4, 5, 6, 7].map(i => `<span class="w-8 h-8 rounded-full flex items-center justify-center text-xs ${i <= cur ? 'bg-emerald-600' : 'bg-zinc-800'}">${i}</span>`).join('')}</div>` +
+      (d.can_claim ? `<button class="btn bg-yellow-500 text-black" onclick="claimDaily()">Abholen +${d.reward} FC</button>` : `<div class="text-zinc-400 text-sm">Nächstes Daily in ${Math.floor(left / 3600)}h ${Math.floor(left % 3600 / 60)}m ${left % 60}s (dann +${d.reward} FC)</div>`)
+  }
+  clearInterval(dTimer); draw(); dTimer = setInterval(draw, 1000)
+}
+
+async function claimDaily() { sfx.click(); const { data, error } = await sb.rpc('claim_daily'); if (error) return toast(error.message); sfx.claim(); setBalance(data.balance); toast('🎁 +' + data.reward + ' Coins • Streak ' + data.streak + ' 🔥'); if (current === 'earn') show('earn') }
+
+/* ---- Leaderboard ---- */
+VIEWS.board = () => '<div id="lb" class="text-zinc-400">Lade...</div>'
+PAGEINIT.board = async () => {
+  const { data, error } = await sb.rpc('leaderboard'); if (error) return $('lb').textContent = error.message
+  const list = (t, a, u) => `<div class="font-bold mb-2 mt-4">${t}</div>` + a.map((x, i) => `<div class="flex justify-between glass rounded-lg px-3 py-2 mb-1"><span>${['🥇', '🥈', '🥉'][i] || (i + 1) + '.'} ${nm(x)}</span><b class="text-emerald-400">${Number(x.balance).toLocaleString('de-DE')} ${u}</b></div>`).join('')
+  $('lb').innerHTML = (await tournamentHtml()) + list('💰 Reichste Spieler', data.rich, 'FC') + list('🎰 Meist gesetzt', data.wager, 'FC')
+}
+
+/* ---- Spieler & Profile ---- */
+VIEWS.players = () => `<div class="glass rounded-xl p-4 mb-4"><b>🎁 Coins verschenken</b>
+  <div class="flex gap-2 mt-2"><input id="gto" placeholder="Username" class="inp flex-1 min-w-0"><input id="gam" type="number" min="1" placeholder="FC" class="inp w-24"><button class="btn bg-pink-600" style="width:auto" onclick="gift()">Senden</button></div>
+  <div class="text-xs text-zinc-500 mt-1">Limit: 5.000 FC pro Tag</div></div>
+  <input id="pq" placeholder="Spieler suchen..." class="inp w-full mb-3" oninput="loadPlayers()"><div id="plist"></div>`
+PAGEINIT.players = () => loadPlayers()
+async function loadPlayers() { const d = await call('players_list', { q: ($('pq') || {}).value || '' }); if (!d || !$('plist')) return; $('plist').innerHTML = d.map(u => `<div class="glass rounded-lg px-3 py-2 mb-1 flex justify-between items-center"><span>${u.online ? '🟢' : '⚪'} ${nm(u)} <span class="text-xs text-zinc-500">Lv ${u.level}</span></span><button class="text-pink-400" data-u="${esc(u.username)}" onclick="$('gto').value=this.dataset.u;$('gam').focus()">🎁</button></div>`).join('') }
+async function gift() { sfx.click(); const d = await call('send_coins', { to_user: $('gto').value.trim(), amount: +$('gam').value }); if (!d) return; sfx.claim(); setBalance(d.balance); toast('🎁 Gesendet!'); $('gam').value = '' }
+async function showProfile(name) {
+  sfx.click()
+  const u = await call('get_profile', { uname: name }); if (!u) return toast('Profil nicht gefunden')
+  clearInterval(chatTimer); $('title').textContent = '🙍 ' + u.username; $('desc').textContent = 'Spielerprofil'; msg('')
+  $('view').innerHTML = `<div class="text-center"><div class="text-7xl mb-2">${esc(u.avatar)}</div><div class="text-2xl font-black" style="color:${/^#[0-9a-f]{6}$/i.test(u.color) ? u.color : '#fff'}">${esc(u.username)} ${BADGE[u.role] || ''}</div>
+    <div class="text-zinc-400 text-sm">${u.clan ? '🛡️ [' + esc(u.clan) + '] · ' : ''}${esc(u.title || 'Spieler')} · Level ${u.level} · ${u.online ? '🟢 online' : '⚪ offline'}</div>
+    <div class="my-4 italic text-zinc-300">${esc(u.bio || 'Keine Bio.')}</div>
+    <div class="grid grid-cols-3 gap-2 text-sm mb-4"><div class="glass rounded-lg p-2">🪙<br><b>${Number(u.balance).toLocaleString('de-DE')}</b></div><div class="glass rounded-lg p-2">🎰 gesetzt<br><b>${Number(u.wagered).toLocaleString('de-DE')}</b></div><div class="glass rounded-lg p-2">🔥 Streak<br><b>${u.streak}</b></div></div>
+    <button class="btn bg-pink-600" data-u="${esc(u.username)}" onclick="show('players');$('gto').value=this.dataset.u">🎁 Coins schenken</button></div>`
+}
+
+/* ---- Shop ---- */
+VIEWS.shop = () => '<div id="shop" class="text-zinc-400">Lade...</div>'
+PAGEINIT.shop = async () => {
+  const cat = await call('shop_catalog', {}); if (!cat || !$('shop')) return
+  const owned = ME.owned || [], eq = { avatar: ME.avatar, color: ME.color, title: ME.title }
+  const sec = (slot, label) => `<div class="flex justify-between items-center mt-5 mb-2"><b>${label}</b><button class="text-xs text-zinc-500" onclick="shopAct('equip','reset_${slot}')">zurücksetzen</button></div><div class="grid grid-cols-2 gap-2">` +
+    cat.filter(i => i.slot === slot).map(i => {
+      const has = owned.includes(i.id), on = eq[slot] === i.v
+      const show_ = slot === 'color' ? `<span style="color:${i.v}">■ ${esc(i.name)}</span>` : esc(i.v)
+      return `<div class="glass rounded-xl p-3 text-center ${on ? 'sel' : ''}"><div class="${slot === 'avatar' ? 'text-3xl' : 'font-bold'} mb-2">${show_}</div>` +
+        (has ? `<button class="btn bg-cyan-700" style="padding:.3rem" onclick="shopAct('equip','${i.id}')">${on ? '✔ Aktiv' : 'Anlegen'}</button>`
+          : i.rare ? `<div class="text-xs text-purple-300 py-1">🔒 ${esc(i.how)}</div>` : `<button class="btn bg-yellow-500 text-black" style="padding:.3rem" onclick="shopAct('shop_buy','${i.id}')">${i.price.toLocaleString('de-DE')} FC</button>`) + '</div>'
+    }).join('') + '</div>'
+  $('shop').innerHTML = `<div class="glass rounded-xl p-4"><b>Bio</b><div class="flex gap-2 mt-2"><input id="bio" maxlength="80" value="${esc(ME.bio || '')}" class="inp flex-1 min-w-0"><button class="btn bg-cyan-600" style="width:auto" onclick="saveBio()">Speichern</button></div></div>` + sec('avatar', '😎 Avatare') + sec('color', '🎨 Namensfarben') + sec('title', '🏷️ Titel')
+}
+async function shopAct(fn, id) { sfx.click(); const d = await call(fn, { item: id }); if (!d) return; sfx.claim(); setBalance(d.balance); await loadProfile(); show('shop') }
+async function saveBio() { const d = await call('set_bio', { t: $('bio').value }); if (d) { ME.bio = $('bio').value; toast('Bio gespeichert') } }
+
+/* ---- Battle Pass & Achievements ---- */
+const BPITEM = { 10: '🔥', 20: '👾', 30: '🏆+Titel' }
+VIEWS.bp = () => '<div id="bpbox" class="text-zinc-400">Lade...</div>'
+PAGEINIT.bp = async () => {
+  const d = await call('bp_info', {}), box = $('bpbox'); if (!d || !box) return
+  const f = n => Number(n).toLocaleString('de-DE'), days = Math.floor(d.secs_left / 86400)
+  const rows = Array.from({ length: 30 }, (_, i) => i + 1).map(t => {
+    const fr = d.free_claimed.includes(t), pr = d.prem_claimed.includes(t), ok = t <= d.tier, it = BPITEM[t] ? ' ' + BPITEM[t] : ''
+    const free = fr ? `<span class="text-zinc-500">✔ ${t * 100}</span>` : ok ? `<button class="btn bg-emerald-700" style="width:auto;padding:.2rem .6rem" onclick="bpClaim(${t},'free')">+${t * 100}</button>` : `<span class="text-zinc-600">${t * 100}</span>`
+    const prem = !d.premium ? '<span class="text-zinc-600">🔒</span>' : pr ? '<span class="text-yellow-500">✔ ⭐</span>' : ok ? `<button class="btn bg-yellow-500 text-black" style="width:auto;padding:.2rem .6rem" onclick="bpClaim(${t},'premium')">⭐ +${t * 200}${it}</button>` : `<span class="text-zinc-600">⭐ ${t * 200}${it}</span>`
+    return `<div class="glass rounded-lg px-3 py-2 mb-1 flex justify-between items-center text-sm ${ok ? '' : 'opacity-60'}"><b>Stufe ${t}</b><span class="flex gap-2 items-center">${free}${prem}</span></div>`
+  }).join('')
+  box.innerHTML = `<div class="glass rounded-xl p-4 mb-3"><div class="font-bold">🎫 Season ${d.season} <span class="text-xs text-zinc-400">(noch ${days} Tage)</span></div>
+    <div class="h-2 rounded bg-zinc-800 my-2"><div class="h-2 rounded bg-cyan-500" style="width:${Math.min(100, (d.xp % 400) / 4)}%"></div></div>
+    <div class="text-xs text-zinc-400">Stufe ${d.tier}/30 · ${f(d.xp)} XP</div>
+    ${d.premium ? '<div class="text-yellow-400 text-sm mt-2">⭐ Premium aktiv</div>' : '<button class="btn bg-yellow-500 text-black mt-3" onclick="bpPremium()">⭐ Premium freischalten (25.000 FC)</button>'}</div>` + rows
+}
+async function bpClaim(t, track) { const d = await call('bp_claim', { btier: t, btrack: track }); if (!d) return; sfx.claim(); setBalance(d.balance); toast('🎫 +' + d.reward + ' FC'); await loadProfile(); PAGEINIT.bp() }
+async function bpPremium() { if (!confirm('Premium für diese Season kaufen (25.000 FC)?')) return; const d = await call('bp_premium', {}); if (d) { sfx.bigwin(); setBalance(d.balance); PAGEINIT.bp() } }
+
+VIEWS.ach = () => '<div id="achbox" class="text-zinc-400">Lade...</div>'
+PAGEINIT.ach = async () => {
+  const d = await call('ach_list', {}), box = $('achbox'); if (!d || !box) return
+  const f = n => Number(n).toLocaleString('de-DE')
+  box.innerHTML = d.map(a => `<div class="glass rounded-xl p-3 mb-2"><div class="flex justify-between text-sm mb-1"><span>🏅 ${esc(a.name)}</span><b class="text-yellow-400">+${f(a.reward)} FC</b></div>
+    <div class="h-2 rounded bg-zinc-800 mb-2"><div class="h-2 rounded bg-emerald-500" style="width:${Math.min(100, a.progress / a.target * 100)}%"></div></div>` +
+    (a.claimed ? '<div class="text-xs text-zinc-500">✔ abgeholt</div>' : a.progress >= a.target ? `<button class="btn bg-emerald-600" style="padding:.3rem" onclick="achClaim('${a.id}')">Belohnung abholen</button>` : `<div class="text-xs text-zinc-500">${f(a.progress)} / ${f(a.target)}</div>`) + '</div>').join('')
+}
+async function achClaim(id) { const d = await call('ach_claim', { aid: id }); if (d) { sfx.claim(); setBalance(d.balance); toast('🏅 +' + d.reward + ' FC'); PAGEINIT.ach() } }
+
+/* ---- Community, Freunde, Feed, Stats ---- */
+VIEWS.community = () => '<div id="comm" class="text-zinc-400">Lade...</div>'
+PAGEINIT.community = () => loadCommunity()
+async function loadCommunity() {
+  const [g, l, c] = await Promise.all([call('goal_info', {}), call('lottery_info', {}), call('clans_list', {})])
+  if (!$('comm')) return; let h = ''
+  if (g) {
+    const pct = Math.min(100, g.total / g.target * 100)
+    h += `<div class="glass rounded-xl p-4 mb-3"><b>🎯 Community-Ziel (heute)</b><div class="h-3 rounded bg-zinc-800 my-2"><div class="h-3 rounded bg-cyan-500" style="width:${pct}%"></div></div><div class="text-xs">${Math.floor(g.total).toLocaleString('de-DE')} / ${g.target.toLocaleString('de-DE')} FC</div></div>`
+  }
+  if (l) {
+    h += `<div class="glass rounded-xl p-4 mb-3"><b>🎟️ Stündliche Lotterie</b><div class="text-2xl font-black text-yellow-400 my-1">Pot: ${Number(l.pot).toLocaleString('de-DE')} FC</div><div class="flex gap-2 mt-2">${[1, 5, 10].map(n => `<button class="btn bg-yellow-500 text-black text-xs" onclick="lotBuy(${n})">${n}× Ticket (${n * l.price})</button>`).join('')}</div></div>`
+  }
+  $('comm').innerHTML = h
+}
+async function lotBuy(n) { const d = await call('lottery_buy', { cnt: n }); if (d) { sfx.bet(); setBalance(d.balance); toast('🎟️ Tickets gekauft!'); loadCommunity() } }
+
+VIEWS.feed = () => '<div id="fbox" class="text-zinc-400">Lade...</div>'
+PAGEINIT.feed = () => { loadFeed(); pvpTimer = setInterval(loadFeed, 10000) }
+async function loadFeed() { const d = await call('activity_feed', {}), b = $('fbox'); if (!d || !b) return; b.innerHTML = d.length ? d.map(x => `<div class="glass rounded-lg px-3 py-2 mb-1 text-sm flex justify-between gap-3"><span>${esc(x.txt)}</span><span class="text-xs text-zinc-500 shrink-0">${new Date(x.ts).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}</span></div>`).join('') : 'Noch nichts passiert.' }
+
+VIEWS.stats = () => '<div id="st" class="text-zinc-400">Lade...</div>'
+PAGEINIT.stats = async () => {
+  const d = await call('stats_me', {}); if (!d || !$('st')) return
+  const f = n => Number(n).toLocaleString('de-DE'), t = d.total, rtp = t.wagered > 0 ? (t.won / t.wagered * 100).toFixed(1) + ' %' : '–'
+  $('st').innerHTML = `<div class="grid grid-cols-2 gap-2 mb-4">${[['🎲 Runden', f(t.plays)], ['💸 Gesetzt', f(t.wagered)], ['💰 Ausgezahlt', f(t.won)], ['📈 Rückzahlung', rtp], ['🏅 Beste Auszahlung', f(t.best)]].map(([a, b]) => `<div class="glass rounded-xl p-3"><div class="text-xs text-zinc-400">${a}</div><div class="text-xl font-black text-white">${b}</div></div>`).join('')}</div>`
+}
+
+VIEWS.friends = () => `<div class="flex gap-2 mb-3"><input id="fadd" placeholder="Username" class="inp flex-1 min-w-0"><button class="btn bg-cyan-600" style="width:auto" onclick="friendAct('friend_request',{uname:$('fadd').value})">Anfrage senden</button></div><div id="flist"></div><div id="dmbox" class="mt-4"></div>`
+PAGEINIT.friends = () => { dmWith = null; loadFriends(); pvpTimer = setInterval(() => { loadFriends(); if (dmWith) loadDm() }, 4000) }
+async function friendAct(fn, args) { const d = await call(fn, args); if (d) { sfx.click(); toast('✔ Erledigt'); loadFriends() } }
+async function loadFriends() {
+  const d = await call('friends_list', {}); if (!d || !$('flist')) return
+  $('flist').innerHTML = (d.friends.length ? d.friends.map(u => `<div class="glass rounded-lg px-3 py-2 mb-1 flex justify-between items-center text-sm"><span>${u.online ? '🟢' : '⚪'} ${nm(u)}</span><button data-u="${esc(u.username)}" onclick="openDm(this.dataset.u)">💬</button></div>`).join('') : '<div class="text-zinc-500 text-sm">Noch keine Freunde hinzugefügt.</div>')
+}
+function openDm(name) { dmWith = name; $('dmbox').innerHTML = `<div class="glass rounded-xl p-3"><div class="font-bold mb-2">💬 ${esc(name)}</div><div id="dmmsgs" class="h-56 overflow-y-auto space-y-1 mb-2 text-sm"></div><div class="flex gap-2"><input id="dmin" class="inp flex-1 min-w-0" placeholder="Nachricht..." onkeydown="if(event.key==='Enter')dmSend()"><button class="btn bg-cyan-600" style="width:auto" onclick="dmSend()">Senden</button></div></div>`; loadDm() }
+async function loadDm() { const d = await call('dm_list', { with_user: dmWith }), b = $('dmmsgs'); if (!d || !b) return; b.innerHTML = d.map(m => `<div class="${m.mine ? 'text-right text-cyan-300' : 'text-zinc-200'}">${esc(m.msg)}</div>`).join(''); b.scrollTop = b.scrollHeight }
+async function dmSend() { const i = $('dmin'), m = i.value.trim(); if (!m) return; sfx.click(); const d = await call('dm_send', { to_user: dmWith, m }); if (d) { i.value = ''; loadDm() } }
+
+/* ---- Schach, Duelle & Mini-Games ---- */
+VIEWS.duel = () => `<div class="glass rounded-xl p-4 mb-3"><b>⚔️ Duell erstellen</b><div class="flex gap-2 mt-2"><select id="dgame" class="inp py-2"><option value="coinflip">🪙 Coinflip</option><option value="dice">🎲 Dice</option></select><input id="dbet" type="number" min="10" value="100" class="inp flex-1 min-w-0"><button class="btn bg-pink-600" style="width:auto" onclick="duelCreate()">Erstellen</button></div></div><div id="dlist"></div>`
+PAGEINIT.duel = () => { loadDuels(); pvpTimer = setInterval(loadDuels, 4000) }
+async function loadDuels() { const d = await call('duel_list', {}); if (!d || !$('dlist')) return; $('dlist').innerHTML = d.open.map(x => `<div class="glass rounded-lg px-3 py-2 mb-1 flex justify-between items-center text-sm"><span>${nm(x)} · ${x.game} · <b class="text-yellow-400">${x.bet} FC</b></span>${x.mine ? '' : `<button class="btn bg-pink-600" style="width:auto;padding:.2rem .6rem" onclick="duelAct('duel_accept',${x.id})">Annehmen</button>`}</div>`).join('') || '<div class="text-zinc-500 text-sm">Keine offenen Duelle.</div>' }
+async function duelCreate() { sfx.bet(); const d = await call('duel_create', { dgame: $('dgame').value, b: Math.floor(+$('dbet').value) }); if (d) { setBalance(d.balance); toast('⚔️ Duell erstellt'); loadDuels() } }
+async function duelAct(fn, id) { sfx.click(); const d = await call(fn, { did: id }); if (!d) return; setBalance(d.balance); if (d.win) sfx.win(); else sfx.lose(); loadDuels() }
+
+VIEWS.chess = () => '<div id="chessbox" class="text-zinc-400">Lade...</div>'
+PAGEINIT.chess = () => chessLobby()
+async function chessLobby() {
+  const d = await call('chess_lobby', {}); if (!d || !$('chessbox')) return
+  $('chessbox').innerHTML = `<div class="glass rounded-xl p-4 mb-3 flex justify-between items-center"><div><b>♟️ Elo: ${d.me.elo}</b></div><button class="btn bg-emerald-600" style="width:auto" onclick="chessNew()">Neue Partie</button></div>` + (d.open.map(g => `<div class="glass rounded-lg px-3 py-2 mb-1 flex justify-between items-center text-sm"><span>${nm(g)}</span><button class="btn bg-cyan-700" style="width:auto;padding:.2rem .6rem" onclick="chessJoin(${g.id})">Annehmen</button></div>`).join('') || '<div class="text-zinc-500 text-sm">Keine Partien offen.</div>')
+}
+async function chessNew() { sfx.click(); const d = await call('chess_create', {}); if (d) toast('Partie erstellt!') }
+async function chessJoin(id) { sfx.click(); const d = await call('chess_join', { gid: id }); if (d) toast('Beigetreten!') }
+
+/* ---- Future Games (Snake, Typing, Trivia, Tetris) ---- */
+VIEWS.snake = () => `<div id="cbar"></div><canvas id="snk" width="300" height="300" class="mx-auto rounded-xl bg-zinc-900 border border-zinc-700 block"></canvas><div class="text-center my-3"><b>Punkte: <span id="snkscore">0</span></b></div><button class="btn bg-emerald-600" onclick="snakeStart()">Start</button><div id="lbox" class="mt-4"></div>`
+PAGEINIT.snake = () => FG('snake')
+let snk = null
+function stopSnake() { if (snk) { clearInterval(snk.timer); document.removeEventListener('keydown', snk.key); snk = null } }
+function snakeStart() {
+  sfx.click(); stopSnake(); const c = $('snk'), x = c.getContext('2d'), N = 15, S = 20; $('snkscore').textContent = 0
+  snk = { body: [[7, 7], [6, 7]], dir: [1, 0], nd: [1, 0], food: [10, 7], score: 0 }
+  const place = () => { do { snk.food = [Math.floor(Math.random() * N), Math.floor(Math.random() * N)] } while (snk.body.some(b => b[0] === snk.food[0] && b[1] === snk.food[1])) }
+  snk.key = e => { const m = { ArrowUp: [0, -1], w: [0, -1], ArrowDown: [0, 1], s: [0, 1], ArrowLeft: [-1, 0], a: [-1, 0], ArrowRight: [1, 0], d: [1, 0] }[e.key]; if (m) snk.nd = m }
+  document.addEventListener('keydown', snk.key)
+  snk.timer = setInterval(() => {
+    snk.dir = snk.nd; const h = [snk.body[0][0] + snk.dir[0], snk.body[0][1] + snk.dir[1]]
+    if (h[0] < 0 || h[1] < 0 || h[0] >= N || h[1] >= N || snk.body.some(b => b[0] === h[0] && b[1] === h[1])) { const sc = snk.score; stopSnake(); sfx.lose(); toast('💥 Game Over: ' + sc); return submitScore('snake', sc) }
+    snk.body.unshift(h)
+    if (h[0] === snk.food[0] && h[1] === snk.food[1]) { sfx.claim(); snk.score++; $('snkscore').textContent = snk.score; place() } else snk.body.pop()
+    x.fillStyle = '#18181b'; x.fillRect(0, 0, 300, 300); x.fillStyle = '#f43f5e'; x.fillRect(snk.food[0] * S + 2, snk.food[1] * S + 2, S - 4, S - 4)
+    x.fillStyle = '#34d399'; snk.body.forEach(b => x.fillRect(b[0] * S + 1, b[1] * S + 1, S - 2, S - 2))
+  }, 110)
+}
+
+VIEWS.typing = () => `<div id="cbar"></div><div id="tprompt" class="glass rounded-xl p-4 mb-3 text-lg leading-relaxed">Drücke Start und tippe den Text so schnell du kannst.</div><input id="tin" class="inp w-full mb-3" disabled oninput="typingInput()"><button class="btn bg-emerald-600" onclick="typingStart()">Start</button><div id="lbox" class="mt-4"></div>`
+PAGEINIT.typing = () => FG('typing')
+const TTEXT = ['Die schnelle braune Katze springt über den faulen Hund und läuft weiter durch den dunklen Wald', 'Wer zuletzt lacht lacht am besten aber wer zuerst tippt gewinnt am Ende das Rennen']
+let ty = null
+function typingRender(v) { $('tprompt').innerHTML = [...ty.t].map((c, k) => `<span style="color:${k >= v.length ? '#a1a1aa' : v[k] === c ? '#34d399' : '#f87171'}">${c}</span>`).join('') }
+function typingStart() { sfx.click(); ty = { t: TTEXT[Math.floor(Math.random() * TTEXT.length)], t0: 0 }; const i = $('tin'); i.value = ''; i.disabled = false; i.focus(); typingRender('') }
+function typingInput() { if (!ty) return; const v = $('tin').value; if (!ty.t0) ty.t0 = Date.now(); sfx.click(); typingRender(v); if (v === ty.t) { const wpm = Math.min(220, Math.round(ty.t.length / 5 / ((Date.now() - ty.t0) / 60000))); $('tin').disabled = true; $('tprompt').innerHTML += `<div class="mt-3 text-xl font-black text-emerald-400">${wpm} WPM</div>`; ty = null; sfx.win(); submitScore('typing', wpm) } }
+
+VIEWS.trivia = () => `<div id="cbar"></div><div id="tvbox" class="glass rounded-xl p-5 mb-3 text-center"><button class="btn bg-emerald-600" onclick="triviaStart()">10 Fragen starten</button></div><div id="lbox"></div>`
+PAGEINIT.trivia = () => FG('trivia')
+const QS = [['Hauptstadt von Australien?', ['Sydney', 'Canberra', 'Melbourne', 'Perth'], 1], ['Wie viele Planeten hat unser Sonnensystem?', ['7', '8', '9', '10'], 1], ['Welches Element hat das Symbol Au?', ['Silber', 'Gold', 'Argon'], 1], ['Was ist 7 × 8?', ['54', '56', '58'], 1]]
+let tv = null
+function triviaStart() { sfx.click(); tv = { q: [...QS], i: 0, s: 0 }; triviaShow() }
+function triviaShow() { const [q, o] = tv.q[tv.i]; $('tvbox').innerHTML = `<div class="text-xs text-zinc-400 mb-2">Frage ${tv.i + 1}/${tv.q.length} · ${tv.s} Punkte</div><div class="text-lg font-bold mb-4">${q}</div>` + o.map((t, k) => `<button class="btn bg-zinc-800 mb-2" onclick="triviaAnswer(${k})">${t}</button>`).join('') }
+function triviaAnswer(k) { const [, o, c] = tv.q[tv.i]; if (k === c) { tv.s++; sfx.win() } else sfx.lose(); tv.i++; if (tv.i < tv.q.length) return triviaShow(); const sc = tv.s; tv = null; $('tvbox').innerHTML = `<div class="text-4xl font-black mb-3">${sc} Punkte 🎉</div><button class="btn bg-emerald-600" onclick="triviaStart()">Nochmal</button>`; submitScore('trivia', sc) }
+
+VIEWS.tetris = () => `<div id="cbar"></div><canvas id="ttc" width="200" height="400" class="mx-auto rounded-xl bg-zinc-900 border border-zinc-700 block"></canvas><div class="text-center my-2"><b>Punkte: <span id="ttscore">0</span></b></div><button class="btn bg-emerald-600" onclick="tetrisStart()">Start</button><div id="lbox" class="mt-4"></div>`
+PAGEINIT.tetris = () => FG('tetris')
+let tt = null
+function stopTetris() { if (tt) { clearInterval(tt.timer); document.removeEventListener('keydown', tt.key); tt = null } }
+function tetrisStart() { sfx.click(); stopTetris(); tt = { score: 0 }; $('ttscore').textContent = 0; toast('Tetris läuft! Pfeiltasten zum Steuern.') }
+
+async function submitScore(game, sc) { const d = await call('submit_score', { sgame: game, sc }); if (d && d.reward) { sfx.claim(); setBalance(d.balance); toast('🎯 +' + d.reward + ' FC') } }
+async function loadScores(g) { const d = await call('scores_top', { sgame: g }), b = $('lbox'); if (d && b) b.innerHTML = '<div class="font-bold mb-2">🏆 Bestenliste</div>' + d.map((x, i) => `<div class="flex justify-between glass rounded-lg px-3 py-2 mb-1 text-sm"><span>${i + 1}. ${nm(x)}</span><b>${x.best}</b></div>`).join('') }
+function FG(g) { loadScores(g) }
+
+function renderHist() {
+  $('hist').innerHTML = HIST.length ? '<div class="text-xs text-zinc-500 mb-1">Letzte Spiele</div>' + HIST.map(h => `<div class="glass rounded-lg px-3 py-2 flex justify-between"><span>${h.g}</span><span class="text-zinc-400">${h.bet} FC</span><b class="${h.net > 0 ? 'text-emerald-400' : h.net < 0 ? 'text-red-400' : 'text-zinc-400'}">${h.net > 0 ? '+' : ''}${h.net}</b></div>`).join('') : ''
+}
+async function delMe() { if (!confirm('Account endgültig löschen?') || !confirm('Wirklich sicher?')) return; const { error } = await sb.rpc('delete_me'); if (error) return toast(error.message); logout() }
+async function loadMissions() { const d = await call('missions_list', {}); if (d && $('missions')) $('missions').innerHTML = '<div class="font-bold mb-2">📋 Tagesmissionen</div>' + d.map(m => `<div class="glass rounded-xl p-3 mb-2 flex justify-between text-sm"><span>${m.label}</span><b class="text-yellow-400">+${m.reward} FC</b></div>`).join('') }
+async function loadLevel() { const d = await call('level_info', {}); if (d && $('lvlbox')) $('lvlbox').innerHTML = `<div class="glass rounded-xl p-3 flex justify-between items-center"><div><b>⭐ Level ${d.level}</b></div>${d.reward > 0 ? `<button class="btn bg-yellow-500 text-black text-xs" style="width:auto" onclick="claimLevel()">+${d.reward} FC</button>` : ''}</div>` }
+async function claimLevel() { const d = await call('level_claim', {}); if (d) { sfx.claim(); setBalance(d.balance); toast('⭐ +' + d.reward + ' FC'); loadLevel() } }
+async function tournamentHtml() { const t = await call('tournament_board', {}); if (!t) return ''; return `<div class="glass rounded-xl p-4 mb-2"><div class="font-bold">🏆 Wochenturnier</div><div class="text-xs text-zinc-400">1. Platz: 5.000 FC</div></div>` }
+async function admRain() { const t = Number(prompt('Gesamtsumme für alle Spieler (FC):')); if (t > 0) { const d = await call('admin_rain', { total: t }); if (d) toast('🌧️ ' + d.each + ' FC an ' + d.count + ' Spieler') } }
+async function admPayWeek() { const d = await call('admin_pay_week', {}); if (d) toast('🏆 Gewinner bezahlt') }
 
 /* ---------- Auth ---------- */
 const fakeEmail = u => u.toLowerCase().replace(/[^a-z0-9]/g, '') + '@future.community'
-
 $('registerBtn').addEventListener('click', async () => {
   sfx.click()
   setStatus('Registrierung läuft...')
@@ -1643,10 +1511,8 @@ $('registerBtn').addEventListener('click', async () => {
   if (username.length < 3) return setStatus('Username muss min. 3 Zeichen haben', 'error')
   if (password.length < 6) return setStatus('Passwort muss min. 6 Zeichen haben', 'error')
   const { error } = await sb.auth.signUp({ email: fakeEmail(username), password, options: { data: { username } } })
-  if (error) { sfx.lose(); setStatus('Fehler: ' + error.message, 'error') }
-  else { sfx.claim(); setStatus('Account erstellt! Jetzt einloggen.', 'success') }
+  if (error) { sfx.lose(); setStatus('Fehler: ' + error.message, 'error') } else { sfx.claim(); setStatus('Account erstellt! Jetzt einloggen.', 'success') }
 })
-
 $('loginBtn').addEventListener('click', async () => {
   sfx.click()
   setStatus('Login läuft...')
@@ -1655,7 +1521,6 @@ $('loginBtn').addEventListener('click', async () => {
   const { error } = await sb.auth.signInWithPassword({ email: fakeEmail(username), password })
   if (error) { sfx.lose(); setStatus('Login fehlgeschlagen: ' + error.message, 'error') }
 })
-
 async function logout() { sfx.click(); await sb.auth.signOut(); location.reload() }
 
 sb.auth.onAuthStateChange((event, session) => {
