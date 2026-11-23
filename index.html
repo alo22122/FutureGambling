@@ -52,7 +52,10 @@
 <!-- APP -->
 <div id="app" class="hidden">
   <aside id="sidebar" class="fixed inset-y-0 left-0 w-64 glass z-40 flex flex-col p-4 transition-transform -translate-x-full md:translate-x-0">
-    <div class="text-xl font-extrabold grad mb-3">Future Gambling</div>
+    <div class="flex items-center justify-between mb-3">
+      <div class="text-xl font-extrabold grad">Future Gambling</div>
+      <button id="soundBtn" onclick="toggleSound()" class="text-lg p-1 rounded-lg hover:bg-zinc-800 transition" title="Sound ein/ausschalten">🔊</button>
+    </div>
     <div class="rounded-2xl p-3 mb-2" style="background:linear-gradient(135deg,rgba(34,211,238,.15),rgba(52,211,153,.15));border:1px solid #3f3f46">
       <div class="text-xs text-zinc-400" id="welcome">Lade...</div>
       <div class="text-2xl font-black text-emerald-400">🪙 <span id="balance">0</span></div>
@@ -61,13 +64,17 @@
     <div class="grid grid-cols-2 gap-2">
       <button onclick="claimDaily()" class="btn bg-yellow-500 text-black col-span-2" style="padding:.5rem">🎁 Daily abholen</button>
       <button onclick="logout()" class="btn bg-zinc-800" style="padding:.4rem;font-size:.8rem">Logout</button>
-      <button onclick="delMe()" class="btn bg-zinc-900 text-zinc-500 hover:text-red-400" style="padding:.4rem;font-size:.7rem">Konto löschen</button></div>
+      <button onclick="delMe()" class="btn bg-zinc-900 text-zinc-500 hover:text-red-400" style="padding:.4rem;font-size:.7rem">Konto löschen</button>
+    </div>
   </aside>
 
   <header class="md:hidden sticky top-0 z-30 glass flex items-center justify-between px-4 py-3">
     <button onclick="toggleMenu()" class="text-2xl">☰</button>
     <span class="grad font-bold">Future Gambling</span>
-    <span class="text-emerald-400 font-bold">🪙 <span id="balance2">0</span></span>
+    <div class="flex items-center gap-3">
+      <button onclick="toggleSound()" class="text-base" id="soundBtnMobile">🔊</button>
+      <span class="text-emerald-400 font-bold">🪙 <span id="balance2">0</span></span>
+    </div>
   </header>
 
   <main class="md:ml-64 p-4 md:p-10">
@@ -94,6 +101,168 @@ const sleep = ms => new Promise(r => setTimeout(r, ms))
 let ROLE = 'user', chatTimer = null, cg = null, rg = null, cr = null, mn = null, plinkoRisk = 'mid', crPoll = 0, ME = {}, hb = null, dTimer = null, slotCur = null, scr = null, tw = null, pvpTimer = null, dmWith = null, cg_ = null
 let wheelRot = 0, kpicks = [], HIST = []
 let balance = 0, current = 'lobby', busy = false, lastBet = 50, diceMode = 'over', diceTarget = 50
+
+/* ================= WEB AUDIO API SOUND ENGINE ================= */
+let soundEnabled = true
+try {
+  const savedSound = localStorage.getItem('fg_sound_enabled')
+  if (savedSound !== null) soundEnabled = savedSound === 'true'
+} catch(e) {}
+
+let audioCtx = null
+function getAudioCtx() {
+  if (!audioCtx) {
+    const AudioContext = window.AudioContext || window.webkitAudioContext
+    if (AudioContext) audioCtx = new AudioContext()
+  }
+  if (audioCtx && audioCtx.state === 'suspended') {
+    audioCtx.resume()
+  }
+  return audioCtx
+}
+
+function updateSoundIcons() {
+  const ic = soundEnabled ? '🔊' : '🔇'
+  if ($('soundBtn')) $('soundBtn').textContent = ic
+  if ($('soundBtnMobile')) $('soundBtnMobile').textContent = ic
+}
+
+function toggleSound() {
+  soundEnabled = !soundEnabled
+  try { localStorage.setItem('fg_sound_enabled', soundEnabled) } catch(e) {}
+  updateSoundIcons()
+  if (soundEnabled) sfx.click()
+  toast(soundEnabled ? '🔊 Sound aktiviert' : '🔇 Sound stummgeschaltet')
+}
+
+const sfx = {
+  click: () => {
+    if (!soundEnabled) return
+    const ctx = getAudioCtx(); if (!ctx) return
+    const osc = ctx.createOscillator(), g = ctx.createGain()
+    osc.type = 'sine'
+    osc.frequency.setValueAtTime(600, ctx.currentTime)
+    osc.frequency.exponentialRampToValueAtTime(300, ctx.currentTime + 0.04)
+    g.gain.setValueAtTime(0.12, ctx.currentTime)
+    g.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.04)
+    osc.connect(g); g.connect(ctx.destination)
+    osc.start(); osc.stop(ctx.currentTime + 0.04)
+  },
+  bet: () => {
+    if (!soundEnabled) return
+    const ctx = getAudioCtx(); if (!ctx) return
+    [520, 780].forEach((freq, idx) => {
+      const osc = ctx.createOscillator(), g = ctx.createGain()
+      osc.type = 'triangle'
+      osc.frequency.setValueAtTime(freq, ctx.currentTime + idx * 0.04)
+      g.gain.setValueAtTime(0.15, ctx.currentTime + idx * 0.04)
+      g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + idx * 0.04 + 0.08)
+      osc.connect(g); g.connect(ctx.destination)
+      osc.start(ctx.currentTime + idx * 0.04); osc.stop(ctx.currentTime + idx * 0.04 + 0.09)
+    })
+  },
+  spin: () => {
+    if (!soundEnabled) return
+    const ctx = getAudioCtx(); if (!ctx) return
+    const osc = ctx.createOscillator(), g = ctx.createGain()
+    osc.type = 'sawtooth'
+    osc.frequency.setValueAtTime(260 + Math.random() * 80, ctx.currentTime)
+    g.gain.setValueAtTime(0.05, ctx.currentTime)
+    g.gain.linearRampToValueAtTime(0.001, ctx.currentTime + 0.04)
+    osc.connect(g); g.connect(ctx.destination)
+    osc.start(); osc.stop(ctx.currentTime + 0.04)
+  },
+  dice: () => {
+    if (!soundEnabled) return
+    const ctx = getAudioCtx(); if (!ctx) return
+    for (let i = 0; i < 4; i++) {
+      setTimeout(() => {
+        if (!soundEnabled) return
+        const osc = ctx.createOscillator(), g = ctx.createGain()
+        osc.type = 'sine'
+        osc.frequency.setValueAtTime(280 + Math.random() * 320, ctx.currentTime)
+        g.gain.setValueAtTime(0.1, ctx.currentTime)
+        g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.05)
+        osc.connect(g); g.connect(ctx.destination)
+        osc.start(); osc.stop(ctx.currentTime + 0.06)
+      }, i * 60)
+    }
+  },
+  win: () => {
+    if (!soundEnabled) return
+    const ctx = getAudioCtx(); if (!ctx) return
+    const notes = [523.25, 659.25, 783.99, 1046.50] // C5, E5, G5, C6
+    notes.forEach((freq, idx) => {
+      const osc = ctx.createOscillator(), g = ctx.createGain()
+      osc.type = 'triangle'
+      osc.frequency.setValueAtTime(freq, ctx.currentTime + idx * 0.08)
+      g.gain.setValueAtTime(0.2, ctx.currentTime + idx * 0.08)
+      g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + idx * 0.08 + 0.28)
+      osc.connect(g); g.connect(ctx.destination)
+      osc.start(ctx.currentTime + idx * 0.08); osc.stop(ctx.currentTime + idx * 0.08 + 0.3)
+    })
+  },
+  bigwin: () => {
+    if (!soundEnabled) return
+    const ctx = getAudioCtx(); if (!ctx) return
+    const melody = [523.25, 659.25, 783.99, 1046.50, 880.00, 1046.50, 1318.51]
+    melody.forEach((freq, idx) => {
+      const osc = ctx.createOscillator(), g = ctx.createGain()
+      osc.type = 'sine'
+      osc.frequency.setValueAtTime(freq, ctx.currentTime + idx * 0.1)
+      g.gain.setValueAtTime(0.28, ctx.currentTime + idx * 0.1)
+      g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + idx * 0.1 + 0.35)
+      osc.connect(g); g.connect(ctx.destination)
+      osc.start(ctx.currentTime + idx * 0.1); osc.stop(ctx.currentTime + idx * 0.1 + 0.38)
+    })
+  },
+  jackpot: () => {
+    if (!soundEnabled) return
+    const ctx = getAudioCtx(); if (!ctx) return
+    for (let i = 0; i < 12; i++) {
+      setTimeout(() => {
+        if (!soundEnabled) return
+        const osc = ctx.createOscillator(), g = ctx.createGain()
+        osc.type = 'sawtooth'
+        const f = 600 + (i % 2 === 0 ? 350 : 0)
+        osc.frequency.setValueAtTime(f, ctx.currentTime)
+        g.gain.setValueAtTime(0.25, ctx.currentTime)
+        g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.12)
+        osc.connect(g); g.connect(ctx.destination)
+        osc.start(); osc.stop(ctx.currentTime + 0.13)
+      }, i * 110)
+    }
+  },
+  lose: () => {
+    if (!soundEnabled) return
+    const ctx = getAudioCtx(); if (!ctx) return
+    const osc = ctx.createOscillator(), g = ctx.createGain()
+    osc.type = 'sawtooth'
+    osc.frequency.setValueAtTime(260, ctx.currentTime)
+    osc.frequency.exponentialRampToValueAtTime(90, ctx.currentTime + 0.28)
+    g.gain.setValueAtTime(0.18, ctx.currentTime)
+    g.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.28)
+    osc.connect(g); g.connect(ctx.destination)
+    osc.start(); osc.stop(ctx.currentTime + 0.29)
+  },
+  claim: () => {
+    if (!soundEnabled) return
+    const ctx = getAudioCtx(); if (!ctx) return
+    [440, 554.37, 659.25, 880].forEach((freq, idx) => {
+      const osc = ctx.createOscillator(), g = ctx.createGain()
+      osc.type = 'sine'
+      osc.frequency.setValueAtTime(freq, ctx.currentTime + idx * 0.07)
+      g.gain.setValueAtTime(0.2, ctx.currentTime + idx * 0.07)
+      g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + idx * 0.07 + 0.25)
+      osc.connect(g); g.connect(ctx.destination)
+      osc.start(ctx.currentTime + idx * 0.07); osc.stop(ctx.currentTime + idx * 0.07 + 0.28)
+    })
+  }
+}
+
+// User-Interaction Unlock for Web Audio
+window.addEventListener('click', () => { if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume() }, { once: true })
+setTimeout(updateSoundIcons, 0)
 
 const GAMES = {
   lobby:    { icon: '🏠', name: 'Lobby', desc: 'Wähle ein Spiel und viel Glück!' },
@@ -138,7 +307,7 @@ const GAMES = {
   earn:     { icon: '⛏️', name: 'Coins verdienen', desc: 'Daily-Streak, Stunden-Bonus und Mini-Games.', page: true },
   chat:     { icon: '💬', name: 'Chat', desc: 'Live-Chat mit allen Spielern.', page: true },
   board:    { icon: '🏆', name: 'Leaderboard', desc: 'Die reichsten und aktivsten Spieler.', page: true },
-  admin:    { icon: '🛡️', name: 'Admin Board', desc: 'User verwalten, Coins, Rollen, Sperren, Löschen.', page: true, admin: true }
+  admin:    { icon: '🛡️', name: 'Admin Board', desc: 'God Mode: Quoten steuern, Jackpot kontrollieren, Gewinner bestimmen.', page: true, admin: true }
 }
 
 /* ---------- UI helpers ---------- */
@@ -168,7 +337,6 @@ async function loadProfile() {
   ME = data; $('welcome').innerHTML = (data.prestige ? '👑' + data.prestige + ' ' : '') + 'Lv ' + data.level + ' · ' + nm(data)
   if (!hb) hb = setInterval(() => sb.rpc('heartbeat'), 60000)
   setBalance(data.balance); renderNav()
-  sb.rpc('fg_version').then(r => { if (r.error || r.data !== 'v10') toast('⚠️ Datenbank-Setup unvollständig – supabase_complete.sql komplett ausführen') })
 }
 
 /* ---------- Navigation ---------- */
@@ -199,9 +367,9 @@ function betBox() {
   return `<label class="text-xs text-zinc-400">Einsatz (FC)</label>
   <div class="flex gap-2 mt-1 mb-5">
     <input id="bet" type="number" min="1" value="${lastBet}" class="inp flex-1 min-w-0" />
-    <button onclick="mod('half')" class="btn bg-zinc-800" style="width:auto">½</button>
-    <button onclick="mod('double')" class="btn bg-zinc-800" style="width:auto">2×</button>
-    <button onclick="mod('max')" class="btn bg-zinc-800" style="width:auto">Max</button>
+    <button onclick="sfx.click();mod('half')" class="btn bg-zinc-800" style="width:auto">½</button>
+    <button onclick="sfx.click();mod('double')" class="btn bg-zinc-800" style="width:auto">2×</button>
+    <button onclick="sfx.click();mod('max')" class="btn bg-zinc-800" style="width:auto">Max</button>
   </div>`
 }
 function mod(m) {
@@ -230,7 +398,7 @@ let PM = [5.6, 2.1, 1.1, 1, 0.5, 1, 1.1, 2.1, 5.6]
 const WM = [0, 0.5, 0, 1.5, 0, 2, 0, 1, 0, 4]
 
 VIEWS.lobby = () => `<div class="grid grid-cols-2 md:grid-cols-3 gap-3">${Object.entries(GAMES).filter(([k, g]) => k !== 'lobby' && !g.page).map(([k, g]) =>
-  `<button onclick="show('${k}')" class="glass rounded-2xl p-5 text-left hover:border-cyan-500 transition"><div class="text-4xl mb-2">${g.icon}</div><div class="font-bold">${g.name}</div><div class="text-xs text-zinc-400 mt-1">${g.desc}</div></button>`).join('')}</div>`
+  `<button onclick="sfx.click();show('${k}')" class="glass rounded-2xl p-5 text-left hover:border-cyan-500 transition"><div class="text-4xl mb-2">${g.icon}</div><div class="font-bold">${g.name}</div><div class="text-xs text-zinc-400 mt-1">${g.desc}</div></button>`).join('')}</div>`
 
 VIEWS.crash = () => betBox() + `<div id="stage" class="h-36 flex items-center justify-center text-5xl font-black">🚀 1.00×</div>
   <label class="text-xs text-zinc-400">Auto-Cashout bei (×)</label>
@@ -259,6 +427,7 @@ VIEWS.keno = () => { kpicks = []; return betBox() + `<div class="grid grid-cols-
   <button class="btn play bg-emerald-600" onclick="kplay()">Ziehen</button>` }
 function kpick(n) {
   if (busy) return
+  sfx.click()
   const i = kpicks.indexOf(n)
   if (i >= 0) kpicks.splice(i, 1); else if (kpicks.length < 5) kpicks.push(n)
   document.querySelectorAll('.kc').forEach(b => b.classList.remove('on', 'hit', 'drawn'))
@@ -285,7 +454,7 @@ VIEWS.hilo = () => {
   return betBox() + stg(`<div class="glass rounded-xl px-6 py-4">${RANKS[hiRef - 1]}</div>`) + '<div class="flex gap-3 mb-3">' +
     (up ? `<button class="btn play bg-emerald-600" onclick="play('higher:${hiRef}')">⬆ Höher ${m(up)}×</button>` : '') +
     (lo ? `<button class="btn play bg-rose-600" onclick="play('lower:${hiRef}')">⬇ Niedriger ${m(lo)}×</button>` : '') +
-    '</div><button class="btn bg-zinc-800" onclick="newRef()">🔄 Neue Karte</button>'
+    '</div><button class="btn bg-zinc-800" onclick="sfx.click();newRef()">🔄 Neue Karte</button>'
 }
 function newRef() { lastBet = Math.floor(Number($('bet').value)) || lastBet; hiRef = 1 + Math.floor(Math.random() * 13); show('hilo') }
 VIEWS.lucky7 = () => betBox() + stg('🎲 🎲') + row([['⬇ Unter 7 · 2.3×', 'under', 'bg-cyan-600'], ['7 · 5.7×', 'seven', 'bg-yellow-600'], ['⬆ Über 7 · 2.3×', 'over', 'bg-pink-600']])
@@ -298,7 +467,6 @@ const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;'
 const BADGE = { admin: '🛡️', mod: '🔧', vip: '⭐' }
 const PAGEINIT = {}
 
-async function setDiff(lvl) { const { error } = await sb.rpc('set_difficulty', { lvl }); toast(error ? error.message : 'Schwierigkeit: ' + lvl) }
 async function delMe() {
   if (!confirm('Account und alle Coins endgültig löschen?') || !confirm('Wirklich sicher?')) return
   const { error } = await sb.rpc('delete_me'); if (error) return toast(error.message)
@@ -312,21 +480,26 @@ VIEWS.earn = () => `<div class="grid grid-cols-2 gap-3 mb-5">
   <div class="glass rounded-xl p-4 mb-3"><b>👆 Klick-Challenge</b><div class="text-xs text-zinc-400 mb-3">10 Sekunden so oft klicken wie möglich – bis 40 Coins.</div><button id="clickbtn" class="btn bg-emerald-600" onclick="clickGame()">Start</button></div>
   <div class="glass rounded-xl p-4"><b>⚡ Reaktionstest</b><div class="text-xs text-zinc-400 mb-3">Klick, sobald der Button grün wird – bis 40 Coins.</div><button id="reactbtn" class="btn bg-zinc-700" onclick="reactGame()">Start</button></div>
   <div id="lvlbox" class="mt-4"></div><div id="missions" class="mt-4"></div><div class="text-xs text-zinc-500 mt-3">Mini-Game-Cooldown: 60 Sekunden. Daily: je mehr Tage in Folge, desto mehr Coins.</div>`
+
 async function claimHourly() {
   const { data, error } = await sb.rpc('claim_hourly'); if (error) return toast(error.message)
+  sfx.claim()
   setBalance(data.balance); toast('⏰ +' + data.reward + ' Coins')
 }
 async function mini(kind, score) {
   const { data, error } = await sb.rpc('claim_mini', { mini_kind: kind, mini_score: score })
   if (error) return toast(error.message)
+  sfx.claim()
   setBalance(data.balance); toast('🎉 +' + data.reward + ' Coins')
 }
 function clickGame() {
+  sfx.click()
   const b = $('clickbtn')
   if (!cg) { cg = { n: 0 }; b.textContent = 'Klick! 0'; setTimeout(() => { const n = cg.n; cg = null; b.textContent = 'Start'; mini('click', n) }, 10000); return }
   cg.n++; b.textContent = 'Klick! ' + cg.n
 }
 function reactGame() {
+  sfx.click()
   const b = $('reactbtn')
   if (!rg) {
     b.textContent = 'Warte...'; b.className = 'btn bg-red-700'; rg = { ready: false }
@@ -347,36 +520,182 @@ PAGEINIT.board = async () => {
 }
 
 /* ---- Chat ---- */
-VIEWS.chat = () => `<div id="chatbox" class="h-80 overflow-y-auto space-y-1 mb-3 text-sm"></div>
+const CHANS = [['global', '🌐 Global'], ['gambling', '🎰 Gambling'], ['games', '🎮 Games'], ['offtopic', '💭 Offtopic'], ['clan', '🏰 Clan']]
+let chatChan = 'global'
+VIEWS.chat = () => `<div class="flex gap-1 flex-wrap mb-3">${CHANS.map(([k, l]) => `<button class="px-3 py-1 rounded-lg text-sm ${k === chatChan ? 'bg-cyan-700' : 'bg-zinc-800'}" onclick="chatChan='${k}';show('chat')">${l}</button>`).join('')}</div>
+  <div id="chatbox" class="h-80 overflow-y-auto space-y-1 mb-3 text-sm"></div>
   <div class="flex gap-2"><input id="chatin" maxlength="200" placeholder="Nachricht..." class="inp flex-1 min-w-0" onkeydown="if(event.key==='Enter')sendChat()"><button class="btn bg-cyan-600" style="width:auto" onclick="sendChat()">Senden</button></div>`
 PAGEINIT.chat = () => { loadChat(); chatTimer = setInterval(loadChat, 4000) }
 async function loadChat() {
-  const { data, error } = await sb.rpc('chat_list'); const box = $('chatbox'); if (error || !box) return
+  const { data, error } = await sb.rpc('chat_list', { chan: chatChan }); const box = $('chatbox'); if (error || !box) return
   const bottom = box.scrollHeight - box.scrollTop - box.clientHeight < 60
   box.innerHTML = data.map(m => `<div><b>${nm(m)}:</b> ${esc(m.msg)}${ROLE === 'mod' || ROLE === 'admin' ? ` <button class="text-red-400" onclick="chatDel(${m.id})">✕</button>` : ''}</div>`).join('')
   if (bottom) box.scrollTop = box.scrollHeight
 }
 async function sendChat() {
   const i = $('chatin'), m = i.value.trim(); if (!m) return
-  const { error } = await sb.rpc('chat_send', { m }); if (error) return toast(error.message)
+  sfx.click()
+  const { error } = await sb.rpc('chat_send', { m, chan: chatChan }); if (error) return toast(error.message)
   i.value = ''; await loadChat(); $('chatbox').scrollTop = 1e6
 }
 async function chatDel(id) { await sb.rpc('chat_delete', { msg_id: id }); loadChat() }
 
-/* ---- Admin ---- */
-VIEWS.admin = () => '<button class="btn bg-sky-600 mb-3" onclick="admRain()">🌧️ Coin Rain starten</button><button class="btn bg-yellow-600 mb-3" onclick="admPayWeek()">🏆 Wochenpreise auszahlen</button><div id="adm" class="text-zinc-400">Lade...</div>'
-PAGEINIT.admin = () => loadAdmin()
-async function loadAdmin() {
-  const { data, error } = await sb.rpc('admin_users'); if (error) return $('adm').textContent = error.message
-  const sm = 'style="width:auto;padding:.3rem .7rem"'
-  $('adm').innerHTML = `<div class="text-xs text-zinc-400 mb-2">${data.length} User</div>` + data.map(u =>
-    `<div class="glass rounded-xl p-3 mb-2 flex flex-wrap items-center gap-2 text-sm"><b class="flex-1 min-w-[6rem]">${esc(u.username)}${u.banned ? ' 🚫' : ''}</b>
-    <select class="inp py-1" onchange="adm('admin_role',{target:'${u.id}',new_role:this.value})">${['user', 'vip', 'mod', 'admin'].map(r => `<option ${r === u.role ? 'selected' : ''}>${r}</option>`).join('')}</select>
-    <span class="text-emerald-400">${Number(u.balance).toLocaleString('de-DE')} FC</span>
-    <button class="btn bg-cyan-700" ${sm} onclick="admCoins('${u.id}')">± Coins</button>
-    <button class="btn ${u.banned ? 'bg-green-700' : 'bg-orange-700'}" ${sm} onclick="adm('admin_ban',{target:'${u.id}',is_banned:${!u.banned}})">${u.banned ? 'Entsperren' : 'Sperren'}</button>
-    <button class="btn bg-red-700" ${sm} onclick="admDel('${u.id}')">🗑</button></div>`).join('')
+/* ================= GOD-MODE ADMIN BOARD ================= */
+VIEWS.admin = () => `
+<div class="space-y-6">
+  <!-- Global Server Controls -->
+  <div class="glass rounded-xl p-5 border border-purple-500/40">
+    <div class="flex items-center gap-2 mb-3">
+      <span class="text-2xl">⚡</span>
+      <h3 class="text-lg font-black text-purple-400">Server & Quoten God-Mode</h3>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+      <div>
+        <label class="text-xs text-zinc-400 font-semibold">Server Glück / Quoten-Modus</label>
+        <select id="adm_global_rig" class="inp w-full mt-1 text-sm py-2" onchange="setGlobalRig(this.value)">
+          <option value="0">🟢 Normal (Faires RNG)</option>
+          <option value="1">🍀 Haus-Glück (Alle gewinnen / Win Rain)</option>
+          <option value="-1">😈 Haus gewinnt immer (Alle verlieren)</option>
+        </select>
+      </div>
+      <div>
+        <label class="text-xs text-zinc-400 font-semibold">Jackpot Pool (FC)</label>
+        <div class="flex gap-1 mt-1">
+          <input id="adm_pot_in" type="number" min="0" placeholder="z.B. 100000" class="inp w-full text-sm py-2">
+          <button class="btn bg-yellow-500 text-black text-xs px-3" style="width:auto" onclick="admSetPot()">Setzen</button>
+        </div>
+      </div>
+      <div>
+        <label class="text-xs text-zinc-400 font-semibold">Jackpot Cut (% von Verlusten)</label>
+        <div class="flex gap-1 mt-1">
+          <input id="adm_cut_in" type="number" min="0" max="100" placeholder="5" class="inp w-full text-sm py-2">
+          <button class="btn bg-cyan-600 text-xs px-3" style="width:auto" onclick="admSetCut()">Setzen</button>
+        </div>
+      </div>
+    </div>
+    <div class="flex gap-2 flex-wrap">
+      <button class="btn bg-sky-600 text-xs" style="width:auto" onclick="admRain()">🌧️ Coin Rain starten</button>
+      <button class="btn bg-yellow-600 text-xs" style="width:auto" onclick="admPayWeek()">🏆 Wochenpreise auszahlen</button>
+      <button class="btn bg-pink-600 text-xs" style="width:auto" onclick="admBroadcast()">📢 Broadcast-Nachricht</button>
+    </div>
+  </div>
+
+  <!-- User Manipulation & Rigging -->
+  <div class="glass rounded-xl p-5">
+    <div class="flex items-center justify-between mb-3">
+      <div class="flex items-center gap-2">
+        <span class="text-2xl">👥</span>
+        <h3 class="text-lg font-black text-white">Spieler-Manipulation & Rigging</h3>
+      </div>
+      <input id="adm_user_search" placeholder="Spieler suchen..." class="inp text-xs py-1.5 px-3 w-40" oninput="filterAdminUsers()">
+    </div>
+    <p class="text-xs text-zinc-400 mb-4">Hier kannst du für jeden einzelnen Spieler bestimmen, wer gewinnt, verliert oder den nächsten Jackpot zieht.</p>
+    <div id="adm_user_list" class="space-y-2">Lade Benutzer...</div>
+  </div>
+</div>`
+
+let ADMIN_USERS_CACHE = []
+
+PAGEINIT.admin = () => { loadAdminOverview(); loadAdmin() }
+
+async function loadAdminOverview() {
+  const d = await call('admin_get_overview', {})
+  if (!d) return
+  if ($('adm_pot_in')) $('adm_pot_in').value = d.jackpot
+  if ($('adm_cut_in')) $('adm_cut_in').value = d.jackpot_cut_percent
+  if ($('adm_global_rig')) $('adm_global_rig').value = d.global_rig_mode
 }
+
+async function loadAdmin() {
+  const { data, error } = await sb.rpc('admin_users')
+  if (error) return $('adm_user_list').textContent = error.message
+  ADMIN_USERS_CACHE = data
+  renderAdminUsers(data)
+}
+
+function filterAdminUsers() {
+  const q = ($('adm_user_search').value || '').toLowerCase().trim()
+  const filtered = ADMIN_USERS_CACHE.filter(u => u.username.toLowerCase().includes(q))
+  renderAdminUsers(filtered)
+}
+
+function renderAdminUsers(data) {
+  const box = $('adm_user_list'); if (!box) return
+  const sm = 'style="width:auto;padding:.3rem .7rem"'
+  box.innerHTML = `<div class="text-xs text-zinc-400 mb-2">${data.length} Spieler registriert</div>` + data.map(u => `
+    <div class="glass rounded-xl p-3 flex flex-wrap items-center gap-2 text-sm border border-zinc-800">
+      <div class="flex-1 min-w-[7rem]">
+        <b class="text-white">${esc(u.username)}</b>
+        ${u.banned ? '<span class="text-red-400 text-xs ml-1">🚫 Gesperrt</span>' : ''}
+        <div class="text-xs text-emerald-400 font-bold">${Number(u.balance).toLocaleString('de-DE')} FC</div>
+      </div>
+      
+      <!-- Rigging Controller -->
+      <div class="flex items-center gap-1">
+        <label class="text-[10px] text-zinc-400 uppercase tracking-wider">Rig:</label>
+        <select class="inp text-xs py-1 px-2 ${u.rig_mode === 'force_win' ? 'border-emerald-500 text-emerald-300' : u.rig_mode === 'force_lose' ? 'border-red-500 text-red-300' : u.rig_mode === 'force_jackpot' ? 'border-yellow-400 text-yellow-300 font-bold' : ''}" 
+          onchange="admUserRig('${u.id}', this.value)">
+          <option value="default" ${u.rig_mode === 'default' ? 'selected' : ''}>🟢 Normal</option>
+          <option value="force_win" ${u.rig_mode === 'force_win' ? 'selected' : ''}>🍀 Immer Win</option>
+          <option value="force_lose" ${u.rig_mode === 'force_lose' ? 'selected' : ''}>💀 Immer Lose</option>
+          <option value="force_jackpot" ${u.rig_mode === 'force_jackpot' ? 'selected' : ''}>💰 Nächster Jackpot!</option>
+        </select>
+      </div>
+
+      <!-- Role Selector -->
+      <select class="inp text-xs py-1 px-2" onchange="adm('admin_role',{target:'${u.id}',new_role:this.value})">
+        ${['user', 'vip', 'mod', 'admin'].map(r => `<option ${r === u.role ? 'selected' : ''}>${r}</option>`).join('')}
+      </select>
+
+      <button class="btn bg-cyan-700 text-xs" ${sm} onclick="admCoins('${u.id}')">± Coins</button>
+      <button class="btn bg-purple-700 text-xs" ${sm} onclick="admSetExactBalance('${u.id}')">Setzen</button>
+      <button class="btn ${u.banned ? 'bg-green-700' : 'bg-orange-700'} text-xs" ${sm} onclick="adm('admin_ban',{target:'${u.id}',is_banned:${!u.banned}})">
+        ${u.banned ? 'Entsperren' : 'Sperren'}
+      </button>
+      <button class="btn bg-red-800 text-xs" ${sm} onclick="admDel('${u.id}')">🗑</button>
+    </div>`).join('')
+}
+
+async function setGlobalRig(val) {
+  const d = await call('admin_set_setting', { skey: 'global_rig_mode', sval: Number(val) })
+  if (d) toast('⚡ Globaler Quoten-Modus aktualisiert!')
+}
+
+async function admSetPot() {
+  const val = Number($('adm_pot_in').value)
+  if (isNaN(val) || val < 0) return toast('Ungültiger Betrag')
+  const d = await call('admin_set_pot', { amount: val })
+  if (d) { toast('💰 Jackpot Pool gesetzt: ' + Number(d.pool).toLocaleString('de-DE') + ' FC'); sfx.claim() }
+}
+
+async function admSetCut() {
+  const val = Number($('adm_cut_in').value)
+  if (isNaN(val) || val < 0 || val > 100) return toast('Cut muss zwischen 0 und 100 % liegen')
+  const d = await call('admin_set_setting', { skey: 'jackpot_cut_percent', sval: val })
+  if (d) toast('✂️ Jackpot Cut auf ' + val + '% geändert')
+}
+
+async function admUserRig(userId, mode) {
+  const d = await call('admin_set_rig', { target: userId, mode })
+  if (d) toast('🎯 Spieler-Rigging gespeichert: ' + mode)
+}
+
+async function admSetExactBalance(id) {
+  const a = prompt('Neuer genauer Kontostand (FC):')
+  if (a !== null && a !== '') {
+    const num = Number(a)
+    if (!isNaN(num) && num >= 0) adm('admin_set_balance', { target: id, amount: num })
+  }
+}
+
+async function admBroadcast() {
+  const txt = prompt('Server-Ankündigung (erscheint im Chat):')
+  if (txt) {
+    const d = await call('admin_broadcast', { msg: txt })
+    if (d) toast('📢 Ankündigung gesendet!')
+  }
+}
+
 async function adm(fn, args) { const { error } = await sb.rpc(fn, args); error ? toast(error.message) : loadAdmin() }
 function admCoins(id) { const a = Number(prompt('Coins (negativ = abziehen):')); if (a) adm('admin_give', { target: id, amount: a }) }
 function admDel(id) { if (confirm('Account endgültig löschen?')) adm('admin_delete', { target: id }) }
@@ -394,7 +713,7 @@ function logRound(net) { HIST.unshift({ g: GAMES[current].icon + ' ' + GAMES[cur
 /* ================= PLINKO mit Risiko ================= */
 const PMS = { low: [3, 1.5, 1.2, 1, 0.65, 1, 1.2, 1.5, 3], mid: [5.6, 2.1, 1.1, 1, 0.5, 1, 1.1, 2.1, 5.6], high: [26, 4, 1.5, 0.3, 0.2, 0.3, 1.5, 4, 26] }
 VIEWS.plinko = () => { PM = PMS[plinkoRisk]; return betBox() + `<div class="flex gap-2 mb-3">${['low', 'mid', 'high'].map(r =>
-  `<button class="btn bg-zinc-800 ${r === plinkoRisk ? 'sel' : ''}" onclick="lastBet=Math.floor(+$('bet').value)||lastBet;plinkoRisk='${r}';show('plinko')">${{ low: '🟢 Niedrig', mid: '🟡 Mittel', high: '🔴 Hoch' }[r]}</button>`).join('')}</div>
+  `<button class="btn bg-zinc-800 ${r === plinkoRisk ? 'sel' : ''}" onclick="sfx.click();lastBet=Math.floor(+$('bet').value)||lastBet;plinkoRisk='${r}';show('plinko')">${{ low: '🟢 Niedrig', mid: '🟡 Mittel', high: '🔴 Hoch' }[r]}</button>`).join('')}</div>
   <div id="stage" class="relative h-72 mb-4 overflow-hidden">${plinkoBoard()}</div><button class="btn play bg-emerald-600" onclick="play('drop')">Ball fallen lassen</button>` }
 
 /* ================= CRASH (interaktiv) ================= */
@@ -404,6 +723,7 @@ async function crashBtn() {
   const b = $('crbtn')
   if (!cr) {
     const bet = readBet(); if (!bet) return
+    sfx.bet()
     b.disabled = true
     const d = await call('crash_start', { b: bet }); b.disabled = false; if (!d) return
     lastBet = bet; setBalance(d.balance); msg(''); $('stage').style.color = ''
@@ -417,6 +737,7 @@ async function crashBtn() {
 }
 async function crashTick() {
   if (!cr) return
+  sfx.spin()
   const m = Math.exp(0.12 * (performance.now() - cr.t0) / 1000)
   $('stage').textContent = '🚀 ' + (Math.floor(m * 100) / 100).toFixed(2) + '×'
   if (++crPoll % 3 === 0 && !cr.polling) {
@@ -429,9 +750,11 @@ function crashEnd(d) {
   clearInterval(cr.timer); cr = null; setBalance(d.balance)
   const s = $('stage'), b = $('crbtn'); b.textContent = 'Start'; b.className = 'btn bg-emerald-600'
   if (d.state === 'cashed') {
+    sfx.win()
     s.textContent = '✅ ' + Number(d.m).toFixed(2) + '×'; s.style.color = '#34d399'
     const net = d.payout - lastBet; msg(`🎉 +${net} FC (Crash bei ${Number(d.cp).toFixed(2)}×)`, 'win'); logRound(net)
   } else {
+    sfx.lose()
     s.textContent = '💥 ' + Number(d.cp).toFixed(2) + '×'; s.style.color = '#f87171'
     msg(`💥 −${lastBet} FC`, 'lose'); logRound(-lastBet)
   }
@@ -446,6 +769,7 @@ async function mineBtn() {
   const b = $('mbtn')
   if (!mn) {
     const bet = readBet(); if (!bet) return
+    sfx.bet()
     const mc = +$('mcount').value
     const d = await call('mines_start', { b: bet, mine_count: mc }); if (!d) return
     lastBet = bet; setBalance(d.balance); msg('')
@@ -461,7 +785,8 @@ async function minePick(i) {
   mn.lock = true
   const d = await call('mines_pick', { t: i })
   if (!d) { mn.lock = false; return }
-  if (d.boom) { $('m' + i).textContent = '💥'; return mineEnd(d, false) }
+  if (d.boom) { sfx.lose(); $('m' + i).textContent = '💥'; return mineEnd(d, false) }
+  sfx.claim()
   mn.picked.push(i); mn.lock = false
   const c = $('m' + i); c.textContent = '💎'; c.classList.add('hit')
   $('minfo').textContent = Number(d.mult).toFixed(2) + '× • nächstes ' + (d.next ? Number(d.next).toFixed(2) + '×' : '–')
@@ -474,6 +799,7 @@ function mineEnd(d, won) {
   mn = null; setBalance(d.balance)
   const b = $('mbtn'); b.textContent = 'Start'; b.className = 'btn bg-emerald-600'; b.disabled = false
   const net = won ? d.payout - lastBet : -lastBet
+  if (won) sfx.win(); else sfx.lose()
   msg(won ? `🎉 +${net} FC` : `💥 −${lastBet} FC`, won ? 'win' : 'lose'); logRound(net)
 }
 
@@ -483,7 +809,7 @@ VIEWS.blackjack = () => betBox() + `<div id="bjt" class="space-y-4 mb-4 min-h-[9
   <div id="bjb" class="flex gap-3 flex-wrap"><button class="btn bg-emerald-600" onclick="bj('start')">Austeilen</button></div>`
 async function bj(act) {
   const args = { act }
-  if (act === 'start') { const bet = readBet(); if (!bet) return; args.b = bet; lastBet = bet }
+  if (act === 'start') { const bet = readBet(); if (!bet) return; sfx.bet(); args.b = bet; lastBet = bet } else sfx.click()
   const btns = document.querySelectorAll('#bjb button'); btns.forEach(x => x.disabled = true)
   const d = await call('bj_action', args)
   if (!d) { btns.forEach(x => x.disabled = false); return }
@@ -496,6 +822,7 @@ function renderBj(d) {
   if (d.done) {
     const net = d.payout - d.bet
     B.innerHTML = `<button class="btn bg-emerald-600" onclick="bj('start')">Neue Runde</button>`
+    if (net > 0) sfx.win(); else if (net < 0) sfx.lose(); else sfx.click()
     msg({ blackjack: '🃏 BLACKJACK! ', win: '🎉 Gewonnen ', push: 'Push ', lose: 'Verloren ' }[d.result] + (net > 0 ? '+' + net : net < 0 ? net : '') + ' FC', net > 0 ? 'win' : net < 0 ? 'lose' : '')
     logRound(net)
   } else {
@@ -513,8 +840,8 @@ PAGEINIT.earn = async () => {
   loadMissions(); loadLevel()
   const box = $('dailybox'); if (!box) return
   const { data: d, error: derr } = await sb.rpc('daily_status')
-  if (derr) { box.innerHTML = '⚠️ Daily-Fehler: ' + esc(derr.message) + '<div class="text-xs text-zinc-500 mt-1">Tipp: supabase_complete.sql erneut ausführen und die Seite neu laden.</div>'; return }
-  if (!d) { box.innerHTML = '<button class="btn bg-yellow-500 text-black" onclick="claimDaily()">🎁 Daily abholen</button><div class="text-xs text-zinc-500 mt-2">Status konnte nicht geladen werden (SQL-Update ausführen?)</div>'; return }
+  if (derr) { box.innerHTML = '⚠️ Daily-Fehler: ' + esc(derr.message); return }
+  if (!d) { box.innerHTML = '<button class="btn bg-yellow-500 text-black" onclick="claimDaily()">🎁 Daily abholen</button>'; return }
   const t0 = Date.now(), cur = d.streak % 7 || (d.streak ? 7 : 0)
   const draw = () => {
     const left = Math.max(0, d.secs_left - Math.floor((Date.now() - t0) / 1000))
@@ -540,10 +867,13 @@ async function loadPlayers() {
     <button class="text-pink-400" data-u="${esc(u.username)}" onclick="$('gto').value=this.dataset.u;$('gam').focus()">🎁</button></div>`).join('')
 }
 async function gift() {
+  sfx.click()
   const d = await call('send_coins', { to_user: $('gto').value.trim(), amount: +$('gam').value }); if (!d) return
+  sfx.claim()
   setBalance(d.balance); toast('🎁 Gesendet!'); $('gam').value = ''
 }
 async function showProfile(name) {
+  sfx.click()
   const u = await call('get_profile', { uname: name }); if (!u) return toast('Profil nicht gefunden')
   clearInterval(chatTimer); $('title').textContent = '🙍 ' + u.username; $('desc').textContent = 'Spielerprofil'; msg('')
   $('view').innerHTML = `<div class="text-center"><div class="text-7xl mb-2">${esc(u.avatar)}</div><div class="text-2xl font-black" style="color:${/^#[0-9a-f]{6}$/i.test(u.color) ? u.color : '#fff'}">${esc(u.username)} ${BADGE[u.role] || ''}</div>
@@ -575,7 +905,9 @@ PAGEINIT.shop = async () => {
     sec('avatar', '😎 Avatare') + sec('color', '🎨 Namensfarben') + sec('title', '🏷️ Titel')
 }
 async function shopAct(fn, id) {
+  sfx.click()
   const d = await call(fn, { item: id }); if (!d) return
+  sfx.claim()
   setBalance(d.balance); await loadProfile(); show('shop')
 }
 async function saveBio() { const d = await call('set_bio', { t: $('bio').value }); if (d) { ME.bio = $('bio').value; toast('Bio gespeichert') } }
@@ -586,7 +918,7 @@ const SLOTS = {
   fruit: { name: 'Fruit Party', icon: '🍇', n: 5, tag: 'Low', col: '#34d399', sym: ['🍒', '🍋', '🍇', '🍉', '🍓'], desc: 'Fast jede Drehung trifft – bis 40×.', pay: '2 gleiche 0,3× · 3: 1,5× · 4: 8× · 5: 40×' },
   volcano: { name: 'Volcano', icon: '🌋', n: 5, tag: 'High', col: '#fb923c', sym: ['🌋', '🔥', '💎', '🪙', '🦖', '🥚', '⚡'], desc: 'Schwerer Slot: seltene, wuchtige Treffer bis 350×.', pay: '3 gleiche 2,8× · 4: 28× · 5: 350×' },
   mega: { name: 'Mega Titan', icon: '👑', n: 5, tag: 'Extreme', col: '#f43f5e', sym: ['💎', '👑', '🔔', '⭐', '🍀', '🍒', '🍋', '🍇', '🎰'], desc: 'Extreme Volatilität – selten, aber bis zu 1.075×!', pay: '3 gleiche 4,5× · 4: 54× · 5: 1.075×' },
-  jackpot: { name: 'Global Jackpot', icon: '💰', n: 3, tag: 'Jackpot', col: '#facc15', sym: ['🍒', '🍋', '🔔', '⭐', '🍀', '💰'], desc: 'Alle Spieler füllen den Pot. Drei 💰 knacken ihn!', pay: 'Paar 0,77× · Drilling 19× · 💰💰💰 = JACKPOT' },
+  jackpot: { name: 'Global Jackpot', icon: '💰', n: 3, tag: 'Jackpot', col: '#facc15', sym: ['🍒', '🍋', '🔔', '⭐', '🍀', '💰'], desc: '5 % aller Verluste füllen den Pot. Drei 💰 knacken ihn!', pay: 'Paar 0,8× · Drilling 17× · 💰💰💰 = JACKPOT' },
   scratch: { name: 'Rubbellos', icon: '🎟️', n: 6, tag: 'Scratch', col: '#a78bfa', sym: ['🍒', '🍋', '⭐', '💎', '🍀', '🎁'], desc: 'Rubbel 6 Felder frei. 3 gleiche gewinnen, bis 340×.', pay: '3 gleiche 1,35× · 4: 6,8× · 5: 34× · 6: 340×' }
 }
 const ACH = [['🎰', 'Zocker', u => u.wagered >= 10000], ['🐳', 'Whale', u => u.wagered >= 500000], ['💰', 'Reich', u => u.balance >= 100000], ['🔥', '7er-Streak', u => u.streak >= 7], ['⭐', 'Level 5', u => u.level >= 5], ['👑', 'Level 10', u => u.level >= 10]]
@@ -594,7 +926,7 @@ const ACH = [['🎰', 'Zocker', u => u.wagered >= 10000], ['🐳', 'Whale', u =>
 VIEWS.slots = () => {
   slotCur = null; scr = null
   return `<div class="grid grid-cols-2 gap-3">${Object.entries(SLOTS).map(([k, m]) =>
-    `<button onclick="openSlot('${k}')" class="glass rounded-2xl p-4 text-left hover:border-cyan-500 transition"><div class="text-4xl mb-1">${m.icon}</div><div class="font-bold">${m.name}</div>
+    `<button onclick="sfx.click();openSlot('${k}')" class="glass rounded-2xl p-4 text-left hover:border-cyan-500 transition"><div class="text-4xl mb-1">${m.icon}</div><div class="font-bold">${m.name}</div>
     <span class="text-xs px-2 py-0.5 rounded-full" style="background:${m.col}33;color:${m.col}">${m.tag}</span><div class="text-xs text-zinc-400 mt-2">${m.desc}</div>
     ${k === 'jackpot' ? '<div class="text-yellow-400 font-bold mt-1">Pot: <span id="jp">…</span> FC</div>' : ''}</button>`).join('')}</div>`
 }
@@ -617,18 +949,24 @@ function openSlot(k) {
 async function slotSpin() {
   if (busy || !slotCur) return
   const M = SLOTS[slotCur], bet = readBet(); if (!bet) return
+  sfx.bet()
   busy = true; lastBet = bet; $('spinbtn').disabled = true; msg('')
   const d = await call('slot_play', { machine: slotCur, bet_amount: bet })
   if (!d) { busy = false; $('spinbtn').disabled = false; return }
   const arr = d.result.split(' ').map(Number), cells = [...document.querySelectorAll('.reel')]
   if (slotCur === 'scratch') { scr = { d, arr, done: new Set() }; cells.forEach(c => { c.textContent = '❔' }); return }
   const sp = { normal: [450, 330], fast: [160, 110], turbo: [0, 0] }[slotSpeed] || [450, 330]
-  const iv = slotSpeed === 'turbo' ? [] : cells.map(c => setInterval(() => c.textContent = M.sym[Math.floor(Math.random() * M.sym.length)], 70))
-  for (let i = 0; i < cells.length; i++) { await sleep(i === 0 ? sp[0] : sp[1]); clearInterval(iv[i]); cells[i].textContent = M.sym[arr[i] - 1]; cells[i].classList.add('stop') }
+  const iv = slotSpeed === 'turbo' ? [] : cells.map(c => setInterval(() => { c.textContent = M.sym[Math.floor(Math.random() * M.sym.length)]; sfx.spin() }, 70))
+  for (let i = 0; i < cells.length; i++) {
+    await sleep(i === 0 ? sp[0] : sp[1])
+    clearInterval(iv[i]); cells[i].textContent = M.sym[arr[i] - 1]; cells[i].classList.add('stop')
+    sfx.click()
+  }
   slotDone(d)
 }
 function scratchClick(i) {
   if (!scr || scr.done.has(i)) return
+  sfx.click()
   scr.done.add(i); const c = $('rl' + i); c.textContent = SLOTS.scratch.sym[scr.arr[i] - 1]; c.classList.add('stop')
   if (scr.done.size === scr.arr.length) { const d = scr.d; scr = null; slotDone(d) }
 }
@@ -636,9 +974,13 @@ function scratchAll() { if (scr) [...Array(scr.arr.length).keys()].forEach(scrat
 function slotDone(d) {
   setBalance(d.balance); busy = false; $('spinbtn').disabled = false
   const net = d.payout - lastBet, x = d.payout / lastBet
-  msg(net > 0 ? `🎉 +${net.toLocaleString('de-DE')} FC` : net === 0 ? 'Einsatz zurück' : `−${lastBet - d.payout} FC`, net > 0 ? 'win' : 'lose'); logRound(net)
-  if (d.jackpot) bigWin('💰 JACKPOT!<br>' + d.payout.toLocaleString('de-DE') + ' FC', true)
-  else if (x >= 20) bigWin('MEGA WIN ×' + Math.floor(x)); else if (x >= 5) bigWin('BIG WIN ×' + x.toFixed(1))
+  msg(net > 0 ? `🎉 +${net.toLocaleString('de-DE')} FC` : net === 0 ? 'Einsatz zurück' : `−${lastBet - d.payout} FC`, net > 0 ? 'win' : 'lose')
+  logRound(net)
+  if (d.jackpot) { sfx.jackpot(); bigWin('💰 JACKPOT!<br>' + d.payout.toLocaleString('de-DE') + ' FC', true) }
+  else if (x >= 20) { sfx.bigwin(); bigWin('MEGA WIN ×' + Math.floor(x)) }
+  else if (x >= 5) { sfx.bigwin(); bigWin('BIG WIN ×' + x.toFixed(1)) }
+  else if (net > 0) sfx.win()
+  else if (net < 0) sfx.lose()
   if (slotCur === 'jackpot') refreshPool()
 }
 function bigWin(text, jp) {
@@ -656,14 +998,14 @@ async function loadMissions() {
     <div class="h-2 rounded bg-zinc-800 mb-2"><div class="h-2 rounded bg-emerald-500" style="width:${Math.min(100, m.progress / m.target * 100)}%"></div></div>` +
     (m.claimed ? '<div class="text-xs text-zinc-500">✔ abgeholt</div>' : m.progress >= m.target ? `<button class="btn bg-emerald-600" style="padding:.3rem" onclick="claimMission('${m.kind}')">Belohnung abholen</button>` : `<div class="text-xs text-zinc-500">${Math.floor(m.progress)} / ${m.target}</div>`) + '</div>').join('')
 }
-async function claimMission(k) { const d = await call('mission_claim', { k }); if (d) { setBalance(d.balance); toast('📋 Belohnung erhalten!'); loadMissions() } }
+async function claimMission(k) { const d = await call('mission_claim', { k }); if (d) { sfx.claim(); setBalance(d.balance); toast('📋 Belohnung erhalten!'); loadMissions() } }
 async function admRain() { const t = Number(prompt('Gesamtsumme für alle Online-Spieler (FC):')); if (t > 0) { const d = await call('admin_rain', { total: t }); if (d) toast('🌧️ ' + d.each + ' FC an ' + d.count + ' Spieler') } }
 
 /* ================= Slot-Tempo ================= */
 let slotSpeed = 'normal'; try { slotSpeed = localStorage.getItem('slotSpeed') || 'normal' } catch (e) { }
 const speedBox = () => `<div class="flex gap-1 justify-end items-center mb-3 text-xs"><span class="text-zinc-500 mr-1">Tempo:</span>${[['normal', 'Normal'], ['fast', 'Schnell'], ['turbo', '⚡ Turbo']].map(([k, l]) =>
   `<button class="px-2 py-1 rounded-lg bg-zinc-800 ${slotSpeed === k ? 'sel' : ''}" onclick="setSpeed('${k}')">${l}</button>`).join('')}</div>`
-function setSpeed(k) { slotSpeed = k; try { localStorage.setItem('slotSpeed', k) } catch (e) { } lastBet = Math.floor(+$('bet').value) || lastBet; openSlot(slotCur) }
+function setSpeed(k) { sfx.click(); slotSpeed = k; try { localStorage.setItem('slotSpeed', k) } catch (e) { } lastBet = Math.floor(+$('bet').value) || lastBet; openSlot(slotCur) }
 
 /* ================= Live-Gewinne (Lobby) ================= */
 const _lobby = VIEWS.lobby
@@ -693,6 +1035,7 @@ async function towersBtn() {
   const b = $('tbtn')
   if (!tw) {
     const bet = readBet(); if (!bet) return
+    sfx.bet()
     const diff = $('tdiff').value, d = await call('towers_start', { b: bet, tdiff: diff }); if (!d) return
     lastBet = bet; setBalance(d.balance); msg(''); tw = { diff, lvl: 0, path: [], lock: false }
     b.textContent = '💸 Cashout'; b.className = 'btn bg-yellow-500 text-black'; b.disabled = true
@@ -705,7 +1048,8 @@ async function towersPick(c) {
   tw.lock = true; const d = await call('towers_pick', { tcol: c })
   if (!d) { tw.lock = false; return }
   tw.path[tw.lvl] = c
-  if (d.boom) return towersEnd(d, false)
+  if (d.boom) { sfx.lose(); return towersEnd(d, false) }
+  sfx.claim()
   tw.lvl++; tw.lock = false; towersDraw()
   $('tinfo').textContent = Number(d.mult).toFixed(2) + '× • nächste Ebene ' + (d.next ? Number(d.next).toFixed(2) + '×' : '–')
   const b = $('tbtn'); b.disabled = false; b.textContent = '💸 Cashout ' + Math.floor(lastBet * d.mult) + ' FC'
@@ -715,6 +1059,7 @@ function towersEnd(d, won) {
   towersDraw(d.bombs); tw = null; setBalance(d.balance)
   const b = $('tbtn'); b.textContent = 'Start'; b.className = 'btn bg-emerald-600'; b.disabled = false
   const net = won ? d.payout - lastBet : -lastBet
+  if (won) sfx.win(); else sfx.lose()
   msg(won ? `🎉 +${net} FC` : `💥 −${lastBet} FC`, won ? 'win' : 'lose'); logRound(net)
 }
 
@@ -741,9 +1086,9 @@ async function loadCommunity() {
   }
   $('comm').innerHTML = h
 }
-async function goalClaim() { const d = await call('goal_claim', {}); if (d) { setBalance(d.balance); toast('🎯 +500 FC!'); loadCommunity() } }
-async function lotBuy(n) { const d = await call('lottery_buy', { cnt: n }); if (d) { setBalance(d.balance); toast('🎟️ Tickets gekauft – viel Glück!'); loadCommunity() } }
-async function clanCreate() { const d = await call('clan_create', { cname: $('cname').value, ctag: $('ctag').value }); if (d) { setBalance(d.balance); toast('🛡️ Clan gegründet!'); loadCommunity() } }
+async function goalClaim() { const d = await call('goal_claim', {}); if (d) { sfx.claim(); setBalance(d.balance); toast('🎯 +500 FC!'); loadCommunity() } }
+async function lotBuy(n) { const d = await call('lottery_buy', { cnt: n }); if (d) { sfx.bet(); setBalance(d.balance); toast('🎟️ Tickets gekauft – viel Glück!'); loadCommunity() } }
+async function clanCreate() { const d = await call('clan_create', { cname: $('cname').value, ctag: $('ctag').value }); if (d) { sfx.claim(); setBalance(d.balance); toast('🛡️ Clan gegründet!'); loadCommunity() } }
 async function clanJoin(id) { const { error } = await sb.rpc('clan_join', { cid: id }); error ? toast(error.message) : loadCommunity() }
 async function clanLeave() { await sb.rpc('clan_leave'); loadCommunity() }
 
@@ -753,7 +1098,7 @@ async function loadLevel() {
   $('lvlbox').innerHTML = `<div class="glass rounded-xl p-3 flex justify-between items-center"><div><b>⭐ Level ${d.level}</b><div class="text-xs text-zinc-400">Jedes neue Level: Level × 200 FC</div></div>` +
     (d.reward > 0 ? `<button class="btn bg-yellow-500 text-black" style="width:auto" onclick="claimLevel()">+${Number(d.reward).toLocaleString('de-DE')} FC</button>` : '<span class="text-xs text-zinc-500">Nichts offen</span>') + '</div>'
 }
-async function claimLevel() { const d = await call('level_claim', {}); if (d) { setBalance(d.balance); toast('⭐ +' + d.reward + ' FC'); loadLevel() } }
+async function claimLevel() { const d = await call('level_claim', {}); if (d) { sfx.claim(); setBalance(d.balance); toast('⭐ +' + d.reward + ' FC'); loadLevel() } }
 async function tournamentHtml() {
   const t = await call('tournament_board', {}); if (!t) return ''
   const h = Math.floor(t.secs_left / 3600), f = n => Number(n).toLocaleString('de-DE')
@@ -773,22 +1118,24 @@ VIEWS.poker = () => { vp = null; return betBox() + `<div id="vph" class="flex ju
   <div class="text-xs text-zinc-500 mt-3 text-center">Paar (J+) 1× · 2 Paare 2× · Drilling 3× · Straße 4× · Flush 5× · Full House 8× · Vierling 25× · Straight Flush 50× · Royal Flush 800×</div>` }
 const vpCard = (c, i) => `<div class="vpc ${[1, 2].includes(Math.floor(c / 13)) ? 'red' : ''} ${vp && vp.hold.has(i) ? 'hold' : ''}" onclick="vpHold(${i})"><div>${RK[c % 13] === 'T' ? '10' : RK[c % 13]}</div><div>${SU[Math.floor(c / 13)]}</div></div>`
 const vpRender = hand => { $('vph').innerHTML = hand.map(vpCard).join('') }
-function vpHold(i) { if (!vp || vp.done) return; vp.hold.has(i) ? vp.hold.delete(i) : vp.hold.add(i); vpRender(vp.hand) }
+function vpHold(i) { if (!vp || vp.done) return; sfx.click(); vp.hold.has(i) ? vp.hold.delete(i) : vp.hold.add(i); vpRender(vp.hand) }
 async function vpBtn() {
   const b = $('vpbtn')
   if (!vp || vp.done) {
     const bet = readBet(); if (!bet) return
+    sfx.bet()
     const d = await call('vp_deal', { b: bet }); if (!d) return
     lastBet = bet; setBalance(d.balance); msg(''); vp = { hand: d.hand, hold: new Set(), done: false }
     vpRender(d.hand); b.textContent = '🔄 Tauschen'; $('vpinfo').textContent = 'Tippe die Karten an, die du behalten willst.'; return
   }
-  b.disabled = true
+  b.disabled = true; sfx.click()
   const d = await call('vp_draw', { holds: [...vp.hold] }); b.disabled = false; if (!d) return
   vp.hand = d.hand; vp.done = true; vp.hold = new Set(); vpRender(d.hand); setBalance(d.balance)
   b.textContent = 'Neue Runde'; $('vpinfo').textContent = d.name
   const net = d.payout - lastBet
+  if (net > 0) sfx.win(); else if (net < 0) sfx.lose(); else sfx.click()
   msg(net > 0 ? `🎉 ${d.name}! +${net} FC` : net === 0 ? 'Einsatz zurück' : `−${lastBet} FC`, net > 0 ? 'win' : 'lose'); logRound(net)
-  if (d.mult >= 25) bigWin(d.name + ' ×' + d.mult)
+  if (d.mult >= 25) { sfx.bigwin(); bigWin(d.name + ' ×' + d.mult) }
 }
 
 /* ================= STATISTIKEN ================= */
@@ -817,12 +1164,14 @@ async function loadDuels() {
     (x.mine ? `<button class="btn bg-zinc-700" style="width:auto;padding:.25rem .8rem" onclick="duelAct('duel_cancel',${x.id})">Zurückziehen</button>` : `<button class="btn bg-pink-600" style="width:auto;padding:.25rem .8rem" onclick="duelAct('duel_accept',${x.id})">Annehmen</button>`) + '</div>').join('') : '<div class="text-zinc-500 text-sm">Keine offenen Duelle – erstelle eins!</div>')
   $('drecent').innerHTML = '<div class="font-bold mb-2">Letzte Duelle</div>' + d.recent.map(r => `<div class="text-sm text-zinc-400 py-0.5">⚔️ <b class="text-white">${esc(r.winner)}</b> besiegt ${esc(r.loser)} · +${f(r.prize)} FC</div>`).join('')
 }
-async function duelCreate() { const d = await call('duel_create', { dgame: $('dgame').value, b: Math.floor(+$('dbet').value) }); if (d) { setBalance(d.balance); toast('⚔️ Duell erstellt'); loadDuels() } }
+async function duelCreate() { sfx.bet(); const d = await call('duel_create', { dgame: $('dgame').value, b: Math.floor(+$('dbet').value) }); if (d) { setBalance(d.balance); toast('⚔️ Duell erstellt'); loadDuels() } }
 async function duelAct(fn, id) {
+  sfx.click()
   const d = await call(fn, { did: id }); if (!d) return; setBalance(d.balance)
   if (fn === 'duel_accept') {
     const rolls = d.game === 'dice' ? ` (du ${d.mine} · Gegner ${d.theirs})` : ''
-    toast(d.win ? `🎉 Gewonnen! +${d.prize} FC${rolls}` : `💀 Verloren${rolls}`); if (d.win && d.prize >= 500) bigWin('DUELL GEWONNEN<br>+' + d.prize + ' FC')
+    if (d.win) { sfx.win(); toast(`🎉 Gewonnen! +${d.prize} FC${rolls}`) } else { sfx.lose(); toast(`💀 Verloren${rolls}`) }
+    if (d.win && d.prize >= 500) bigWin('DUELL GEWONNEN<br>+' + d.prize + ' FC')
   }
   loadDuels()
 }
@@ -840,8 +1189,8 @@ async function chessLobby() {
     '<div class="font-bold mt-4 mb-2">🏆 Elo-Rangliste</div>' + (d.top.length ? d.top.map((x, i) => `<div class="flex justify-between glass rounded-lg px-3 py-2 mb-1 text-sm"><span>${['🥇', '🥈', '🥉'][i] || (i + 1) + '.'} ${nm(x)}</span><b>${x.elo}</b></div>`).join('') : '<div class="text-zinc-500 text-sm">Noch keine gewerteten Partien.</div>')
   pvpTimer = setInterval(chessLobby, 5000)
 }
-async function chessNew() { const d = await call('chess_create', {}); if (d) chessOpen(d.id) }
-async function chessJoin(id) { const d = await call('chess_join', { gid: id }); if (d) chessOpen(d.id) }
+async function chessNew() { sfx.click(); const d = await call('chess_create', {}); if (d) chessOpen(d.id) }
+async function chessJoin(id) { sfx.click(); const d = await call('chess_join', { gid: id }); if (d) chessOpen(d.id) }
 async function chessCancel() { await call('chess_cancel', { gid: cg_.id }); chessLobby() }
 function chessLeave() { clearInterval(pvpTimer); cg_ = null; chessLobby() }
 async function chessEnd(kind) { if (kind === 'resign' && !confirm('Wirklich aufgeben?')) return; const d = await call('chess_end', { gid: cg_.id, kind }); if (d) chessPoll() }
@@ -852,7 +1201,8 @@ async function chessPoll() {
   cg_.s = s
   if (s.moves.length !== cg_.n) {
     cg_.ch = new Chess(); cg_.sel = null; cg_.n = s.moves.length
-    s.moves.forEach(m => { if (!cg_.ch.move(m) && !cg_.warned) { cg_.warned = 1; toast('⚠️ Ungültiger Zug erkannt – gib auf oder warte auf Zeitablauf.') } })
+    s.moves.forEach(m => { if (!cg_.ch.move(m) && !cg_.warned) { cg_.warned = 1; toast('⚠️ Ungültiger Zug erkannt.') } })
+    sfx.click()
   }
   chessRender()
   if (s.status === 'active' && s.turn === s.my_color && !cg_.rep) {
@@ -881,7 +1231,7 @@ async function chessClick(name) {
   const s = cg_ && cg_.s; if (!s || s.status !== 'active' || s.turn !== s.my_color) return
   if (cg_.sel && cg_.sel !== name) {
     const t = new Chess(cg_.ch.fen()), m = t.move({ from: cg_.sel, to: name, promotion: 'q' })
-    if (m) { cg_.sel = null; const d = await call('chess_move', { gid: cg_.id, san: m.san }); if (d) chessPoll(); return }
+    if (m) { sfx.click(); cg_.sel = null; const d = await call('chess_move', { gid: cg_.id, san: m.san }); if (d) chessPoll(); return }
   }
   const pc = cg_.ch.get(name); cg_.sel = pc && pc.color === s.my_color ? name : null; chessRender()
 }
@@ -889,7 +1239,7 @@ async function chessClick(name) {
 /* ================= FREUNDE & DMs ================= */
 VIEWS.friends = () => `<div class="flex gap-2 mb-3"><input id="fadd" placeholder="Username" class="inp flex-1 min-w-0"><button class="btn bg-cyan-600" style="width:auto" onclick="friendAct('friend_request',{uname:$('fadd').value})">Anfrage senden</button></div><div id="flist"></div><div id="dmbox" class="mt-4"></div>`
 PAGEINIT.friends = () => { dmWith = null; loadFriends(); pvpTimer = setInterval(() => { loadFriends(); if (dmWith) loadDm() }, 4000) }
-async function friendAct(fn, args) { const d = await call(fn, args); if (d) { toast('✔ Erledigt'); loadFriends() } }
+async function friendAct(fn, args) { const d = await call(fn, args); if (d) { sfx.click(); toast('✔ Erledigt'); loadFriends() } }
 async function loadFriends() {
   const d = await call('friends_list', {}); if (!d || !$('flist')) return
   const sm = 'style="width:auto;padding:.2rem .7rem"'
@@ -901,6 +1251,7 @@ async function loadFriends() {
     <button class="text-zinc-500" data-u="${esc(u.username)}" onclick="if(confirm('Freund entfernen?'))friendAct('friend_remove',{uname:this.dataset.u})">✖</button></span></div>`).join('') : '<div class="text-zinc-500 text-sm">Noch keine Freunde – füge jemanden über den Usernamen hinzu.</div>')
 }
 function openDm(name) {
+  sfx.click()
   dmWith = name
   $('dmbox').innerHTML = `<div class="glass rounded-xl p-3"><div class="font-bold mb-2">💬 ${esc(name)}</div><div id="dmmsgs" class="h-56 overflow-y-auto space-y-1 mb-2 text-sm"></div>
     <div class="flex gap-2"><input id="dmin" maxlength="300" class="inp flex-1 min-w-0" placeholder="Nachricht..." onkeydown="if(event.key==='Enter')dmSend()"><button class="btn bg-cyan-600" style="width:auto" onclick="dmSend()">Senden</button></div></div>`
@@ -910,12 +1261,12 @@ async function loadDm() {
   const d = await call('dm_list', { with_user: dmWith }), b = $('dmmsgs'); if (!d || !b) return
   b.innerHTML = d.map(m => `<div class="${m.mine ? 'text-right text-cyan-300' : 'text-zinc-200'}">${esc(m.msg)}</div>`).join(''); b.scrollTop = b.scrollHeight
 }
-async function dmSend() { const i = $('dmin'), m = i.value.trim(); if (!m) return; const d = await call('dm_send', { to_user: dmWith, m }); if (d) { i.value = ''; loadDm() } }
+async function dmSend() { const i = $('dmin'), m = i.value.trim(); if (!m) return; sfx.click(); const d = await call('dm_send', { to_user: dmWith, m }); if (d) { i.value = ''; loadDm() } }
 
 /* ================= FUTURE GAMES ================= */
 async function submitScore(game, sc) {
   const d = await call('submit_score', { sgame: game, sc }); if (!d) return
-  if (d.reward) { setBalance(d.balance); toast('🎯 Daily Challenge geschafft! +' + d.reward + ' FC') } else if (d.new_best) toast('🏅 Neuer Rekord: ' + sc)
+  if (d.reward) { sfx.claim(); setBalance(d.balance); toast('🎯 Daily Challenge geschafft! +' + d.reward + ' FC') } else if (d.new_best) toast('🏅 Neuer Rekord: ' + sc)
   loadScores(game); loadChallenge()
 }
 async function loadScores(game) {
@@ -937,6 +1288,7 @@ PAGEINIT.snake = () => { FG('snake'); vsAuto('snake') }
 function stopSnake() { if (snk) { clearInterval(snk.timer); document.removeEventListener('keydown', snk.key); snk = null } }
 let snk = null
 function snakeStart() {
+  sfx.click()
   stopSnake(); const c = $('snk'), x = c.getContext('2d'), N = 15, S = 20; $('snkscore').textContent = 0
   snk = { body: [[7, 7], [6, 7]], dir: [1, 0], nd: [1, 0], food: [10, 7], score: 0 }
   const place = () => { do { snk.food = [Math.floor(R() * N), Math.floor(R() * N)] } while (snk.body.some(b => b[0] === snk.food[0] && b[1] === snk.food[1])) }
@@ -947,9 +1299,9 @@ function snakeStart() {
   c.ontouchend = e => { if (!snk) return; const t = e.changedTouches[0], dx = t.clientX - t0.clientX, dy = t.clientY - t0.clientY, m = Math.abs(dx) > Math.abs(dy) ? [Math.sign(dx), 0] : [0, Math.sign(dy)]; if (ok(m)) snk.nd = m }
   snk.timer = setInterval(() => {
     snk.dir = snk.nd; const h = [snk.body[0][0] + snk.dir[0], snk.body[0][1] + snk.dir[1]]
-    if (h[0] < 0 || h[1] < 0 || h[0] >= N || h[1] >= N || snk.body.some(b => b[0] === h[0] && b[1] === h[1])) { const sc = snk.score; stopSnake(); toast('💥 Game Over: ' + sc + ' Punkte'); return finishScore('snake', sc) }
+    if (h[0] < 0 || h[1] < 0 || h[0] >= N || h[1] >= N || snk.body.some(b => b[0] === h[0] && b[1] === h[1])) { const sc = snk.score; stopSnake(); sfx.lose(); toast('💥 Game Over: ' + sc + ' Punkte'); return finishScore('snake', sc) }
     snk.body.unshift(h)
-    if (h[0] === snk.food[0] && h[1] === snk.food[1]) { snk.score++; $('snkscore').textContent = snk.score; place() } else snk.body.pop()
+    if (h[0] === snk.food[0] && h[1] === snk.food[1]) { sfx.claim(); snk.score++; $('snkscore').textContent = snk.score; place() } else snk.body.pop()
     x.fillStyle = '#18181b'; x.fillRect(0, 0, 300, 300); x.fillStyle = '#f43f5e'; x.fillRect(snk.food[0] * S + 2, snk.food[1] * S + 2, S - 4, S - 4)
     x.fillStyle = '#34d399'; snk.body.forEach(b => x.fillRect(b[0] * S + 1, b[1] * S + 1, S - 2, S - 2))
   }, 110)
@@ -965,12 +1317,12 @@ VIEWS.typing = () => `<div id="vsbar"></div><div id="cbar"></div><div id="tpromp
   <input id="tin" class="inp w-full mb-3" disabled autocomplete="off" oninput="typingInput()"><button class="btn bg-emerald-600" onclick="typingStart()">Start</button><div id="lbox" class="mt-4"></div>`
 PAGEINIT.typing = () => { FG('typing'); vsAuto('typing') }
 function typingRender(v) { $('tprompt').innerHTML = [...ty.t].map((c, k) => `<span style="color:${k >= v.length ? '#a1a1aa' : v[k] === c ? '#34d399' : '#f87171'}">${c}</span>`).join('') }
-function typingStart() { ty = { t: TTEXT[Math.floor(R() * TTEXT.length)], t0: 0 }; const i = $('tin'); i.value = ''; i.disabled = false; i.focus(); typingRender('') }
+function typingStart() { sfx.click(); ty = { t: TTEXT[Math.floor(R() * TTEXT.length)], t0: 0 }; const i = $('tin'); i.value = ''; i.disabled = false; i.focus(); typingRender('') }
 function typingInput() {
-  if (!ty) return; const v = $('tin').value; if (!ty.t0) ty.t0 = Date.now(); typingRender(v)
+  if (!ty) return; const v = $('tin').value; if (!ty.t0) ty.t0 = Date.now(); sfx.click(); typingRender(v)
   if (v === ty.t) {
     const wpm = Math.min(220, Math.round(ty.t.length / 5 / ((Date.now() - ty.t0) / 60000)))
-    $('tin').disabled = true; $('tprompt').innerHTML += `<div class="mt-3 text-xl font-black text-emerald-400">${wpm} WPM</div>`; ty = null; finishScore('typing', wpm)
+    $('tin').disabled = true; $('tprompt').innerHTML += `<div class="mt-3 text-xl font-black text-emerald-400">${wpm} WPM</div>`; ty = null; sfx.win(); finishScore('typing', wpm)
   }
 }
 
@@ -985,13 +1337,13 @@ const QS = [['Hauptstadt von Australien?', ['Sydney', 'Canberra', 'Melbourne', '
 let tv = null
 VIEWS.trivia = () => `<div id="vsbar"></div><div id="cbar"></div><div id="tvbox" class="glass rounded-xl p-5 mb-3 text-center"><button class="btn bg-emerald-600" onclick="triviaStart()">10 Fragen starten</button></div><div id="lbox"></div>`
 PAGEINIT.trivia = () => { FG('trivia'); vsAuto('trivia') }
-function triviaStart() { tv = { q: shuffle([...QS]).slice(0, 10), i: 0, s: 0 }; triviaShow() }
+function triviaStart() { sfx.click(); tv = { q: shuffle([...QS]).slice(0, 10), i: 0, s: 0 }; triviaShow() }
 function triviaShow() {
   const [q, o] = tv.q[tv.i]
   $('tvbox').innerHTML = `<div class="text-xs text-zinc-400 mb-2">Frage ${tv.i + 1}/10 · ${tv.s} Punkte</div><div class="text-lg font-bold mb-4">${q}</div>` + o.map((t, k) => `<button class="btn bg-zinc-800 mb-2" onclick="triviaAnswer(${k})">${t}</button>`).join('')
 }
 function triviaAnswer(k) {
-  const [, o, c] = tv.q[tv.i]; if (k === c) tv.s++
+  const [, o, c] = tv.q[tv.i]; if (k === c) { tv.s++; sfx.win() } else sfx.lose()
   toast(k === c ? '✅ Richtig!' : '❌ Richtig wäre: ' + o[c]); tv.i++
   if (tv.i < 10) return triviaShow()
   const sc = tv.s; tv = null
@@ -999,7 +1351,7 @@ function triviaAnswer(k) {
 }
 
 /* ================= VERSUS (seeded) ================= */
-let vsRun = null, vsMid = null, R = Math.random, chatChan = 'global', tt = null
+let vsRun = null, vsMid = null, R = Math.random, tt = null
 function mkRng(seed) { let a = seed >>> 0; return () => { a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296 } }
 function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(R() * (i + 1)); [a[i], a[j]] = [a[j], a[i]] } return a }
 function finishScore(game, sc) { if (vsRun && vsRun.game === game) vsSubmit(sc); else submitScore(game, sc) }
@@ -1017,8 +1369,8 @@ async function vsLobby() {
     '<div class="font-bold mt-4 mb-2">Letzte Matches</div>' + d.recent.map(r => `<div class="text-sm text-zinc-400 py-0.5">${VSN[r.game]}: <b class="text-white">${esc(r.a)}</b> ${r.s1} : ${r.s2} <b class="text-white">${esc(r.b)}</b></div>`).join('')
   pvpTimer = setInterval(vsLobby, 5000)
 }
-async function vsCreate() { const d = await call('vs_create', { vgame: $('vsg').value }); if (d) vsWait(d.id) }
-async function vsJoin(id) { const d = await call('vs_join', { mid: id }); if (d) vsWait(id) }
+async function vsCreate() { sfx.click(); const d = await call('vs_create', { vgame: $('vsg').value }); if (d) vsWait(d.id) }
+async function vsJoin(id) { sfx.click(); const d = await call('vs_join', { mid: id }); if (d) vsWait(id) }
 async function vsCancel() { await call('vs_cancel', { mid: vsMid }); vsLobby() }
 function vsWait(id) {
   clearInterval(pvpTimer); vsMid = id
@@ -1033,6 +1385,7 @@ function vsWait(id) {
 }
 function vsResult(s) {
   const t = { me: '🏆 Du gewinnst!', opp: '💀 Du verlierst.', draw: '🤝 Unentschieden' }[s.winner]
+  if (s.winner === 'me') sfx.bigwin(); else if (s.winner === 'opp') sfx.lose()
   $('vsbox').innerHTML = `<div class="glass rounded-xl p-5 text-center"><div class="text-2xl font-black mb-2">${t}</div><div class="mb-3">Du: <b>${s.mine ?? '–'}</b> · ${esc(s.opp)}: <b>${s.theirs ?? '–'}</b></div><button class="btn bg-emerald-600" onclick="vsLobby()">Zurück zur Lobby</button></div>`
 }
 async function vsSubmit(sc) { const id = vsRun.id; vsRun = null; R = Math.random; await call('vs_submit', { mid: id, sc }); show('versus') }
@@ -1053,6 +1406,7 @@ PAGEINIT.tetris = () => { FG('tetris'); vsAuto('tetris') }
 function stopTetris() { if (tt) { clearInterval(tt.timer); clearInterval(tt.clock); document.removeEventListener('keydown', tt.key); tt = null } }
 function tetrisKey(k) { if (tt) tt.act(k) }
 function tetrisStart() {
+  sfx.click()
   stopTetris(); tt = { b: Array.from({ length: 20 }, () => Array(10).fill(0)), score: 0, left: 120 }
   const hit = (m, x, y) => m.some((r, j) => r.some((v, i) => v && (x + i < 0 || x + i >= 10 || y + j >= 20 || (y + j >= 0 && tt.b[y + j][x + i]))))
   const draw = () => {
@@ -1060,19 +1414,20 @@ function tetrisStart() {
     tt.b.forEach((r, j) => r.forEach((v, i) => { if (v) { x.fillStyle = TC[v - 1]; x.fillRect(i * 20 + 1, j * 20 + 1, 18, 18) } }))
     x.fillStyle = TC[tt.p.c - 1]; tt.p.m.forEach((r, j) => r.forEach((v, i) => { if (v) x.fillRect((tt.p.x + i) * 20 + 1, (tt.p.y + j) * 20 + 1, 18, 18) }))
   }
-  const over = () => { const sc = tt.score; stopTetris(); toast('🧱 Ende: ' + sc + ' Punkte'); finishScore('tetris', sc) }
+  const over = () => { const sc = tt.score; stopTetris(); sfx.lose(); toast('🧱 Ende: ' + sc + ' Punkte'); finishScore('tetris', sc) }
   const spawn = () => { const i = Math.floor(R() * 7); tt.p = { m: TP[i].map(r => [...r]), c: i + 1, x: 3, y: 0 }; if (hit(tt.p.m, 3, 0)) { over(); return false } return true }
   const move = (dx, dy) => { if (hit(tt.p.m, tt.p.x + dx, tt.p.y + dy)) return false; tt.p.x += dx; tt.p.y += dy; return true }
   const lock = () => {
     tt.p.m.forEach((r, j) => r.forEach((v, i) => { if (v) tt.b[tt.p.y + j][tt.p.x + i] = tt.p.c }))
     let n = 0; tt.b = tt.b.filter(r => { if (r.every(v => v)) { n++; return false } return true }); while (tt.b.length < 20) tt.b.unshift(Array(10).fill(0))
+    if (n > 0) sfx.win()
     tt.score += [0, 100, 300, 500, 800][n]; $('ttscore').textContent = tt.score; return spawn()
   }
   tt.act = k => {
     if (!tt) return; let alive = true
     if (k === 'l') move(-1, 0); else if (k === 'r') move(1, 0)
     else if (k === 'd') { if (!move(0, 1)) alive = lock() }
-    else if (k === 'rot') { const m = tt.p.m[0].map((_, i) => tt.p.m.map(r => r[i]).reverse()); if (!hit(m, tt.p.x, tt.p.y)) tt.p.m = m }
+    else if (k === 'rot') { sfx.click(); const m = tt.p.m[0].map((_, i) => tt.p.m.map(r => r[i]).reverse()); if (!hit(m, tt.p.x, tt.p.y)) tt.p.m = m }
     else if (k === 'drop') { while (move(0, 1)); alive = lock() }
     if (alive && tt) draw()
   }
@@ -1081,25 +1436,6 @@ function tetrisStart() {
   tt.timer = setInterval(() => tt && tt.act('d'), 500)
   tt.clock = setInterval(() => { if (!tt) return; tt.left--; $('tttime').textContent = tt.left + 's'; if (tt.left <= 0) over() }, 1000)
   $('ttscore').textContent = 0; if (spawn()) draw()
-}
-
-/* ================= CHAT-CHANNELS ================= */
-const CHANS = [['global', '🌐 Global'], ['gambling', '🎰 Gambling'], ['games', '🎮 Games'], ['offtopic', '💭 Offtopic'], ['clan', '🏰 Clan']]
-VIEWS.chat = () => `<div class="flex gap-1 flex-wrap mb-3">${CHANS.map(([k, l]) => `<button class="px-3 py-1 rounded-lg text-sm ${k === chatChan ? 'bg-cyan-700' : 'bg-zinc-800'}" onclick="chatChan='${k}';show('chat')">${l}</button>`).join('')}</div>
-  <div id="chatbox" class="h-80 overflow-y-auto space-y-1 mb-3 text-sm"></div>
-  <div class="flex gap-2"><input id="chatin" maxlength="200" placeholder="Nachricht..." class="inp flex-1 min-w-0" onkeydown="if(event.key==='Enter')sendChat()"><button class="btn bg-cyan-600" style="width:auto" onclick="sendChat()">Senden</button></div>`
-PAGEINIT.chat = () => { loadChat(); chatTimer = setInterval(loadChat, 4000) }
-async function loadChat() {
-  const { data, error } = await sb.rpc('chat_list', { chan: chatChan }), box = $('chatbox'); if (!box) return
-  if (error) { box.textContent = error.message; return }
-  const bottom = box.scrollHeight - box.scrollTop - box.clientHeight < 60
-  box.innerHTML = data.map(m => `<div><b>${nm(m)}:</b> ${esc(m.msg)}${ROLE === 'mod' || ROLE === 'admin' ? ` <button class="text-red-400" onclick="chatDel(${m.id})">✕</button>` : ''}</div>`).join('')
-  if (bottom) box.scrollTop = box.scrollHeight
-}
-async function sendChat() {
-  const i = $('chatin'), m = i.value.trim(); if (!m) return
-  const { error } = await sb.rpc('chat_send', { m, chan: chatChan }); if (error) return toast(error.message)
-  i.value = ''; await loadChat(); $('chatbox').scrollTop = 1e6
 }
 
 /* ================= CLAN-HQ ================= */
@@ -1116,7 +1452,7 @@ PAGEINIT.clanhq = async () => {
     `<button class="btn bg-zinc-800" style="font-size:.85rem" onclick="chatChan='clan';show('chat')">💬 Clan-Chat öffnen</button></div>` +
     c.members.map(m => `<div class="glass rounded-lg px-3 py-2 mb-1 flex justify-between text-sm"><span>${nm(m)} <span class="text-xs text-zinc-500">Lv ${m.level}</span></span><span class="text-zinc-400">${f(m.wagered)} gesetzt</span></div>`).join('')
 }
-async function clanAct(fn, args) { const d = await call(fn, args); if (!d) return; if (d.balance != null) setBalance(d.balance); toast('✔ ' + (d.msg || 'Erledigt')); PAGEINIT.clanhq() }
+async function clanAct(fn, args) { sfx.click(); const d = await call(fn, args); if (!d) return; if (d.balance != null) setBalance(d.balance); sfx.claim(); toast('✔ ' + (d.msg || 'Erledigt')); PAGEINIT.clanhq() }
 
 /* ================= BATTLE PASS & PRESTIGE ================= */
 const BPITEM = { 10: '🔥', 20: '👾', 30: '🏆+Titel' }
@@ -1137,9 +1473,9 @@ PAGEINIT.bp = async () => {
     <div class="glass rounded-xl p-4 mb-3"><b>👑 Prestige ${d.prestige}</b><div class="text-xs text-zinc-400 mb-2">Ab Level 20: Level zurücksetzen, +10.000 FC. Prestige 1 schaltet die Farbe „Rubin“ frei, Prestige 3 einen Titel.</div>
     <button class="btn ${d.level >= 20 ? 'bg-purple-600' : 'bg-zinc-800'}" ${d.level >= 20 ? '' : 'disabled'} onclick="prestigeDo()">Prestige (Level ${d.level}/20)</button></div>` + rows
 }
-async function bpClaim(t, track) { const d = await call('bp_claim', { btier: t, btrack: track }); if (!d) return; setBalance(d.balance); toast('🎫 +' + d.reward + ' FC' + (d.item ? ' + neues Cosmetic!' : '')); await loadProfile(); PAGEINIT.bp() }
-async function bpPremium() { if (!confirm('Premium für diese Season kaufen (25.000 FC)?')) return; const d = await call('bp_premium', {}); if (d) { setBalance(d.balance); PAGEINIT.bp() } }
-async function prestigeDo() { if (!confirm('Level wird zurückgesetzt. Prestige jetzt durchführen?')) return; const d = await call('prestige_do', {}); if (d) { setBalance(d.balance); toast('👑 Prestige ' + d.prestige + '!'); await loadProfile(); PAGEINIT.bp() } }
+async function bpClaim(t, track) { const d = await call('bp_claim', { btier: t, btrack: track }); if (!d) return; sfx.claim(); setBalance(d.balance); toast('🎫 +' + d.reward + ' FC' + (d.item ? ' + neues Cosmetic!' : '')); await loadProfile(); PAGEINIT.bp() }
+async function bpPremium() { if (!confirm('Premium für diese Season kaufen (25.000 FC)?')) return; const d = await call('bp_premium', {}); if (d) { sfx.bigwin(); setBalance(d.balance); PAGEINIT.bp() } }
+async function prestigeDo() { if (!confirm('Level wird zurückgesetzt. Prestige jetzt durchführen?')) return; const d = await call('prestige_do', {}); if (d) { sfx.bigwin(); setBalance(d.balance); toast('👑 Prestige ' + d.prestige + '!'); await loadProfile(); PAGEINIT.bp() } }
 
 /* ================= ACHIEVEMENTS & FEED ================= */
 VIEWS.ach = () => '<div id="achbox" class="text-zinc-400">Lade...</div>'
@@ -1150,7 +1486,7 @@ PAGEINIT.ach = async () => {
     <div class="h-2 rounded bg-zinc-800 mb-2"><div class="h-2 rounded bg-emerald-500" style="width:${Math.min(100, a.progress / a.target * 100)}%"></div></div>` +
     (a.claimed ? '<div class="text-xs text-zinc-500">✔ abgeholt</div>' : a.progress >= a.target ? `<button class="btn bg-emerald-600" style="padding:.3rem" onclick="achClaim('${a.id}')">Belohnung abholen</button>` : `<div class="text-xs text-zinc-500">${f(a.progress)} / ${f(a.target)}</div>`) + '</div>').join('')
 }
-async function achClaim(id) { const d = await call('ach_claim', { aid: id }); if (d) { setBalance(d.balance); toast('🏅 +' + d.reward + ' FC'); PAGEINIT.ach() } }
+async function achClaim(id) { const d = await call('ach_claim', { aid: id }); if (d) { sfx.claim(); setBalance(d.balance); toast('🏅 +' + d.reward + ' FC'); PAGEINIT.ach() } }
 VIEWS.feed = () => '<div id="fbox" class="text-zinc-400">Lade...</div>'
 PAGEINIT.feed = () => { loadFeed(); pvpTimer = setInterval(loadFeed, 10000) }
 async function loadFeed() {
@@ -1159,7 +1495,7 @@ async function loadFeed() {
 }
 async function saveExtra() { const d = await call('profile_set', { pstatus: $('pst').value, pfav: $('pfv').value }); if (d) { ME.status = $('pst').value; ME.fav_game = $('pfv').value; toast('Profil gespeichert') } }
 
-function setMode(m) { diceMode = m; diceInfo() }
+function setMode(m) { diceMode = m; sfx.click(); diceInfo() }
 function diceInfo() {
   const over = diceMode === 'over', ch = over ? 100 - diceTarget : diceTarget - 1
   $('dice-info').innerHTML = `Würfel ${over ? 'über' : 'unter'} <b class="text-white">${diceTarget}</b> • Chance <b class="text-white">${ch}%</b> • Gewinn <b class="text-emerald-400">${(98 / ch).toFixed(2)}×</b>`
@@ -1181,21 +1517,24 @@ function show(g) {
 /* ---------- Spiel-Animationen ---------- */
 const REVEAL = {
   coinflip: async d => {
+    sfx.spin()
     $('stage').innerHTML = '<span class="animate-spin inline-block">🪙</span>'; await sleep(700)
     $('stage').innerHTML = `<span class="text-4xl font-black ${d.win ? 'text-emerald-400' : 'text-red-400'}">${d.result.toUpperCase()}</span>`
   },
   dice: async d => {
+    sfx.dice()
     const s = $('stage'), iv = setInterval(() => s.textContent = 1 + Math.floor(Math.random() * 100), 60)
     await sleep(700); clearInterval(iv)
     s.textContent = d.result; s.style.color = d.win ? '#34d399' : '#f87171'
   },
   slots: async d => {
     const S = ['🍒', '🍋', '🔔', '⭐', '💎', '🍀'], el = [0, 1, 2].map(i => $('r' + i))
-    const iv = setInterval(() => el.forEach(e => e.textContent = S[Math.floor(Math.random() * 6)]), 80)
+    const iv = setInterval(() => { el.forEach(e => e.textContent = S[Math.floor(Math.random() * 6)]); sfx.spin() }, 80)
     await sleep(900); clearInterval(iv)
     d.result.split(' ').forEach((s, i) => el[i].textContent = s)
   },
   roulette: async d => {
+    sfx.spin()
     const [n, col] = d.result.split(' '), c = { red: '#dc2626', black: '#27272a', green: '#16a34a' }[col]
     $('stage').innerHTML = '<div class="text-5xl animate-spin">🎡</div>'; await sleep(900)
     $('stage').innerHTML = `<div class="w-24 h-24 rounded-full flex items-center justify-center text-4xl font-black border-4 border-zinc-500" style="background:${c}">${n}</div>`
@@ -1206,7 +1545,7 @@ Object.assign(REVEAL, {
   crash: async d => {
     const cp = parseFloat(d.result), s = $('stage'); let x = 1
     s.style.color = '#e4e4e7'
-    while (x < cp) { x = Math.min(cp, x * 1.07 + 0.01); s.textContent = '🚀 ' + x.toFixed(2) + '×'; await sleep(40) }
+    while (x < cp) { x = Math.min(cp, x * 1.07 + 0.01); s.textContent = '🚀 ' + x.toFixed(2) + '×'; sfx.spin(); await sleep(40) }
     s.textContent = (d.win ? '✅ ' : '💥 ') + cp.toFixed(2) + '×'; s.style.color = d.win ? '#34d399' : '#f87171'
   },
   plinko: async d => {
@@ -1215,7 +1554,7 @@ Object.assign(REVEAL, {
     b.style.transition = 'all .25s'
     for (let i = 0; i < 8; i++) {
       pos += d.result[i] === '1' ? 1 : -1
-      b.style.left = (50 + pos * 5.5) + '%'; b.style.top = ((i + 1) * 9 + 4) + '%'; await sleep(290)
+      b.style.left = (50 + pos * 5.5) + '%'; b.style.top = ((i + 1) * 9 + 4) + '%'; sfx.click(); await sleep(290)
     }
     b.style.top = '82%'
   },
@@ -1223,11 +1562,12 @@ Object.assign(REVEAL, {
     const c = (+d.result - 1) * 36 + 18, w = $('wheel')
     wheelRot = (Math.floor(wheelRot / 360) + 6) * 360 - c
     w.style.transition = 'transform 3.2s cubic-bezier(.1,.7,.1,1)'; w.style.transform = `rotate(${wheelRot}deg)`
-    await sleep(3300)
+    const iv = setInterval(sfx.spin, 250)
+    await sleep(3200); clearInterval(iv)
   },
   keno: async d => {
     document.querySelectorAll('.kc').forEach(b => b.classList.remove('hit', 'drawn'))
-    for (const n of d.result.split(',')) { await sleep(150); $('k' + n).classList.add(kpicks.includes(+n) ? 'hit' : 'drawn') }
+    for (const n of d.result.split(',')) { await sleep(150); sfx.click(); $('k' + n).classList.add(kpicks.includes(+n) ? 'hit' : 'drawn') }
   }
 })
 
@@ -1245,13 +1585,14 @@ Object.assign(REVEAL, {
     say(`<div class="glass rounded-xl px-5 py-3">${RANKS[hiRef - 1]}</div><span class="text-3xl">→</span><div class="glass rounded-xl px-5 py-3 ${d.win ? 'text-emerald-400' : 'text-red-400'}">${RANKS[d.result - 1]}</div>`)
   },
   lucky7: async d => {
+    sfx.dice()
     const [a, b] = d.result.split(' ')
     const iv = setInterval(() => say(DICE[Math.floor(Math.random() * 6)] + DICE[Math.floor(Math.random() * 6)]), 80)
     await sleep(800); clearInterval(iv)
     say(DICE[a - 1] + DICE[b - 1] + `<span class="text-3xl">= ${+a + +b}</span>`)
   },
   dragon: async d => { const [a, b] = d.result.split(' '); await sleep(600); say(`🐉 ${RANKS[a - 1]} <span class="text-3xl">vs</span> 🐅 ${RANKS[b - 1]}`) },
-  doors: async d => { await sleep(600); say([1, 2, 3].map(i => i == d.result ? '💎' : '💀').join(' ')) },
+  doors: async d => { const [a] = [d.result]; await sleep(600); say([1, 2, 3].map(i => i == d.result ? '💎' : '💀').join(' ')) },
   number: async d => { await sleep(600); say(`<span class="${d.win ? 'text-emerald-400' : 'text-red-400'}">${d.result}</span>`) },
   rps: async d => { await sleep(500); say(`${RP[lastParam]} <span class="text-3xl">vs</span> ${RP[d.result]}`) }
 })
@@ -1260,7 +1601,7 @@ VIEWS.baccarat = () => betBox() + stg('👤 vs 🏦') + row([['👤 Player 2.05�
 VIEWS.sicbo = () => betBox() + stg('🎲🎲🎲') + row([['⬇ Low ≤10 · 2×', 'low', 'bg-cyan-600'], ['Triple 30×', 'triple', 'bg-yellow-600'], ['⬆ High ≥11 · 2×', 'high', 'bg-pink-600']])
 Object.assign(REVEAL, {
   baccarat: async d => { const [a, b] = d.result.split(' '); await sleep(600); say(`👤 ${a} <span class="text-3xl">vs</span> 🏦 ${b}`) },
-  sicbo: async d => { const x = d.result.split(' '); await sleep(700); say(x.map(n => DICE[n - 1]).join('') + `<span class="text-3xl">= ${x.reduce((t, n) => t + +n, 0)}</span>`) }
+  sicbo: async d => { sfx.dice(); const x = d.result.split(' '); await sleep(700); say(x.map(n => DICE[n - 1]).join('') + `<span class="text-3xl">= ${x.reduce((t, n) => t + +n, 0)}</span>`) }
 })
 
 /* ---------- Spielen ---------- */
@@ -1271,20 +1612,24 @@ async function play(param) {
   const bet = Math.floor(Number($('bet').value))
   if (!(bet >= 1)) return msg('Ungültiger Einsatz', 'lose')
   if (bet > balance) return msg('Nicht genug Coins', 'lose')
+  sfx.bet()
   busy = true; lastBet = bet; lastParam = param; setBtns(true); msg('')
   const { data, error } = current === 'plinko' ? await sb.rpc('play_plinko', { bet_amount: bet, risk: plinkoRisk }) : await sb.rpc(current === 'baccarat' || current === 'sicbo' ? 'play_game2' : 'play_game_d', { game_name: current, bet_amount: bet, param })
-  if (error) { msg(error.message, 'lose'); busy = false; setBtns(false); return }
+  if (error) { msg(error.message, 'lose'); sfx.lose(); busy = false; setBtns(false); return }
   await REVEAL[current](data)
   setBalance(data.balance)
   const net = data.payout - bet
+  if (net > 0) sfx.win(); else if (net < 0) sfx.lose(); else sfx.click()
   msg(net > 0 ? `🎉 +${net} FC` : net === 0 ? 'Einsatz zurück' : `−${bet - data.payout} FC`, net > 0 ? 'win' : 'lose')
   HIST.unshift({ g: GAMES[current].icon + ' ' + GAMES[current].name, bet, net }); HIST.length = Math.min(HIST.length, 8); renderHist()
   busy = false; setBtns(false)
 }
 
 async function claimDaily() {
+  sfx.click()
   const { data, error } = await sb.rpc('claim_daily')
   if (error) return toast(error.message)
+  sfx.claim()
   setBalance(data.balance); toast('🎁 +' + data.reward + ' Coins • Streak ' + data.streak + ' 🔥'); if (current === 'earn') show('earn')
 }
 
@@ -1292,23 +1637,26 @@ async function claimDaily() {
 const fakeEmail = u => u.toLowerCase().replace(/[^a-z0-9]/g, '') + '@future.community'
 
 $('registerBtn').addEventListener('click', async () => {
+  sfx.click()
   setStatus('Registrierung läuft...')
   const username = $('username').value.trim(), password = $('password').value
   if (username.length < 3) return setStatus('Username muss min. 3 Zeichen haben', 'error')
   if (password.length < 6) return setStatus('Passwort muss min. 6 Zeichen haben', 'error')
   const { error } = await sb.auth.signUp({ email: fakeEmail(username), password, options: { data: { username } } })
-  error ? setStatus('Fehler: ' + error.message, 'error') : setStatus('Account erstellt! Jetzt einloggen.', 'success')
+  if (error) { sfx.lose(); setStatus('Fehler: ' + error.message, 'error') }
+  else { sfx.claim(); setStatus('Account erstellt! Jetzt einloggen.', 'success') }
 })
 
 $('loginBtn').addEventListener('click', async () => {
+  sfx.click()
   setStatus('Login läuft...')
   const username = $('username').value.trim(), password = $('password').value
   if (!username || !password) return setStatus('Bitte Username und Passwort eingeben', 'error')
   const { error } = await sb.auth.signInWithPassword({ email: fakeEmail(username), password })
-  if (error) setStatus('Login fehlgeschlagen: ' + error.message, 'error')
+  if (error) { sfx.lose(); setStatus('Login fehlgeschlagen: ' + error.message, 'error') }
 })
 
-async function logout() { await sb.auth.signOut(); location.reload() }
+async function logout() { sfx.click(); await sb.auth.signOut(); location.reload() }
 
 sb.auth.onAuthStateChange((event, session) => {
   if (!session) return
