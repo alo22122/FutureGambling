@@ -1,0 +1,2098 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Future Gambling - NextGen Gaming</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<style>
+  body{font-family:system-ui,-apple-system,sans-serif;background:radial-gradient(1200px 600px at 80% -10%,rgba(34,211,238,.12),transparent),#09090b;color:#fff;margin:0}
+  .glass{background:rgba(24,24,27,.85);border:1px solid #3f3f46;backdrop-filter:blur(8px)}
+  .grad{background:linear-gradient(135deg,#22d3ee,#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+  .btn{padding:.75rem 1rem;border-radius:.75rem;font-weight:600;transition:.15s;width:100%}
+  .btn:hover{filter:brightness(1.15)} .btn:active{transform:scale(.97)} .btn:disabled{opacity:.5;cursor:not-allowed}
+  .nav{display:flex;align-items:center;gap:.75rem;width:100%;padding:.45rem .75rem;border-radius:.75rem;color:#a1a1aa;text-align:left;transition:.15s;border:1px solid transparent;font-size:.9rem}
+  .nav:hover{background:#27272a;color:#fff} .nav.on{background:linear-gradient(135deg,rgba(34,211,238,.2),rgba(52,211,153,.2));color:#fff;border-color:#0e7490}
+  .inp{background:#18181b;border:1px solid #3f3f46;border-radius:.75rem;padding:.75rem 1rem;outline:none;color:#fff}
+  .inp:focus{border-color:#22d3ee}
+  .reel{width:5rem;height:6rem;display:flex;align-items:center;justify-content:center;font-size:3rem;background:#18181b;border:1px solid #3f3f46;border-radius:1rem}
+  .sel{outline:2px solid #22d3ee}
+  .kc{padding:.55rem 0;border-radius:.5rem;background:#18181b;border:1px solid #3f3f46;font-weight:700;transition:.15s}
+  .kc.on{outline:2px solid #22d3ee}.kc.drawn{background:#52525b}.kc.hit{background:#16a34a}
+  @keyframes pop{0%{transform:scale(.2);opacity:0}60%{transform:scale(1.2);opacity:1}100%{transform:scale(1)}}
+  @keyframes fall{to{transform:translateY(110vh) rotate(360deg)}}
+  @keyframes shake{0%,100%{transform:translate(0)}25%{transform:translate(-6px,3px)}50%{transform:translate(5px,-4px)}75%{transform:translate(-4px,-2px)}}
+  .shake{animation:shake .4s 3}.stop{animation:pop .25s}
+  .nhead{display:flex;justify-content:space-between;align-items:center;width:100%;padding:.4rem .6rem;margin-top:.5rem;font-size:.68rem;text-transform:uppercase;letter-spacing:.07em;color:#71717a}
+  .nhead:hover{color:#d4d4d8}
+  .vpc{width:3.6rem;height:5rem;border-radius:.6rem;background:#fafafa;color:#111;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:800;font-size:1.3rem;cursor:pointer;position:relative}
+  .vpc.red{color:#dc2626}.vpc.hold{outline:3px solid #22d3ee;margin-bottom:.3rem}.vpc.hold::after{content:'HOLD';position:absolute;bottom:-1.15rem;font-size:.6rem;color:#22d3ee}
+  .banner-glow{animation:glow 2s infinite alternate}
+  @keyframes glow{from{border-color:#eab308;box-shadow:0 0 10px rgba(234,179,8,.3)}to{border-color:#ef4444;box-shadow:0 0 20px rgba(239,68,68,.5)}}
+</style>
+</head>
+<body>
+
+<!-- AUTH -->
+<div id="auth-screen" class="min-h-screen flex items-center justify-center p-4">
+  <div class="glass rounded-2xl p-8 w-full max-w-md">
+    <h1 class="text-3xl font-bold text-center mb-2 grad">Future Gambling</h1>
+    <p class="text-center text-zinc-400 text-sm mb-6">Nur Fake-Geld • Nur zum Spaß • NextGen Web Casino</p>
+    <div id="status" class="mb-6 p-4 rounded-xl text-center text-sm font-medium bg-zinc-800 text-zinc-300">Bereit. Drücke einen Button.</div>
+    <input id="username" type="text" placeholder="Username" class="inp w-full mb-3" />
+    <input id="password" type="password" placeholder="Passwort" class="inp w-full mb-6" />
+    <div class="flex gap-3">
+      <button id="loginBtn" class="btn bg-cyan-600">Einloggen</button>
+      <button id="registerBtn" class="btn bg-emerald-600">Registrieren</button>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" class="hidden">
+  <!-- Server Broadcast Banner -->
+  <div id="serverBanner" class="hidden bg-gradient-to-r from-red-600 via-amber-600 to-red-600 text-white px-4 py-2 text-center text-sm font-bold shadow-lg sticky top-0 z-50 flex items-center justify-between">
+    <div class="flex-1 text-center" id="serverBannerText">📢 Server-Ankündigung</div>
+    <button onclick="$('serverBanner').classList.add('hidden')" class="text-xs bg-black/30 hover:bg-black/50 px-2 py-0.5 rounded">✕</button>
+  </div>
+
+  <aside id="sidebar" class="fixed inset-y-0 left-0 w-64 glass z-40 flex flex-col p-4 transition-transform -translate-x-full md:translate-x-0">
+    <div class="flex items-center justify-between mb-3">
+      <div class="text-xl font-extrabold grad">Future Gambling</div>
+      <button id="soundBtn" onclick="toggleSound()" class="text-lg p-1 rounded-lg hover:bg-zinc-800 transition" title="Sound ein/ausschalten">🔊</button>
+    </div>
+    <div class="rounded-2xl p-3 mb-2" style="background:linear-gradient(135deg,rgba(34,211,238,.15),rgba(52,211,153,.15));border:1px solid #3f3f46">
+      <div class="text-xs text-zinc-400" id="welcome">Lade...</div>
+      <div class="text-2xl font-black text-emerald-400">🪙 <span id="balance">0</span></div>
+    </div>
+    <nav id="nav" class="flex-1 space-y-1 overflow-y-auto mb-3"></nav>
+    <div class="grid grid-cols-2 gap-2">
+      <button onclick="claimDaily()" class="btn bg-yellow-500 text-black col-span-2" style="padding:.5rem">🎁 Daily abholen</button>
+      <button onclick="logout()" class="btn bg-zinc-800" style="padding:.4rem;font-size:.8rem">Logout</button>
+      <button onclick="delMe()" class="btn bg-zinc-900 text-zinc-500 hover:text-red-400" style="padding:.4rem;font-size:.7rem">Konto löschen</button>
+    </div>
+  </aside>
+
+  <header class="md:hidden sticky top-0 z-30 glass flex items-center justify-between px-4 py-3">
+    <button onclick="toggleMenu()" class="text-2xl">☰</button>
+    <span class="grad font-bold">Future Gambling</span>
+    <div class="flex items-center gap-3">
+      <button onclick="toggleSound()" class="text-base" id="soundBtnMobile">🔊</button>
+      <span class="text-emerald-400 font-bold">🪙 <span id="balance2">0</span></span>
+    </div>
+  </header>
+
+  <main class="md:ml-64 p-4 md:p-10">
+    <div class="max-w-3xl mx-auto">
+      <h2 id="title" class="text-3xl font-black mb-1"></h2>
+      <p id="desc" class="text-zinc-400 mb-6"></p>
+      <div id="view" class="glass rounded-2xl p-6"></div>
+      <div id="msg" class="mt-5 text-center text-xl font-bold min-h-[2rem]"></div>
+      <div id="hist" class="mt-6 space-y-1 text-sm"></div>
+    </div>
+  </main>
+</div>
+
+<div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 glass rounded-xl px-5 py-3 text-sm hidden z-50"></div>
+
+<script>
+const SUPABASE_URL = 'https://gxxblyzjxsagwmgjvhyu.supabase.co'
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd4eGJseXpqeHNhZ3dtZ2p2aHl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTUwOTQ5NjUsImV4cCI6MjExMDY3MDk2NX0.7Jktb_7QPtdmPGi-LxRutLSRca5ehdWLqX0lfkU22Ik'
+const { createClient } = window.supabase
+const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+
+const $ = id => document.getElementById(id)
+const sleep = ms => new Promise(r => setTimeout(r, ms))
+let ROLE = 'user', chatTimer = null, cg = null, rg = null, cr = null, mn = null, plinkoRisk = 'mid', crPoll = 0, ME = {}, hb = null, dTimer = null, slotCur = null, scr = null, tw = null, pvpTimer = null, dmWith = null, cg_ = null
+let wheelRot = 0, kpicks = [], HIST = []
+let balance = 0, current = 'lobby', busy = false, lastBet = 50, diceMode = 'over', diceTarget = 50
+
+/* ================= WEB AUDIO API SOUND ENGINE ================= */
+let soundEnabled = true
+try {
+  const savedSound = localStorage.getItem('fg_sound_enabled')
+  if (savedSound !== null) soundEnabled = savedSound === 'true'
+} catch(e) {}
+
+let audioCtx = null
+function getAudioCtx() {
+  if (!audioCtx) {
+    const AudioContext = window.AudioContext || window.webkitAudioContext
+    if (AudioContext) audioCtx = new AudioContext()
+  }
+  if (audioCtx && audioCtx.state === 'suspended') {
+    audioCtx.resume()
+  }
+  return audioCtx
+}
+
+function updateSoundIcons() {
+  const ic = soundEnabled ? '🔊' : '🔇'
+  if ($('soundBtn')) $('soundBtn').textContent = ic
+  if ($('soundBtnMobile')) $('soundBtnMobile').textContent = ic
+}
+
+function toggleSound() {
+  soundEnabled = !soundEnabled
+  try { localStorage.setItem('fg_sound_enabled', soundEnabled) } catch(e) {}
+  updateSoundIcons()
+  if (soundEnabled) sfx.click()
+  toast(soundEnabled ? '🔊 Sound aktiviert' : '🔇 Sound stummgeschaltet')
+}
+
+const sfx = {
+  click: () => {
+    if (!soundEnabled) return
+    const ctx = getAudioCtx(); if (!ctx) return
+    const osc = ctx.createOscillator(), g = ctx.createGain()
+    osc.type = 'sine'
+    osc.frequency.setValueAtTime(650, ctx.currentTime)
+    osc.frequency.exponentialRampToValueAtTime(320, ctx.currentTime + 0.04)
+    g.gain.setValueAtTime(0.12, ctx.currentTime)
+    g.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.04)
+    osc.connect(g); g.connect(ctx.destination)
+    osc.start(); osc.stop(ctx.currentTime + 0.04)
+  },
+  bet: () => {
+    if (!soundEnabled) return
+    const ctx = getAudioCtx(); if (!ctx) return
+    [520, 780].forEach((freq, idx) => {
+      const osc = ctx.createOscillator(), g = ctx.createGain()
+      osc.type = 'triangle'
+      osc.frequency.setValueAtTime(freq, ctx.currentTime + idx * 0.04)
+      g.gain.setValueAtTime(0.15, ctx.currentTime + idx * 0.04)
+      g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + idx * 0.04 + 0.08)
+      osc.connect(g); g.connect(ctx.destination)
+      osc.start(ctx.currentTime + idx * 0.04); osc.stop(ctx.currentTime + idx * 0.04 + 0.09)
+    })
+  },
+  spin: () => {
+    if (!soundEnabled) return
+    const ctx = getAudioCtx(); if (!ctx) return
+    const osc = ctx.createOscillator(), g = ctx.createGain()
+    osc.type = 'sawtooth'
+    osc.frequency.setValueAtTime(260 + Math.random() * 80, ctx.currentTime)
+    g.gain.setValueAtTime(0.05, ctx.currentTime)
+    g.gain.linearRampToValueAtTime(0.001, ctx.currentTime + 0.04)
+    osc.connect(g); g.connect(ctx.destination)
+    osc.start(); osc.stop(ctx.currentTime + 0.04)
+  },
+  dice: () => {
+    if (!soundEnabled) return
+    const ctx = getAudioCtx(); if (!ctx) return
+    for (let i = 0; i < 4; i++) {
+      setTimeout(() => {
+        if (!soundEnabled) return
+        const osc = ctx.createOscillator(), g = ctx.createGain()
+        osc.type = 'sine'
+        osc.frequency.setValueAtTime(280 + Math.random() * 320, ctx.currentTime)
+        g.gain.setValueAtTime(0.1, ctx.currentTime)
+        g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.05)
+        osc.connect(g); g.connect(ctx.destination)
+        osc.start(); osc.stop(ctx.currentTime + 0.06)
+      }, i * 60)
+    }
+  },
+  win: () => {
+    if (!soundEnabled) return
+    const ctx = getAudioCtx(); if (!ctx) return
+    const notes = [523.25, 659.25, 783.99, 1046.50]
+    notes.forEach((freq, idx) => {
+      const osc = ctx.createOscillator(), g = ctx.createGain()
+      osc.type = 'triangle'
+      osc.frequency.setValueAtTime(freq, ctx.currentTime + idx * 0.08)
+      g.gain.setValueAtTime(0.2, ctx.currentTime + idx * 0.08)
+      g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + idx * 0.08 + 0.28)
+      osc.connect(g); g.connect(ctx.destination)
+      osc.start(ctx.currentTime + idx * 0.08); osc.stop(ctx.currentTime + idx * 0.08 + 0.3)
+    })
+  },
+  bigwin: () => {
+    if (!soundEnabled) return
+    const ctx = getAudioCtx(); if (!ctx) return
+    const melody = [523.25, 659.25, 783.99, 1046.50, 880.00, 1046.50, 1318.51]
+    melody.forEach((freq, idx) => {
+      const osc = ctx.createOscillator(), g = ctx.createGain()
+      osc.type = 'sine'
+      osc.frequency.setValueAtTime(freq, ctx.currentTime + idx * 0.1)
+      g.gain.setValueAtTime(0.28, ctx.currentTime + idx * 0.1)
+      g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + idx * 0.1 + 0.35)
+      osc.connect(g); g.connect(ctx.destination)
+      osc.start(ctx.currentTime + idx * 0.1); osc.stop(ctx.currentTime + idx * 0.1 + 0.38)
+    })
+  },
+  jackpot: () => {
+    if (!soundEnabled) return
+    const ctx = getAudioCtx(); if (!ctx) return
+    for (let i = 0; i < 14; i++) {
+      setTimeout(() => {
+        if (!soundEnabled) return
+        const osc = ctx.createOscillator(), g = ctx.createGain()
+        osc.type = 'sawtooth'
+        const f = 600 + (i % 2 === 0 ? 380 : 0)
+        osc.frequency.setValueAtTime(f, ctx.currentTime)
+        g.gain.setValueAtTime(0.25, ctx.currentTime)
+        g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.12)
+        osc.connect(g); g.connect(ctx.destination)
+        osc.start(); osc.stop(ctx.currentTime + 0.13)
+      }, i * 100)
+    }
+  },
+  lose: () => {
+    if (!soundEnabled) return
+    const ctx = getAudioCtx(); if (!ctx) return
+    const osc = ctx.createOscillator(), g = ctx.createGain()
+    osc.type = 'sawtooth'
+    osc.frequency.setValueAtTime(260, ctx.currentTime)
+    osc.frequency.exponentialRampToValueAtTime(80, ctx.currentTime + 0.28)
+    g.gain.setValueAtTime(0.18, ctx.currentTime)
+    g.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.28)
+    osc.connect(g); g.connect(ctx.destination)
+    osc.start(); osc.stop(ctx.currentTime + 0.29)
+  },
+  claim: () => {
+    if (!soundEnabled) return
+    const ctx = getAudioCtx(); if (!ctx) return
+    [440, 554.37, 659.25, 880].forEach((freq, idx) => {
+      const osc = ctx.createOscillator(), g = ctx.createGain()
+      osc.type = 'sine'
+      osc.frequency.setValueAtTime(freq, ctx.currentTime + idx * 0.07)
+      g.gain.setValueAtTime(0.2, ctx.currentTime + idx * 0.07)
+      g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + idx * 0.07 + 0.25)
+      osc.connect(g); g.connect(ctx.destination)
+      osc.start(ctx.currentTime + idx * 0.07); osc.stop(ctx.currentTime + idx * 0.07 + 0.28)
+    })
+  },
+  whistle: () => {
+    if (!soundEnabled) return
+    const ctx = getAudioCtx(); if (!ctx) return
+    const osc = ctx.createOscillator(), g = ctx.createGain()
+    osc.type = 'square'
+    osc.frequency.setValueAtTime(1800, ctx.currentTime)
+    g.gain.setValueAtTime(0.15, ctx.currentTime)
+    g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.25)
+    osc.connect(g); g.connect(ctx.destination)
+    osc.start(); osc.stop(ctx.currentTime + 0.26)
+  }
+}
+
+window.addEventListener('click', () => { if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume() }, { once: true })
+setTimeout(updateSoundIcons, 0)
+
+const GAMES = {
+  lobby:    { icon: '🏠', name: 'Lobby', desc: 'Wähle ein Spiel und viel Glück!' },
+  // Beliebt
+  limbo:    { icon: '🎯', name: 'Limbo', desc: 'Beliebter Krypto-Hit! Setze dein Ziel – schieße bis zu 10.000× in die Höhe.' },
+  penalty:  { icon: '⚽', name: 'Elfmeter', desc: 'Schieße ins Tor! Überwinde den Torwart für 1,95× Auszahlung.' },
+  crash:    { icon: '🚀', name: 'Crash', desc: 'Die Rakete steigt – drücke rechtzeitig auf Cashout!' },
+  slots:    { icon: '🎰', name: 'Slots', desc: 'Wähle eine Slot-Maschine: von Low bis Extreme, plus globaler Jackpot.' },
+  mines:    { icon: '💣', name: 'Mines', desc: 'Decke Diamanten auf, meide die Minen, cashe jederzeit aus.' },
+  blackjack:{ icon: '♠️', name: 'Blackjack', desc: 'Schlage den Dealer. Blackjack zahlt 2,5×, Double möglich.' },
+  towers:   { icon: '🗼', name: 'Towers', desc: 'Steige 8 Ebenen auf – wähle deine Schwierigkeit!' },
+  plinko:   { icon: '🟡', name: 'Plinko', desc: 'Ball fallen lassen – die Ränder zahlen bis 5,6×.' },
+  // Tischspiele
+  war:      { icon: '⚔️', name: 'Casino War', desc: 'High-Card War! Höhere Karte schlägt den Dealer (2×), bei Gleichstand WAR (3×).' },
+  roulette: { icon: '🎡', name: 'Roulette', desc: 'Rot/Schwarz = 2×, Grün (0) = 14×.' },
+  baccarat: { icon: '🎴', name: 'Baccarat', desc: 'Player, Banker oder Tie – wer kommt näher an 9?' },
+  poker:    { icon: '♦️', name: 'Video Poker', desc: 'Jacks or Better: Karten halten, tauschen, bis 800×.' },
+  sicbo:    { icon: '🔮', name: 'Sic Bo', desc: 'Drei Würfel: Low, High oder Triple (30×).' },
+  dragon:   { icon: '🐉', name: 'Dragon Tiger', desc: 'Höhere Karte gewinnt: Drache, Tiger oder Tie (11×).' },
+  // Schnelle Spiele
+  cyberrace:{ icon: '🏎️', name: 'Cyber Race', desc: 'Wähle einen von 5 Renn-Gleitern. Live-Rennen um bis zu 20× Gewinn!' },
+  coinflip: { icon: '🪙', name: 'Coinflip', desc: 'Kopf oder Zahl – gewinne das Doppelte (2×).' },
+  dice:     { icon: '🎲', name: 'Dice', desc: 'Wähle deine Zahl. Je riskanter, desto höher der Gewinn.' },
+  wheel:    { icon: '🎯', name: 'Glücksrad', desc: 'Dreh das Rad – Gewinne bis 4×.' },
+  keno:     { icon: '🔢', name: 'Keno', desc: 'Tippe 5 Zahlen von 40 – bis zu 80×.' },
+  double:   { icon: '💰', name: 'Double or Nothing', desc: 'Verdopple oder verliere alles. Dein Gewinn wird direkt neu gesetzt.' },
+  allin:    { icon: '🔥', name: 'All In', desc: 'Dein ganzes Guthaben auf eine Karte: 48 % für 2×.' },
+  hilo:     { icon: '🃏', name: 'Hi-Lo', desc: 'Höher oder niedriger als die Karte? Je riskanter, desto mehr.' },
+  lucky7:   { icon: '7️⃣', name: 'Lucky 7', desc: 'Zwei Würfel: unter 7, über 7 oder genau 7 (5,7×).' },
+  doors:    { icon: '🚪', name: 'Schatztüren', desc: 'Drei Türen, hinter einer liegt 2,8×.' },
+  number:   { icon: '🔟', name: 'Lucky Number', desc: 'Rate die Zahl von 1 bis 10 – 9×.' },
+  rps:      { icon: '✊', name: 'Schere Stein Papier', desc: 'Sieg 2,4×, Unentschieden gibt 0,5× zurück.' },
+  // PvP & Mini-Games
+  community:{ icon: '🌍', name: 'Community', desc: 'Community-Ziel, Lotterie und Clans.', page: true },
+  duel:     { icon: '⚔️', name: 'Duelle (1v1)', desc: 'Fordere andere Spieler heraus: Coinflip oder Dice um echte Coins.', page: true },
+  chess:    { icon: '♟️', name: 'Schach (Elo)', desc: '1v1 Schach mit Elo-Rating und Rangliste.', page: true },
+  friends:  { icon: '🤝', name: 'Freunde & DMs', desc: 'Freunde hinzufügen und privat schreiben.', page: true },
+  snake:    { icon: '🐍', name: 'Snake', desc: 'Friss so viel wie du kannst – ohne dich selbst zu beißen.', page: true },
+  typing:   { icon: '⌨️', name: 'Typing Race', desc: 'Wie schnell tippst du? Miss deine WPM.', page: true },
+  trivia:   { icon: '🧠', name: 'Trivia', desc: '10 Fragen, wie viele weißt du?', page: true },
+  versus:   { icon: '🎮', name: 'Versus (Mini-Games)', desc: '1v1 in Snake, Typing, Trivia oder Tetris – gleiche Runde für beide.', page: true },
+  tetris:   { icon: '🧱', name: 'Tetris', desc: '2 Minuten, so viele Punkte wie möglich.', page: true },
+  clanhq:   { icon: '🏰', name: 'Clan-HQ', desc: 'Kasse, Upgrades und Tagesbonus deines Clans.', page: true },
+  feed:     { icon: '📰', name: 'Aktivität', desc: 'Was gerade auf dem Server passiert.', page: true },
+  bp:       { icon: '🎫', name: 'Battle Pass', desc: 'Season-Belohnungen, Premium und Prestige.', page: true },
+  ach:      { icon: '🏅', name: 'Achievements', desc: 'Ziele erreichen und Coins kassieren.', page: true },
+  stats:    { icon: '📊', name: 'Statistiken', desc: 'Deine Zahlen: Runden, Einsatz, Auszahlung, Rückzahlung.', page: true },
+  players:  { icon: '👥', name: 'Spieler', desc: 'Wer ist online? Schau Profile an und verschenke Coins.', page: true },
+  shop:     { icon: '🛍️', name: 'Shop & Profil', desc: 'Avatare, Namensfarben und Titel kaufen.', page: true },
+  earn:     { icon: '⛏️', name: 'Coins verdienen', desc: 'Daily-Streak, Stunden-Bonus und Mini-Games.', page: true },
+  chat:     { icon: '💬', name: 'Chat', desc: 'Live-Chat mit allen Spielern.', page: true },
+  board:    { icon: '🏆', name: 'Leaderboard', desc: 'Die reichsten und aktivsten Spieler.', page: true },
+  admin:    { icon: '🛡️', name: 'Admin God-Mode', desc: 'Master Control: Quoten, Server-Rigging, Jackpot, Spieler-Manipulation.', page: true, admin: true }
+}
+
+/* ---------- UI helpers ---------- */
+function setStatus(text, type = 'info') {
+  const el = $('status'); el.textContent = text
+  el.style.background = type === 'error' ? 'rgba(127,29,29,.5)' : type === 'success' ? 'rgba(6,78,59,.5)' : '#27272a'
+  el.style.color = type === 'error' ? '#fca5a5' : type === 'success' ? '#6ee7b7' : '#d4d4d8'
+}
+function toast(t) { const e = $('toast'); e.textContent = t; e.classList.remove('hidden'); clearTimeout(toast.t); toast.t = setTimeout(() => e.classList.add('hidden'), 2600) }
+function msg(t, type) { const e = $('msg'); e.textContent = t; e.style.color = type === 'win' ? '#34d399' : type === 'lose' ? '#f87171' : '#a1a1aa' }
+function toggleMenu() { $('sidebar').classList.toggle('-translate-x-full') }
+
+function setBalance(n) {
+  n = Number(n) || 0
+  const from = balance, t0 = performance.now(); balance = n
+  ;(function step(t) {
+    const k = Math.min(1, (t - t0) / 500), v = Math.round(from + (n - from) * k)
+    $('balance').textContent = $('balance2').textContent = v.toLocaleString('de-DE')
+    if (k < 1) requestAnimationFrame(step)
+  })(t0)
+}
+
+async function loadProfile() {
+  const { data, error } = await sb.rpc('get_me')
+  if (error) { console.error(error); if (/gesperrt/.test(error.message)) { alert(error.message); logout() } else toast('Profil-Fehler: ' + error.message); return }
+  ROLE = data.role
+  ME = data; $('welcome').innerHTML = (data.prestige ? '👑' + data.prestige + ' ' : '') + 'Lv ' + data.level + ' · ' + nm(data)
+  if (!hb) hb = setInterval(() => sb.rpc('heartbeat'), 60000)
+  setBalance(data.balance); renderNav()
+  checkAnnouncement()
+}
+
+async function checkAnnouncement() {
+  const { data } = await sb.rpc('get_announcement')
+  if (data && data.active && data.message) {
+    $('serverBannerText').textContent = '📢 ' + data.message
+    $('serverBanner').classList.remove('hidden')
+  } else {
+    $('serverBanner').classList.add('hidden')
+  }
+}
+
+/* ---------- Navigation ---------- */
+const NAVGROUPS = [
+  ['⭐', 'Beliebt', ['limbo', 'penalty', 'slots', 'crash', 'mines', 'blackjack', 'towers', 'plinko']],
+  ['🃏', 'Tischspiele', ['war', 'roulette', 'baccarat', 'sicbo', 'dragon', 'poker', 'hilo']],
+  ['⚡', 'Schnelle Spiele', ['cyberrace', 'coinflip', 'dice', 'double', 'allin', 'lucky7', 'rps', 'number', 'doors', 'wheel', 'keno']],
+  ['⚔️', 'PvP', ['duel', 'chess', 'versus']],
+  ['🎮', 'Future Games', ['snake', 'typing', 'trivia', 'tetris']],
+  ['🌍', 'Community', ['community', 'friends', 'chat', 'clanhq', 'feed', 'players', 'board']],
+  ['👤', 'Mein Konto', ['earn', 'bp', 'ach', 'shop', 'stats', 'admin']]
+]
+const navOpen = {}
+const grpOpen = (name, keys) => name in navOpen ? navOpen[name] : (name === 'Beliebt' || keys.includes(current))
+function toggleGroup(name) { const g = NAVGROUPS.find(x => x[1] === name); navOpen[name] = !grpOpen(name, g[2]); renderNav() }
+function renderNav() {
+  const ok = k => GAMES[k] && (!GAMES[k].admin || ROLE === 'admin')
+  const btn = k => `<button class="nav ${k === current ? 'on' : ''}" onclick="show('${k}')"><span class="text-lg">${GAMES[k].icon}</span>${GAMES[k].name}</button>`
+  const listed = NAVGROUPS.flatMap(g => g[2]).concat('lobby'), rest = Object.keys(GAMES).filter(k => !listed.includes(k))
+  const groups = rest.length ? NAVGROUPS.concat([['➕', 'Mehr', rest]]) : NAVGROUPS
+  $('nav').innerHTML = btn('lobby') + groups.map(([ic, name, keys]) => {
+    keys = keys.filter(ok); if (!keys.length) return ''
+    const open = grpOpen(name, keys)
+    return `<div><button class="nhead" onclick="toggleGroup('${name}')"><span>${ic} ${name}</span><span>${open ? '▾' : '▸'}</span></button>${open ? keys.map(btn).join('') : ''}</div>`
+  }).join('')
+}
+function betBox() {
+  return `<label class="text-xs text-zinc-400">Einsatz (FC)</label>
+  <div class="flex gap-2 mt-1 mb-5">
+    <input id="bet" type="number" min="1" value="${lastBet}" class="inp flex-1 min-w-0" />
+    <button onclick="sfx.click();mod('half')" class="btn bg-zinc-800" style="width:auto">½</button>
+    <button onclick="sfx.click();mod('double')" class="btn bg-zinc-800" style="width:auto">2×</button>
+    <button onclick="sfx.click();mod('max')" class="btn bg-zinc-800" style="width:auto">Max</button>
+  </div>`
+}
+function mod(m) {
+  let v = Math.floor(Number($('bet').value)) || 1
+  v = m === 'half' ? Math.max(1, Math.floor(v / 2)) : m === 'double' ? v * 2 : Math.max(1, balance)
+  $('bet').value = Math.min(v, Math.max(1, balance))
+}
+
+const VIEWS = {
+  coinflip: () => betBox() + `<div id="stage" class="h-32 flex items-center justify-center text-7xl">🪙</div>
+    <div class="flex gap-3"><button class="btn play bg-cyan-600" onclick="play('kopf')">Kopf</button><button class="btn play bg-pink-600" onclick="play('zahl')">Zahl</button></div>`,
+  dice: () => betBox() + `<div class="flex gap-2 mb-4">
+      <button id="m-over" class="btn bg-zinc-800" onclick="setMode('over')">Über</button>
+      <button id="m-under" class="btn bg-zinc-800" onclick="setMode('under')">Unter</button></div>
+    <input id="target" type="range" min="5" max="95" value="${diceTarget}" oninput="diceTarget=+this.value;diceInfo()" class="w-full accent-emerald-500" />
+    <div id="dice-info" class="text-sm text-zinc-400 mt-3 text-center"></div>
+    <div id="stage" class="h-28 flex items-center justify-center text-7xl font-black">🎲</div>
+    <button class="btn play bg-emerald-600" onclick="play(diceMode+':'+diceTarget)">Würfeln</button>`,
+  slots: () => betBox() + `<div id="stage" class="flex justify-center gap-3 my-6"><div class="reel" id="r0">🍒</div><div class="reel" id="r1">🍋</div><div class="reel" id="r2">🔔</div></div>
+    <button class="btn play bg-emerald-600" onclick="play('spin')">Drehen</button>`,
+  roulette: () => betBox() + `<div id="stage" class="h-32 flex items-center justify-center"><div class="w-24 h-24 rounded-full flex items-center justify-center text-4xl font-black bg-zinc-800 border-4 border-zinc-600">?</div></div>
+    <div class="flex gap-3"><button class="btn play bg-red-600" onclick="play('red')">Rot 2×</button><button class="btn play bg-zinc-700" onclick="play('black')">Schwarz 2×</button><button class="btn play bg-green-600" onclick="play('green')">Grün 14×</button></div>`
+}
+
+let PM = [5.6, 2.1, 1.1, 1, 0.5, 1, 1.1, 2.1, 5.6]
+const WM = [0, 0.5, 0, 1.5, 0, 2, 0, 1, 0, 4]
+
+VIEWS.lobby = () => `<div class="grid grid-cols-2 md:grid-cols-4 gap-3">${Object.entries(GAMES).filter(([k, g]) => k !== 'lobby' && !g.page).map(([k, g]) =>
+  `<button onclick="sfx.click();show('${k}')" class="glass rounded-2xl p-4 text-left hover:border-cyan-500 transition"><div class="text-3xl mb-1">${g.icon}</div><div class="font-bold text-sm">${g.name}</div><div class="text-[11px] text-zinc-400 mt-1 line-clamp-2">${g.desc}</div></button>`).join('')}</div>`
+
+/* ================= NEUE GAMES: LIMBO, PENALTY, WAR, CYBER RACE ================= */
+VIEWS.limbo = () => betBox() + `
+  <div id="stage" class="h-36 flex flex-col items-center justify-center">
+    <div id="limbo-res" class="text-6xl font-black text-cyan-400">1.00×</div>
+    <div class="text-xs text-zinc-500 mt-2">Beliebter Krypto-Hit • Schieße bis zu 10.000×</div>
+  </div>
+  <label class="text-xs text-zinc-400">Ziel-Multiplikator (z.B. 2.00× oder 50.00×)</label>
+  <div class="flex gap-2 mt-1 mb-4">
+    <input id="limbo-tgt" type="number" step="0.1" min="1.05" max="10000" value="2.00" class="inp flex-1" oninput="updateLimboWinChance()" />
+    <span id="limbo-chance" class="text-xs text-zinc-400 flex items-center px-3 glass rounded-xl">Chance: 49.0%</span>
+  </div>
+  <button class="btn play bg-emerald-600 font-bold" onclick="playLimbo()">Rakete starten</button>`
+
+function updateLimboWinChance() {
+  const val = Number($('limbo-tgt').value) || 2
+  const ch = Math.max(0.01, Math.min(95, 98 / val)).toFixed(1)
+  if ($('limbo-chance')) $('limbo-chance').textContent = `Chance: ${ch}%`
+}
+function playLimbo() {
+  const tgt = Number($('limbo-tgt').value)
+  if (!tgt || tgt < 1.05) return msg('Ziel muss mindestens 1.05× sein', 'lose')
+  play(tgt.toString())
+}
+
+// 2. PENALTY SHOOTOUT
+VIEWS.penalty = () => betBox() + `
+  <div class="relative w-full max-w-md mx-auto h-52 glass rounded-2xl border-4 border-zinc-700 p-2 flex flex-col justify-between mb-4" style="background:radial-gradient(#15803d,#064e3b)">
+    <div class="flex justify-between">
+      <button class="pen-btn btn bg-black/40 hover:bg-yellow-500 hover:text-black text-xs py-2 px-3 w-auto" onclick="playPenalty('tl')">↖ Oben Links</button>
+      <button class="pen-btn btn bg-black/40 hover:bg-yellow-500 hover:text-black text-xs py-2 px-3 w-auto" onclick="playPenalty('tr')">↗ Oben Rechts</button>
+    </div>
+    <div id="penalty-goalie" class="text-6xl text-center transition-all duration-300">🧤</div>
+    <div class="flex justify-between items-end">
+      <button class="pen-btn btn bg-black/40 hover:bg-yellow-500 hover:text-black text-xs py-2 px-3 w-auto" onclick="playPenalty('bl')">↙ Unten Links</button>
+      <button class="pen-btn btn bg-black/40 hover:bg-yellow-500 hover:text-black text-xs py-2 px-3 w-auto" onclick="playPenalty('mid')">⬆ Mitte</button>
+      <button class="pen-btn btn bg-black/40 hover:bg-yellow-500 hover:text-black text-xs py-2 px-3 w-auto" onclick="playPenalty('br')">↘ Unten Rechts</button>
+    </div>
+  </div>
+  <div class="text-xs text-zinc-400 text-center">Wähle eine Ecke zum Schießen! Trifft der Ball am Torwart vorbei: <b>1,95× Auszahlung</b>.</div>`
+
+function playPenalty(slot) { play(slot) }
+
+// 3. CASINO WAR
+VIEWS.war = () => betBox() + stg(`
+  <div class="flex items-center gap-6">
+    <div class="text-center"><div class="text-xs text-zinc-400 mb-1">DU</div><div id="war-p" class="glass rounded-xl px-5 py-4 text-3xl font-black">?</div></div>
+    <div class="text-2xl font-black text-zinc-500">VS</div>
+    <div class="text-center"><div class="text-xs text-zinc-400 mb-1">DEALER</div><div id="war-d" class="glass rounded-xl px-5 py-4 text-3xl font-black">?</div></div>
+  </div>`) + `<button class="btn play bg-emerald-600" onclick="play('war')">In die Schlacht (War) ziehen</button>
+  <div class="text-xs text-zinc-500 mt-3 text-center">Höhere Karte gewinnt 2,0× • Gleichstand = WAR (3,0× Auszahlung)!</div>`
+
+// 4. CYBER RACE
+const RACERS = [
+  { id: 1, name: 'Neon Blade', col: '#22d3ee', odds: 2.0, ch: '45%' },
+  { id: 2, name: 'Quantum Ghost', col: '#a78bfa', odds: 3.2, ch: '25%' },
+  { id: 3, name: 'Solar Flash', col: '#facc15', odds: 5.0, ch: '15%' },
+  { id: 4, name: 'Void Walker', col: '#f43f5e', odds: 9.0, ch: '10%' },
+  { id: 5, name: 'Hyper Nova', col: '#34d399', odds: 20.0, ch: '5%' }
+]
+let chosenRacer = 1
+VIEWS.cyberrace = () => betBox() + `
+  <div id="race-track" class="space-y-2 mb-4 glass rounded-2xl p-4">
+    ${RACERS.map(r => `
+      <div class="space-y-1">
+        <div class="flex justify-between text-xs font-bold" style="color:${r.col}">
+          <span>🏎️ ${r.name} (${r.odds}×)</span>
+          <span>Chance ~${r.ch}</span>
+        </div>
+        <div class="h-3 bg-zinc-800 rounded-full overflow-hidden">
+          <div id="racer-bar-${r.id}" class="h-full rounded-full transition-all duration-300" style="background:${r.col};width:4%"></div>
+        </div>
+      </div>`).join('')}
+  </div>
+  <label class="text-xs text-zinc-400">Wähle deinen Gewinner</label>
+  <div class="grid grid-cols-2 md:grid-cols-5 gap-2 my-2">
+    ${RACERS.map(r => `
+      <button class="btn text-xs py-2 ${chosenRacer === r.id ? 'sel' : 'bg-zinc-800'}" style="color:${r.col}" onclick="sfx.click();chosenRacer=${r.id};show('cyberrace')">
+        ${r.name}<br><b>${r.odds}×</b>
+      </button>`).join('')}
+  </div>
+  <button class="btn play bg-emerald-600 mt-2 font-bold" onclick="play(chosenRacer.toString())">Rennen starten</button>`
+
+/* ================= CRASH (interaktiv) ================= */
+VIEWS.crash = () => betBox() + stg('🚀 1.00×', 'h-36') + `<button id="crbtn" class="btn bg-emerald-600" onclick="crashBtn()">Start</button>
+  <div class="text-xs text-zinc-500 mt-3 text-center">Drücke rechtzeitig auf Cashout – sonst crasht die Rakete und dein Einsatz ist weg!</div>`
+async function crashBtn() {
+  const b = $('crbtn')
+  if (!cr) {
+    const bet = readBet(); if (!bet) return
+    sfx.bet()
+    b.disabled = true
+    const d = await call('crash_start', { b: bet }); b.disabled = false; if (!d) return
+    lastBet = bet; setBalance(d.balance); msg(''); $('stage').style.color = ''
+    cr = { t0: performance.now(), polling: false }
+    b.textContent = '💸 CASHOUT'; b.className = 'btn bg-yellow-500 text-black'
+    cr.timer = setInterval(crashTick, 100); return
+  }
+  b.disabled = true
+  const d = await call('crash_status', { do_cash: true }); b.disabled = false
+  if (d && cr) crashEnd(d)
+}
+async function crashTick() {
+  if (!cr) return
+  sfx.spin()
+  const m = Math.exp(0.12 * (performance.now() - cr.t0) / 1000)
+  $('stage').textContent = '🚀 ' + (Math.floor(m * 100) / 100).toFixed(2) + '×'
+  if (++crPoll % 3 === 0 && !cr.polling) {
+    cr.polling = true
+    const d = await call('crash_status', {})
+    if (cr) { cr.polling = false; if (d && d.state === 'crashed') crashEnd(d) }
+  }
+}
+function crashEnd(d) {
+  clearInterval(cr.timer); cr = null; setBalance(d.balance)
+  const s = $('stage'), b = $('crbtn'); b.textContent = 'Start'; b.className = 'btn bg-emerald-600'
+  if (d.state === 'cashed') {
+    sfx.win()
+    s.textContent = '✅ ' + Number(d.m).toFixed(2) + '×'; s.style.color = '#34d399'
+    const net = d.payout - lastBet; msg(`🎉 +${net} FC (Crash bei ${Number(d.cp).toFixed(2)}×)`, 'win'); logRound(net)
+  } else {
+    sfx.lose()
+    s.textContent = '💥 ' + Number(d.cp).toFixed(2) + '×'; s.style.color = '#f87171'
+    msg(`💥 −${lastBet} FC`, 'lose'); logRound(-lastBet)
+  }
+}
+
+/* ================= PLINKO ================= */
+function plinkoBoard() {
+  let h = ''
+  for (let r = 0; r < 8; r++) for (let k = -r; k <= r; k += 2)
+    h += `<i style="position:absolute;left:${50 + k * 5.5}%;top:${(r + 1) * 9}%;width:6px;height:6px;margin:-3px;border-radius:50%;background:#52525b"></i>`
+  PM.forEach((m, k) => h += `<b style="position:absolute;left:${50 + (2 * k - 8) * 5.5}%;top:90%;transform:translateX(-50%);font-size:11px" class="${m >= 2 ? 'text-emerald-400' : m < 1 ? 'text-red-400' : 'text-zinc-300'}">${m}×</b>`)
+  return h + '<span id="ball" style="position:absolute;left:50%;top:0;font-size:18px;transform:translateX(-50%)">🟡</span>'
+}
+const PMS = { low: [3, 1.5, 1.2, 1, 0.65, 1, 1.2, 1.5, 3], mid: [5.6, 2.1, 1.1, 1, 0.5, 1, 1.1, 2.1, 5.6], high: [26, 4, 1.5, 0.3, 0.2, 0.3, 1.5, 4, 26] }
+VIEWS.plinko = () => { PM = PMS[plinkoRisk]; return betBox() + `<div class="flex gap-2 mb-3">${['low', 'mid', 'high'].map(r =>
+  `<button class="btn bg-zinc-800 ${r === plinkoRisk ? 'sel' : ''}" onclick="sfx.click();lastBet=Math.floor(+$('bet').value)||lastBet;plinkoRisk='${r}';show('plinko')">${{ low: '🟢 Niedrig', mid: '🟡 Mittel', high: '🔴 Hoch' }[r]}</button>`).join('')}</div>
+  <div id="stage" class="relative h-72 mb-4 overflow-hidden">${plinkoBoard()}</div><button class="btn play bg-emerald-600" onclick="play('drop')">Ball fallen lassen</button>` }
+
+/* ================= MINES ================= */
+VIEWS.mines = () => { mn = null; return betBox() + `<div class="flex items-center gap-2 mb-4"><label class="text-xs text-zinc-400">Minen</label>
+  <select id="mcount" class="inp py-2">${[[1, '🟢 Leicht · 1 Mine'], [3, '🟡 Mittel · 3 Minen'], [5, '🟠 Schwer · 5 Minen'], [10, '🔴 Extrem · 10 Minen'], [15, '💀 Wahnsinn · 15'], [20, '☠️ Unmöglich · 20']].map(([n, l]) => `<option value="${n}" ${n === 3 ? 'selected' : ''}>${l}</option>`).join('')}</select><div id="minfo" class="flex-1 text-right text-sm text-zinc-400"></div></div>
+  <div id="mgrid" class="grid grid-cols-5 gap-2 mb-4">${Array.from({ length: 25 }, (_, i) => `<button id="m${i}" class="kc" style="padding:1rem 0;font-size:1.4rem" onclick="minePick(${i})">?</button>`).join('')}</div>
+  <button id="mbtn" class="btn bg-emerald-600" onclick="mineBtn()">Start</button>` }
+async function mineBtn() {
+  const b = $('mbtn')
+  if (!mn) {
+    const bet = readBet(); if (!bet) return
+    sfx.bet()
+    const mc = +$('mcount').value
+    const d = await call('mines_start', { b: bet, mine_count: mc }); if (!d) return
+    lastBet = bet; setBalance(d.balance); msg('')
+    mn = { picked: [], lock: false }
+    document.querySelectorAll('#mgrid .kc').forEach(c => { c.textContent = '?'; c.className = 'kc' })
+    b.textContent = '💸 Cashout'; b.className = 'btn bg-yellow-500 text-black'; b.disabled = true
+    $('minfo').textContent = 'Wähle ein Feld'; return
+  }
+  const d = await call('mines_cash', {}); if (d) mineEnd(d, true)
+}
+async function minePick(i) {
+  if (!mn || mn.lock || mn.picked.includes(i)) return
+  mn.lock = true
+  const d = await call('mines_pick', { t: i })
+  if (!d) { mn.lock = false; return }
+  if (d.boom) { sfx.lose(); $('m' + i).textContent = '💥'; return mineEnd(d, false) }
+  sfx.claim()
+  mn.picked.push(i); mn.lock = false
+  const c = $('m' + i); c.textContent = '💎'; c.classList.add('hit')
+  $('minfo').textContent = Number(d.mult).toFixed(2) + '× • nächstes ' + (d.next ? Number(d.next).toFixed(2) + '×' : '–')
+  const b = $('mbtn'); b.disabled = false; b.textContent = '💸 Cashout ' + Math.floor(lastBet * d.mult) + ' FC'
+  if (d.done) mineEnd(d, true)
+}
+function mineEnd(d, won) {
+  const picked = mn ? mn.picked : []
+  ;(d.mines || []).forEach(x => { const c = $('m' + x); if (!picked.includes(x) && c.textContent !== '💥') c.textContent = '💣' })
+  mn = null; setBalance(d.balance)
+  const b = $('mbtn'); b.textContent = 'Start'; b.className = 'btn bg-emerald-600'; b.disabled = false
+  const net = won ? d.payout - lastBet : -lastBet
+  if (won) sfx.win(); else sfx.lose()
+  msg(won ? `🎉 +${net} FC` : `💥 −${lastBet} FC`, won ? 'win' : 'lose'); logRound(net)
+}
+
+/* ================= BLACKJACK ================= */
+const RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K']
+const card = c => `<span class="glass rounded-lg px-3 py-2 text-xl font-bold">${RANKS[c - 1]}</span>`
+VIEWS.blackjack = () => betBox() + `<div id="bjt" class="space-y-4 mb-4 min-h-[9rem]"><div class="text-center text-zinc-500 pt-6">Setze und teile aus</div></div>
+  <div id="bjb" class="flex gap-3 flex-wrap"><button class="btn bg-emerald-600" onclick="bj('start')">Austeilen</button></div>`
+async function bj(act) {
+  const args = { act }
+  if (act === 'start') { const bet = readBet(); if (!bet) return; sfx.bet(); args.b = bet; lastBet = bet } else sfx.click()
+  const btns = document.querySelectorAll('#bjb button'); btns.forEach(x => x.disabled = true)
+  const d = await call('bj_action', args)
+  if (!d) { btns.forEach(x => x.disabled = false); return }
+  setBalance(d.balance); renderBj(d)
+}
+function renderBj(d) {
+  $('bjt').innerHTML = `<div><div class="text-xs text-zinc-400 mb-1">Dealer ${d.dv ?? ''}</div><div class="flex gap-2">${d.d.map(card).join('')}${d.done ? '' : '<span class="glass rounded-lg px-3 py-2 text-xl">🂠</span>'}</div></div>
+    <div><div class="text-xs text-zinc-400 mb-1">Du ${d.pv}</div><div class="flex gap-2">${d.p.map(card).join('')}</div></div>`
+  const B = $('bjb')
+  if (d.done) {
+    const net = d.payout - d.bet
+    B.innerHTML = `<button class="btn bg-emerald-600" onclick="bj('start')">Neue Runde</button>`
+    if (net > 0) sfx.win(); else if (net < 0) sfx.lose(); else sfx.click()
+    msg({ blackjack: '🃏 BLACKJACK! ', win: '🎉 Gewonnen ', push: 'Push ', lose: 'Verloren ' }[d.result] + (net > 0 ? '+' + net : net < 0 ? net : '') + ' FC', net > 0 ? 'win' : net < 0 ? 'lose' : '')
+    logRound(net)
+  } else {
+    msg('')
+    B.innerHTML = `<button class="btn bg-cyan-600" onclick="bj('hit')">Hit</button><button class="btn bg-orange-600" onclick="bj('stand')">Stand</button>` +
+      (d.p.length === 2 ? `<button class="btn bg-pink-600" onclick="bj('double')">Double</button>` : '')
+  }
+}
+
+/* ================= WHEEL, KENO, TOWERS, ROULETTE ETC ================= */
+VIEWS.wheel = () => betBox() + `<div class="relative w-64 h-64 mx-auto my-6">
+  <div style="position:absolute;left:50%;top:-14px;transform:translateX(-50%);z-index:2;font-size:24px">🔻</div>
+  <div id="wheel" style="width:100%;height:100%;border-radius:50%;border:4px solid #52525b;position:relative;background:conic-gradient(${WM.map((m, i) => (m >= 2 ? '#16a34a' : m >= 1 ? '#0891b2' : m > 0 ? '#ca8a04' : '#3f3f46') + ' ' + i * 36 + 'deg ' + (i + 1) * 36 + 'deg').join(',')})">
+  ${WM.map((m, i) => `<span style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(${i * 36 + 18}deg) translateY(-6.2rem);font-weight:800;font-size:14px">${m}×</span>`).join('')}</div></div>
+  <button class="btn play bg-emerald-600" onclick="play('spin')">Drehen</button>`
+
+VIEWS.keno = () => { kpicks = []; return betBox() + `<div class="grid grid-cols-8 gap-1.5 mb-3">${Array.from({ length: 40 }, (_, i) => `<button id="k${i + 1}" onclick="kpick(${i + 1})" class="kc">${i + 1}</button>`).join('')}</div>
+  <div class="text-xs text-zinc-400 mb-4">Wähle 5 Zahlen • 2 Treffer 1,5× • 3 → 4× • 4 → 15× • 5 → 80×</div>
+  <button class="btn play bg-emerald-600" onclick="kplay()">Ziehen</button>` }
+function kpick(n) {
+  if (busy) return
+  sfx.click()
+  const i = kpicks.indexOf(n)
+  if (i >= 0) kpicks.splice(i, 1); else if (kpicks.length < 5) kpicks.push(n)
+  document.querySelectorAll('.kc').forEach(b => b.classList.remove('on', 'hit', 'drawn'))
+  kpicks.forEach(k => $('k' + k).classList.add('on'))
+}
+function kplay() { if (kpicks.length !== 5) return msg('Wähle genau 5 Zahlen', 'lose'); play(kpicks.join(',')) }
+
+const TDIFF = { easy: [4, '🟢 Leicht · 4 Felder, 1 Bombe'], medium: [3, '🟡 Mittel · 3 Felder, 1 Bombe'], hard: [2, '🔴 Schwer · 2 Felder, 1 Bombe'], extreme: [3, '💀 Extrem · 3 Felder, 2 Bomben'] }
+VIEWS.towers = () => { tw = null; return betBox() + `<select id="tdiff" class="inp w-full mb-3">${Object.entries(TDIFF).map(([k, v]) => `<option value="${k}">${v[1]}</option>`).join('')}</select>
+  <div id="tgrid" class="space-y-1 mb-3 min-h-[3rem]"></div><div id="tinfo" class="text-sm text-zinc-400 text-center mb-3">8 Ebenen – je höher, desto mehr Multiplikator</div>
+  <button id="tbtn" class="btn bg-emerald-600" onclick="towersBtn()">Start</button>` }
+function towersDraw(rev) {
+  const cols = TDIFF[tw.diff][0]; let h = ''
+  for (let l = 7; l >= 0; l--) {
+    h += '<div class="flex gap-1">' + Array.from({ length: cols }, (_, c) => {
+      const picked = tw.path[l] === c, bomb = rev && ((rev[l] >> c) & 1), act = l === tw.lvl && !rev
+      return `<button class="kc flex-1 ${picked && !bomb ? 'hit' : ''}" style="padding:.55rem 0" ${act ? `onclick="towersPick(${c})"` : 'disabled'}>${bomb ? '💣' : picked ? '💎' : act ? '?' : '·'}</button>`
+    }).join('') + '</div>'
+  }
+  $('tgrid').innerHTML = h
+}
+async function towersBtn() {
+  const b = $('tbtn')
+  if (!tw) {
+    const bet = readBet(); if (!bet) return
+    sfx.bet()
+    const diff = $('tdiff').value, d = await call('towers_start', { b: bet, tdiff: diff }); if (!d) return
+    lastBet = bet; setBalance(d.balance); msg(''); tw = { diff, lvl: 0, path: [], lock: false }
+    b.textContent = '💸 Cashout'; b.className = 'btn bg-yellow-500 text-black'; b.disabled = true
+    $('tinfo').textContent = 'Wähle ein Feld in der untersten Reihe'; towersDraw(); return
+  }
+  const d = await call('towers_cash', {}); if (d) towersEnd(d, true)
+}
+async function towersPick(c) {
+  if (!tw || tw.lock) return
+  tw.lock = true; const d = await call('towers_pick', { tcol: c })
+  if (!d) { tw.lock = false; return }
+  tw.path[tw.lvl] = c
+  if (d.boom) { sfx.lose(); return towersEnd(d, false) }
+  sfx.claim()
+  tw.lvl++; tw.lock = false; towersDraw()
+  $('tinfo').textContent = Number(d.mult).toFixed(2) + '× • nächste Ebene ' + (d.next ? Number(d.next).toFixed(2) + '×' : '–')
+  const b = $('tbtn'); b.disabled = false; b.textContent = '💸 Cashout ' + Math.floor(lastBet * d.mult) + ' FC'
+  if (d.done) towersEnd(d, true)
+}
+function towersEnd(d, won) {
+  towersDraw(d.bombs); tw = null; setBalance(d.balance)
+  const b = $('tbtn'); b.textContent = 'Start'; b.className = 'btn bg-emerald-600'; b.disabled = false
+  const net = won ? d.payout - lastBet : -lastBet
+  if (won) sfx.win(); else sfx.lose()
+  msg(won ? `🎉 +${net} FC` : `💥 −${lastBet} FC`, won ? 'win' : 'lose'); logRound(net)
+}
+
+const DICE = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'], RP = { rock: '✊', paper: '✋', scissors: '✌️' }
+let dnS = 0, dnBase = 50, hiRef = 1 + Math.floor(Math.random() * 13), lastParam = ''
+const row = a => '<div class="flex gap-3 flex-wrap">' + a.map(([l, p, c]) => `<button class="btn play ${c}" style="flex:1" onclick="play('${p}')">${l}</button>`).join('') + '</div>'
+const stg = (t, h = 'h-32') => `<div id="stage" class="${h} flex items-center justify-center text-6xl font-black gap-4">${t}</div>`
+const say = h => { $('stage').innerHTML = h }
+
+VIEWS.double = () => { dnS = 0; dnBase = lastBet; return betBox() + stg('💰') + '<div id="dn" class="text-center text-sm text-zinc-400 mb-4">Streak: 0 – Gewinne werden automatisch neu gesetzt</div>' + row([['💥 Double or Nothing', 'x', 'bg-orange-600']]) }
+VIEWS.allin = () => `<input id="bet" type="hidden" value="${balance}">` + stg('🔥', 'h-36') + `<div class="text-center text-zinc-400 mb-4">Dein ganzes Guthaben (${balance} FC) – 48 % Chance auf 2×</div><button class="btn play bg-red-600" onclick="$('bet').value=balance;play('x')">🔥 ALL IN</button>`
+VIEWS.hilo = () => {
+  const up = 13 - hiRef, lo = hiRef - 1, m = c => (0.97 * 13 / c).toFixed(2)
+  return betBox() + stg(`<div class="glass rounded-xl px-6 py-4">${RANKS[hiRef - 1]}</div>`) + '<div class="flex gap-3 mb-3">' +
+    (up ? `<button class="btn play bg-emerald-600" onclick="play('higher:${hiRef}')">⬆ Höher ${m(up)}×</button>` : '') +
+    (lo ? `<button class="btn play bg-rose-600" onclick="play('lower:${hiRef}')">⬇ Niedriger ${m(lo)}×</button>` : '') +
+    '</div><button class="btn bg-zinc-800" onclick="sfx.click();newRef()">🔄 Neue Karte</button>'
+}
+function newRef() { lastBet = Math.floor(Number($('bet').value)) || lastBet; hiRef = 1 + Math.floor(Math.random() * 13); show('hilo') }
+VIEWS.lucky7 = () => betBox() + stg('🎲 🎲') + row([['⬇ Unter 7 · 2.3×', 'under', 'bg-cyan-600'], ['7 · 5.7×', 'seven', 'bg-yellow-600'], ['⬆ Über 7 · 2.3×', 'over', 'bg-pink-600']])
+VIEWS.dragon = () => betBox() + stg('🐉 vs 🐅') + row([['🐉 Dragon 2.05×', 'dragon', 'bg-red-600'], ['Tie 11×', 'tie', 'bg-zinc-700'], ['🐅 Tiger 2.05×', 'tiger', 'bg-orange-600']])
+VIEWS.doors = () => betBox() + stg('🚪 🚪 🚪') + row([['Tür 1', '1', 'bg-cyan-600'], ['Tür 2', '2', 'bg-cyan-600'], ['Tür 3', '3', 'bg-cyan-600']])
+VIEWS.number = () => betBox() + stg('🔟') + '<div class="grid grid-cols-5 gap-2">' + Array.from({ length: 10 }, (_, i) => `<button class="btn play bg-zinc-800" onclick="play('${i + 1}')">${i + 1}</button>`).join('') + '</div>'
+VIEWS.rps = () => betBox() + stg('✊ ✋ ✌️') + row([['✊ Stein', 'rock', 'bg-cyan-600'], ['✋ Papier', 'paper', 'bg-pink-600'], ['✌️ Schere', 'scissors', 'bg-emerald-600']])
+VIEWS.baccarat = () => betBox() + stg('👤 vs 🏦') + row([['👤 Player 2.05×', 'player', 'bg-cyan-600'], ['Tie 9×', 'tie', 'bg-zinc-700'], ['🏦 Banker 2.05×', 'banker', 'bg-red-600']])
+VIEWS.sicbo = () => betBox() + stg('🎲🎲🎲') + row([['⬇ Low ≤10 · 2×', 'low', 'bg-cyan-600'], ['Triple 30×', 'triple', 'bg-yellow-600'], ['⬆ High ≥11 · 2×', 'high', 'bg-pink-600']])
+
+/* ================= SLOTS ================= */
+const SLOTS = {
+  classic: { name: 'Classic 777', icon: '🍒', n: 3, tag: 'Low', col: '#22d3ee', sym: ['🍒', '🍋', '🔔', '⭐', '💎', '🍀'], desc: '3 Walzen, klassisch. Ein Paar zahlt schon.', pay: 'Paar 0,72× · Drilling 22×' },
+  fruit: { name: 'Fruit Party', icon: '🍇', n: 5, tag: 'Low', col: '#34d399', sym: ['🍒', '🍋', '🍇', '🍉', '🍓'], desc: 'Fast jede Drehung trifft – bis 40×.', pay: '2 gleiche 0,3× · 3: 1,5× · 4: 8× · 5: 40×' },
+  volcano: { name: 'Volcano', icon: '🌋', n: 5, tag: 'High', col: '#fb923c', sym: ['🌋', '🔥', '💎', '🪙', '🦖', '🥚', '⚡'], desc: 'Schwerer Slot: seltene, wuchtige Treffer bis 350×.', pay: '3 gleiche 2,8× · 4: 28× · 5: 350×' },
+  mega: { name: 'Mega Titan', icon: '👑', n: 5, tag: 'Extreme', col: '#f43f5e', sym: ['💎', '👑', '🔔', '⭐', '🍀', '🍒', '🍋', '🍇', '🎰'], desc: 'Extreme Volatilität – selten, aber bis zu 1.075×!', pay: '3 gleiche 4,5× · 4: 54× · 5: 1.075×' },
+  jackpot: { name: 'Global Jackpot', icon: '💰', n: 3, tag: 'Jackpot', col: '#facc15', sym: ['🍒', '🍋', '🔔', '⭐', '🍀', '💰'], desc: '5 % aller Verluste füllen den Pot. Drei 💰 knacken ihn!', pay: 'Paar 0,8× · Drilling 17× · 💰💰💰 = JACKPOT' },
+  scratch: { name: 'Rubbellos', icon: '🎟️', n: 6, tag: 'Scratch', col: '#a78bfa', sym: ['🍒', '🍋', '⭐', '💎', '🍀', '🎁'], desc: 'Rubbel 6 Felder frei. 3 gleiche gewinnen, bis 340×.', pay: '3 gleiche 1,35× · 4: 6,8× · 5: 34× · 6: 340×' }
+}
+VIEWS.slots = () => {
+  slotCur = null; scr = null
+  return `<div class="grid grid-cols-2 gap-3">${Object.entries(SLOTS).map(([k, m]) =>
+    `<button onclick="sfx.click();openSlot('${k}')" class="glass rounded-2xl p-4 text-left hover:border-cyan-500 transition"><div class="text-4xl mb-1">${m.icon}</div><div class="font-bold">${m.name}</div>
+    <span class="text-xs px-2 py-0.5 rounded-full" style="background:${m.col}33;color:${m.col}">${m.tag}</span><div class="text-xs text-zinc-400 mt-2">${m.desc}</div>
+    ${k === 'jackpot' ? '<div class="text-yellow-400 font-bold mt-1">Pot: <span id="jp">…</span> FC</div>' : ''}</button>`).join('')}</div>`
+}
+const PAGEINIT = {}
+PAGEINIT.slots = () => refreshPool()
+async function refreshPool() { const p = await call('jackpot_pool', {}); if (p != null && $('jp')) $('jp').textContent = Number(p).toLocaleString('de-DE') }
+
+function openSlot(k) {
+  const m = SLOTS[k]; slotCur = k; scr = null; busy = false
+  $('title').textContent = m.icon + ' ' + m.name; $('desc').textContent = m.desc; msg('')
+  const big = m.n > 3 && m.n !== 6, st = big ? 'width:3.6rem;height:4.6rem;font-size:2rem' : ''
+  $('view').innerHTML = `<button class="text-sm text-zinc-400 mb-3" onclick="show('slots')">← Alle Slots</button>` + speedBox() + betBox() +
+    `<div id="stage" class="flex flex-wrap justify-center gap-2 my-5 mx-auto" style="max-width:${m.n === 6 ? '17rem' : 'none'}">${Array.from({ length: m.n }, (_, i) =>
+      `<div class="reel" id="rl${i}" style="${st}" onclick="scratchClick(${i})">${m.sym[i % m.sym.length]}</div>`).join('')}</div>
+    ${k === 'jackpot' ? '<div class="text-center text-yellow-400 font-bold mb-3">💰 Pot: <span id="jp">…</span> FC</div>' : ''}
+    <div class="flex gap-3"><button id="spinbtn" class="btn bg-emerald-600" onclick="slotSpin()">${k === 'scratch' ? 'Los kaufen' : 'Drehen'}</button>${k === 'scratch' ? '<button class="btn bg-zinc-700" onclick="scratchAll()">Alles aufdecken</button>' : ''}</div>
+    <div class="text-xs text-zinc-500 mt-3 text-center">${m.pay}<br>Gleiche Symbole zählen, egal auf welcher Walze.</div>`
+  if (k === 'jackpot') refreshPool()
+  sb.rpc('hint_game', { g: 'slot:' + k })
+}
+async function slotSpin() {
+  if (busy || !slotCur) return
+  const M = SLOTS[slotCur], bet = readBet(); if (!bet) return
+  sfx.bet()
+  busy = true; lastBet = bet; $('spinbtn').disabled = true; msg('')
+  const d = await call('slot_play', { machine: slotCur, bet_amount: bet })
+  if (!d) { busy = false; $('spinbtn').disabled = false; return }
+  const arr = d.result.split(' ').map(Number), cells = [...document.querySelectorAll('.reel')]
+  if (slotCur === 'scratch') { scr = { d, arr, done: new Set() }; cells.forEach(c => { c.textContent = '❔' }); return }
+  const sp = { normal: [450, 330], fast: [160, 110], turbo: [0, 0] }[slotSpeed] || [450, 330]
+  const iv = slotSpeed === 'turbo' ? [] : cells.map(c => setInterval(() => { c.textContent = M.sym[Math.floor(Math.random() * M.sym.length)]; sfx.spin() }, 70))
+  for (let i = 0; i < cells.length; i++) {
+    await sleep(i === 0 ? sp[0] : sp[1])
+    clearInterval(iv[i]); cells[i].textContent = M.sym[arr[i] - 1]; cells[i].classList.add('stop')
+    sfx.click()
+  }
+  slotDone(d)
+}
+function scratchClick(i) {
+  if (!scr || scr.done.has(i)) return
+  sfx.click()
+  scr.done.add(i); const c = $('rl' + i); c.textContent = SLOTS.scratch.sym[scr.arr[i] - 1]; c.classList.add('stop')
+  if (scr.done.size === scr.arr.length) { const d = scr.d; scr = null; slotDone(d) }
+}
+function scratchAll() { if (scr) [...Array(scr.arr.length).keys()].forEach(scratchClick) }
+function slotDone(d) {
+  setBalance(d.balance); busy = false; $('spinbtn').disabled = false
+  const net = d.payout - lastBet, x = d.payout / lastBet
+  msg(net > 0 ? `🎉 +${net.toLocaleString('de-DE')} FC` : net === 0 ? 'Einsatz zurück' : `−${lastBet - d.payout} FC`, net > 0 ? 'win' : 'lose')
+  logRound(net)
+  if (d.jackpot) { sfx.jackpot(); bigWin('💰 JACKPOT!<br>' + d.payout.toLocaleString('de-DE') + ' FC', true) }
+  else if (x >= 20) { sfx.bigwin(); bigWin('MEGA WIN ×' + Math.floor(x)) }
+  else if (x >= 5) { sfx.bigwin(); bigWin('BIG WIN ×' + x.toFixed(1)) }
+  else if (net > 0) sfx.win()
+  else if (net < 0) sfx.lose()
+  if (slotCur === 'jackpot') refreshPool()
+}
+function bigWin(text, jp) {
+  const o = document.createElement('div'); o.style.cssText = 'position:fixed;inset:0;z-index:60;pointer-events:none;display:flex;align-items:center;justify-content:center;overflow:hidden'
+  o.innerHTML = `<div style="font-size:clamp(2rem,9vw,4.5rem);font-weight:900;text-align:center;animation:pop .5s;color:${jp ? '#facc15' : '#fff'};text-shadow:0 0 30px ${jp ? '#facc15' : '#22d3ee'}">${text}</div>` +
+    Array.from({ length: 28 }, (_, i) => `<span style="position:absolute;top:-40px;left:${Math.random() * 100}%;font-size:${20 + Math.random() * 20}px;animation:fall ${1.5 + Math.random() * 1.5}s ${Math.random() * 0.6}s linear forwards">${['🪙', '💎', '⭐', '🎉'][i % 4]}</span>`).join('')
+  document.body.appendChild(o); const mn_ = document.querySelector('main'); mn_.classList.add('shake')
+  setTimeout(() => { o.remove(); mn_.classList.remove('shake') }, 3300)
+}
+let slotSpeed = 'normal'; try { slotSpeed = localStorage.getItem('slotSpeed') || 'normal' } catch (e) { }
+const speedBox = () => `<div class="flex gap-1 justify-end items-center mb-3 text-xs"><span class="text-zinc-500 mr-1">Tempo:</span>${[['normal', 'Normal'], ['fast', 'Schnell'], ['turbo', '⚡ Turbo']].map(([k, l]) =>
+  `<button class="px-2 py-1 rounded-lg bg-zinc-800 ${slotSpeed === k ? 'sel' : ''}" onclick="setSpeed('${k}')">${l}</button>`).join('')}</div>`
+function setSpeed(k) { sfx.click(); slotSpeed = k; try { localStorage.setItem('slotSpeed', k) } catch (e) { } lastBet = Math.floor(+$('bet').value) || lastBet; openSlot(slotCur) }
+
+/* ================= MEGA GOD-MODE ADMIN BOARD MIT TABS & VOLLER SPIELKONTROLLE ================= */
+let admTab = 'games';
+let ADM_DATA = null;
+let ADMIN_USERS_CACHE = [];
+
+VIEWS.admin = () => `
+<div class="space-y-4">
+  <!-- Admin Navigation Tabs -->
+  <div class="flex gap-2 p-1.5 glass rounded-2xl mb-4 overflow-x-auto text-sm border border-zinc-700/60 sticky top-14 z-20 backdrop-blur-md">
+    <button id="atab_games" onclick="switchAdmTab('games')" class="px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition whitespace-nowrap ${admTab==='games'?'bg-gradient-to-r from-cyan-600 to-emerald-600 text-white shadow-lg shadow-cyan-900/30':'hover:bg-zinc-800 text-zinc-300'}">🎮 Games (Alle Spiele)</button>
+    <button id="atab_server" onclick="switchAdmTab('server')" class="px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition whitespace-nowrap ${admTab==='server'?'bg-gradient-to-r from-cyan-600 to-emerald-600 text-white shadow-lg shadow-cyan-900/30':'hover:bg-zinc-800 text-zinc-300'}">🌐 Server & Quoten</button>
+    <button id="atab_players" onclick="switchAdmTab('players')" class="px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition whitespace-nowrap ${admTab==='players'?'bg-gradient-to-r from-cyan-600 to-emerald-600 text-white shadow-lg shadow-cyan-900/30':'hover:bg-zinc-800 text-zinc-300'}">👥 Spieler-God-Mode</button>
+    <button id="atab_economy" onclick="switchAdmTab('economy')" class="px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition whitespace-nowrap ${admTab==='economy'?'bg-gradient-to-r from-cyan-600 to-emerald-600 text-white shadow-lg shadow-cyan-900/30':'hover:bg-zinc-800 text-zinc-300'}">💰 Economy & Jackpot</button>
+    <button id="atab_logs" onclick="switchAdmTab('logs')" class="px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition whitespace-nowrap ${admTab==='logs'?'bg-gradient-to-r from-cyan-600 to-emerald-600 text-white shadow-lg shadow-cyan-900/30':'hover:bg-zinc-800 text-zinc-300'}">📊 Logs & Status</button>
+  </div>
+
+  <!-- Dynamic Content Container -->
+  <div id="adm_tab_content">Lade God-Mode Dashboard...</div>
+</div>`;
+
+function switchAdmTab(t) {
+  sfx.click();
+  admTab = t;
+  ['games', 'server', 'players', 'economy', 'logs'].forEach(tab => {
+    const btn = $('atab_' + tab);
+    if (!btn) return;
+    if (tab === t) {
+      btn.className = 'px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition whitespace-nowrap bg-gradient-to-r from-cyan-600 to-emerald-600 text-white shadow-lg shadow-cyan-900/30';
+    } else {
+      btn.className = 'px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition whitespace-nowrap hover:bg-zinc-800 text-zinc-300';
+    }
+  });
+  renderAdminContent();
+}
+
+PAGEINIT.admin = () => { loadAdminFullDashboard(); };
+
+async function loadAdminFullDashboard() {
+  const d = await call('admin_get_full_dashboard', {});
+  if (!d) return;
+  ADM_DATA = d;
+  ADMIN_USERS_CACHE = d.users || [];
+  renderAdminContent();
+}
+
+function renderAdminContent() {
+  const container = $('adm_tab_content');
+  if (!container || !ADM_DATA) return;
+
+  if (admTab === 'games') renderAdminGamesTab(container);
+  else if (admTab === 'server') renderAdminServerTab(container);
+  else if (admTab === 'players') renderAdminPlayersTab(container);
+  else if (admTab === 'economy') renderAdminEconomyTab(container);
+  else if (admTab === 'logs') renderAdminLogsTab(container);
+}
+
+/* ================= TAB 1: ALLE SPIELE MANIPULIEREN ================= */
+function renderAdminGamesTab(c) {
+  const d = ADM_DATA;
+  const isAct = (v, normal) => v !== undefined && v !== null && String(v) !== String(normal) && String(v) !== 'none' && String(v) !== '-1' && String(v) !== '0';
+  
+  // Count active rigged games
+  let rigCount = 0;
+  const checkRig = (v, n) => { if (isAct(v, n)) rigCount++; };
+  checkRig(d.forced_crash_next, 0);
+  checkRig(d.forced_penalty_next, 'none');
+  checkRig(d.forced_roulette_next, -1);
+  checkRig(d.forced_dice_next, 0);
+  checkRig(d.forced_coinflip_next, 'none');
+  checkRig(d.forced_limbo_next, 0);
+  checkRig(d.forced_slots_next, 'none');
+  checkRig(d.forced_wheel_next, 0);
+  checkRig(d.forced_cyberrace_next, 0);
+  checkRig(d.forced_war_next, 'none');
+  checkRig(d.forced_keno_hits, -1);
+  checkRig(d.forced_bj_next, 'none');
+  checkRig(d.forced_mines_next, 'none');
+  checkRig(d.forced_towers_next, 'none');
+  checkRig(d.forced_baccarat_next, 'none');
+  checkRig(d.forced_sicbo_next, 'none');
+  checkRig(d.forced_hilo_next, 'none');
+  checkRig(d.forced_dragon_next, 'none');
+  checkRig(d.forced_lucky7_next, 'none');
+  checkRig(d.forced_doors_next, 'none');
+  checkRig(d.forced_number_next, 0);
+  checkRig(d.forced_rps_next, 'none');
+  checkRig(d.forced_double_next, 'none');
+  checkRig(d.forced_allin_next, 'none');
+
+  const badge = (val, def, label) => {
+    const active = isAct(val, def);
+    return active 
+      ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-500/20 text-amber-300 border border-amber-500/50 animate-pulse">AKTIV: ${label || val}</span>`
+      : `<span class="px-2 py-0.5 rounded-full text-[10px] bg-zinc-800 text-zinc-500 border border-zinc-700">Normal</span>`;
+  };
+
+  const card = (icon, title, statusHtml, bodyHtml) => `
+    <div class="glass rounded-2xl p-4 border border-zinc-700/70 hover:border-cyan-500/50 transition flex flex-col justify-between shadow-lg">
+      <div>
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center gap-2">
+            <span class="text-xl">${icon}</span>
+            <b class="text-white text-sm">${title}</b>
+          </div>
+          ${statusHtml}
+        </div>
+        <div class="text-xs text-zinc-300 space-y-2 mb-3">${bodyHtml}</div>
+      </div>
+    </div>`;
+
+  c.innerHTML = `
+    <!-- Top Action Bar -->
+    <div class="glass rounded-2xl p-4 mb-4 flex flex-wrap items-center justify-between gap-3 border border-zinc-700">
+      <div class="flex items-center gap-3">
+        <span class="text-2xl">🕹️</span>
+        <div>
+          <div class="font-bold text-white text-sm">Vollständige Spiel-Kontrolle (24 Games)</div>
+          <div class="text-xs text-zinc-400">Erzwinge das exakte Ergebnis der nächsten Runde für jedes beliebige Spiel.</div>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 flex-wrap">
+        <span class="text-xs px-2.5 py-1 rounded-lg ${rigCount > 0 ? 'bg-amber-900/60 text-amber-300 border border-amber-500 font-bold' : 'bg-zinc-800 text-zinc-400'}">
+          ${rigCount > 0 ? '⚡ ' + rigCount + ' Spiele forciert' : '🟢 Alle Spiele auf Normal'}
+        </span>
+        <button onclick="resetAllForces()" class="btn bg-zinc-800 hover:bg-zinc-700 text-xs px-3 py-1.5 border border-zinc-600" style="width:auto">↩ Alle Forcings zurücksetzen</button>
+      </div>
+    </div>
+
+    <!-- Games Control Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+      <!-- 1. ELFMETER / PENALTY -->
+      ${card('⚽', 'Elfmeter (11 Meter)', badge(d.forced_penalty_next, 'none', d.forced_penalty_next), `
+        <div class="text-[11px] text-zinc-400 mb-1">Nächste Torwart-Aktion / Spielausgang erzwingen:</div>
+        <div class="grid grid-cols-2 gap-1 mb-2">
+          <button class="btn bg-emerald-600/80 hover:bg-emerald-500 text-xs py-1" onclick="forceGame('penalty', 'win')">🟢 Tor garantieren</button>
+          <button class="btn bg-red-700/80 hover:bg-red-600 text-xs py-1" onclick="forceGame('penalty', 'lose')">🔴 Torwart hält</button>
+        </div>
+        <div class="text-[10px] text-zinc-400 uppercase tracking-wider font-semibold mb-1">Exakte Torwart-Ecke:</div>
+        <div class="grid grid-cols-3 gap-1">
+          <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[11px] py-1" onclick="forceGame('penalty', 'tl')">↖ Oben L</button>
+          <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[11px] py-1" onclick="forceGame('penalty', 'mid')">⬆ Mitte</button>
+          <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[11px] py-1" onclick="forceGame('penalty', 'tr')">↗ Oben R</button>
+          <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[11px] py-1" onclick="forceGame('penalty', 'bl')">↙ Unten L</button>
+          <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[11px] py-1" onclick="forceGame('penalty', 'br')">↘ Unten R</button>
+          <button class="btn bg-zinc-900 text-zinc-500 hover:text-zinc-300 text-[11px] py-1" onclick="forceGame('penalty', 'none')">↩ Reset</button>
+        </div>
+      `)}
+
+      <!-- 2. CRASH -->
+      ${card('🚀', 'Crash (Rakete)', badge(d.forced_crash_next, 0, d.forced_crash_next + '×'), `
+        <div class="text-[11px] text-zinc-400 mb-1">Nächsten Crash-Punkt exakt setzen:</div>
+        <div class="flex gap-1 mb-2">
+          <input id="in_f_crash" type="number" step="0.1" min="1" placeholder="z.B. 50.0" value="${d.forced_crash_next > 0 ? d.forced_crash_next : ''}" class="inp py-1 px-2 text-xs flex-1">
+          <button class="btn bg-cyan-600 text-xs px-2.5 py-1" style="width:auto" onclick="forceGame('crash', $('in_f_crash').value)">Setzen</button>
+        </div>
+        <div class="grid grid-cols-3 gap-1">
+          <button class="btn bg-red-900/60 hover:bg-red-800 text-[10px] py-1 text-red-200" onclick="forceGame('crash', 1.00)">💥 1.00× (Crash)</button>
+          <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[10px] py-1" onclick="forceGame('crash', 2.0)">2.00×</button>
+          <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[10px] py-1" onclick="forceGame('crash', 5.0)">5.00×</button>
+          <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[10px] py-1" onclick="forceGame('crash', 10.0)">10.0×</button>
+          <button class="btn bg-emerald-900/60 hover:bg-emerald-800 text-[10px] py-1 text-emerald-300" onclick="forceGame('crash', 50.0)">🚀 50.0×</button>
+          <button class="btn bg-zinc-900 text-zinc-500 hover:text-zinc-300 text-[10px] py-1" onclick="forceGame('crash', 0)">↩ Reset</button>
+        </div>
+      `)}
+
+      <!-- 3. ROULETTE -->
+      ${card('🎡', 'Roulette', badge(d.forced_roulette_next, -1, '#' + d.forced_roulette_next), `
+        <div class="text-[11px] text-zinc-400 mb-1">Gewinnzahl erzwingen (0 - 36):</div>
+        <div class="flex gap-1 mb-2">
+          <input id="in_f_roul" type="number" min="0" max="36" placeholder="0-36" value="${d.forced_roulette_next >= 0 ? d.forced_roulette_next : ''}" class="inp py-1 px-2 text-xs flex-1">
+          <button class="btn bg-cyan-600 text-xs px-2.5 py-1" style="width:auto" onclick="forceGame('roulette', $('in_f_roul').value)">Setzen</button>
+        </div>
+        <div class="grid grid-cols-4 gap-1">
+          <button class="btn bg-emerald-800 hover:bg-emerald-700 text-[10px] py-1" onclick="forceGame('roulette', 0)">🟢 0 (14×)</button>
+          <button class="btn bg-red-800 hover:bg-red-700 text-[10px] py-1" onclick="forceGame('roulette', 7)">🔴 7 Rot</button>
+          <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[10px] py-1" onclick="forceGame('roulette', 8)">⚫ 8 Schwarz</button>
+          <button class="btn bg-zinc-900 text-zinc-500 hover:text-zinc-300 text-[10px] py-1" onclick="forceGame('roulette', -1)">↩ Reset</button>
+        </div>
+      `)}
+
+      <!-- 4. DICE -->
+      ${card('🎲', 'Dice (Würfel)', badge(d.forced_dice_next, 0, '#' + d.forced_dice_next), `
+        <div class="text-[11px] text-zinc-400 mb-1">Exakte Augenzahl (1 - 100):</div>
+        <div class="flex gap-1 mb-2">
+          <input id="in_f_dice" type="number" min="1" max="100" placeholder="1-100" value="${d.forced_dice_next > 0 ? d.forced_dice_next : ''}" class="inp py-1 px-2 text-xs flex-1">
+          <button class="btn bg-cyan-600 text-xs px-2.5 py-1" style="width:auto" onclick="forceGame('dice', $('in_f_dice').value)">Setzen</button>
+        </div>
+        <div class="grid grid-cols-4 gap-1">
+          <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[10px] py-1" onclick="forceGame('dice', 1)">1 (Under)</button>
+          <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[10px] py-1" onclick="forceGame('dice', 50)">50</button>
+          <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[10px] py-1" onclick="forceGame('dice', 99)">99 (Over)</button>
+          <button class="btn bg-zinc-900 text-zinc-500 hover:text-zinc-300 text-[10px] py-1" onclick="forceGame('dice', 0)">↩ Reset</button>
+        </div>
+      `)}
+
+      <!-- 5. COINFLIP -->
+      ${card('🪙', 'Coinflip (Münzwurf)', badge(d.forced_coinflip_next, 'none', d.forced_coinflip_next), `
+        <div class="text-[11px] text-zinc-400 mb-1">Münzergebnis oder Win/Lose erzwingen:</div>
+        <div class="grid grid-cols-2 gap-1 mb-1">
+          <button class="btn bg-amber-700 hover:bg-amber-600 text-xs py-1" onclick="forceGame('coinflip', 'kopf')">🪙 Kopf</button>
+          <button class="btn bg-amber-800 hover:bg-amber-700 text-xs py-1" onclick="forceGame('coinflip', 'zahl')">🪙 Zahl</button>
+        </div>
+        <div class="grid grid-cols-3 gap-1">
+          <button class="btn bg-emerald-700 hover:bg-emerald-600 text-[10px] py-1" onclick="forceGame('coinflip', 'win')">🍀 Immer Win</button>
+          <button class="btn bg-red-800 hover:bg-red-700 text-[10px] py-1" onclick="forceGame('coinflip', 'lose')">💀 Immer Lose</button>
+          <button class="btn bg-zinc-900 text-zinc-500 hover:text-zinc-300 text-[10px] py-1" onclick="forceGame('coinflip', 'none')">↩ Reset</button>
+        </div>
+      `)}
+
+      <!-- 6. LIMBO -->
+      ${card('🎯', 'Limbo', badge(d.forced_limbo_next, 0, d.forced_limbo_next + '×'), `
+        <div class="text-[11px] text-zinc-400 mb-1">Nächsten Limbo-Multiplikator setzen:</div>
+        <div class="flex gap-1 mb-2">
+          <input id="in_f_limbo" type="number" step="0.05" min="1.05" placeholder="z.B. 100.0" value="${d.forced_limbo_next > 0 ? d.forced_limbo_next : ''}" class="inp py-1 px-2 text-xs flex-1">
+          <button class="btn bg-cyan-600 text-xs px-2.5 py-1" style="width:auto" onclick="forceGame('limbo', $('in_f_limbo').value)">Setzen</button>
+        </div>
+        <div class="grid grid-cols-4 gap-1">
+          <button class="btn bg-red-900/60 hover:bg-red-800 text-[10px] py-1" onclick="forceGame('limbo', 1.00)">1.00× (Lose)</button>
+          <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[10px] py-1" onclick="forceGame('limbo', 10.0)">10.0×</button>
+          <button class="btn bg-emerald-900/70 hover:bg-emerald-800 text-[10px] py-1 text-emerald-300" onclick="forceGame('limbo', 500.0)">⭐ 500×</button>
+          <button class="btn bg-zinc-900 text-zinc-500 hover:text-zinc-300 text-[10px] py-1" onclick="forceGame('limbo', 0)">↩ Reset</button>
+        </div>
+      `)}
+
+      <!-- 7. SLOTS -->
+      ${card('🎰', 'Slots (Spielautomaten)', badge(d.forced_slots_next, 'none', d.forced_slots_next), `
+        <div class="text-[11px] text-zinc-400 mb-1">Nächsten Dreh manipulieren:</div>
+        <div class="grid grid-cols-1 gap-1 mb-1">
+          <button class="btn bg-gradient-to-r from-yellow-500 to-amber-600 text-black font-extrabold text-xs py-1.5" onclick="forceGame('slots', 'jackpot')">💰 GLOBALEN JACKPOT AUSLÖSEN</button>
+        </div>
+        <div class="grid grid-cols-3 gap-1">
+          <button class="btn bg-emerald-700 hover:bg-emerald-600 text-[10px] py-1" onclick="forceGame('slots', 'big_win')">⭐ Big Win</button>
+          <button class="btn bg-red-800 hover:bg-red-700 text-[10px] py-1" onclick="forceGame('slots', 'lose')">💀 Lose</button>
+          <button class="btn bg-zinc-900 text-zinc-500 hover:text-zinc-300 text-[10px] py-1" onclick="forceGame('slots', 'none')">↩ Reset</button>
+        </div>
+      `)}
+
+      <!-- 8. MINES -->
+      ${card('💣', 'Mines (Minenfeld)', badge(d.forced_mines_next, 'none', d.forced_mines_next), `
+        <div class="text-[11px] text-zinc-400 mb-1">Nächsten Klick auf ein Feld manipulieren:</div>
+        <div class="grid grid-cols-3 gap-1">
+          <button class="btn bg-emerald-700 hover:bg-emerald-600 text-xs py-1.5 font-bold" onclick="forceGame('mines', 'safe')">🍀 Sicher (Diamant)</button>
+          <button class="btn bg-red-800 hover:bg-red-700 text-xs py-1.5 font-bold" onclick="forceGame('mines', 'boom')">💥 BOOM (Explosion)</button>
+          <button class="btn bg-zinc-900 text-zinc-500 hover:text-zinc-300 text-xs py-1.5" onclick="forceGame('mines', 'none')">↩ Reset</button>
+        </div>
+      `)}
+
+      <!-- 9. BLACKJACK -->
+      ${card('🃏', 'Blackjack', badge(d.forced_bj_next, 'none', d.forced_bj_next), `
+        <div class="text-[11px] text-zinc-400 mb-1">Nächste Karten-Hand für Spieler/Dealer:</div>
+        <div class="grid grid-cols-2 gap-1 mb-1">
+          <button class="btn bg-yellow-600 hover:bg-yellow-500 text-black font-bold text-xs py-1" onclick="forceGame('bj', 'blackjack')">🌟 Instant 21 (BJ)</button>
+          <button class="btn bg-emerald-700 hover:bg-emerald-600 text-xs py-1" onclick="forceGame('bj', 'win')">🏆 Spieler Win</button>
+        </div>
+        <div class="grid grid-cols-3 gap-1">
+          <button class="btn bg-red-800 hover:bg-red-700 text-[10px] py-1" onclick="forceGame('bj', 'lose')">💀 Dealer Win</button>
+          <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[10px] py-1" onclick="forceGame('bj', 'push')">🤝 Push (Tie)</button>
+          <button class="btn bg-zinc-900 text-zinc-500 hover:text-zinc-300 text-[10px] py-1" onclick="forceGame('bj', 'none')">↩ Reset</button>
+        </div>
+      `)}
+
+      <!-- 10. TOWERS -->
+      ${card('🏰', 'Towers (Turm)', badge(d.forced_towers_next, 'none', d.forced_towers_next), `
+        <div class="text-[11px] text-zinc-400 mb-1">Nächste Stufe auf dem Turm:</div>
+        <div class="grid grid-cols-3 gap-1">
+          <button class="btn bg-emerald-700 hover:bg-emerald-600 text-xs py-1.5 font-bold" onclick="forceGame('towers', 'safe')">🍀 Sicher (Treppe)</button>
+          <button class="btn bg-red-800 hover:bg-red-700 text-xs py-1.5 font-bold" onclick="forceGame('towers', 'boom')">💥 Bombe treffen</button>
+          <button class="btn bg-zinc-900 text-zinc-500 hover:text-zinc-300 text-xs py-1.5" onclick="forceGame('towers', 'none')">↩ Reset</button>
+        </div>
+      `)}
+
+      <!-- 11. WHEEL -->
+      ${card('🎡', 'Wheel (Glücksrad)', badge(d.forced_wheel_next, 0, 'Seg #' + d.forced_wheel_next), `
+        <div class="text-[11px] text-zinc-400 mb-1">Segment 1 bis 10 erzwingen:</div>
+        <div class="grid grid-cols-4 gap-1">
+          <button class="btn bg-yellow-600 hover:bg-yellow-500 text-black font-bold text-[10px] py-1" onclick="forceGame('wheel', 10)">⭐ 10 (4×)</button>
+          <button class="btn bg-emerald-800 hover:bg-emerald-700 text-[10px] py-1" onclick="forceGame('wheel', 6)">6 (2×)</button>
+          <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[10px] py-1" onclick="forceGame('wheel', 1)">1 (0×)</button>
+          <button class="btn bg-zinc-900 text-zinc-500 hover:text-zinc-300 text-[10px] py-1" onclick="forceGame('wheel', 0)">↩ Reset</button>
+        </div>
+      `)}
+
+      <!-- 12. CYBER RACE -->
+      ${card('🏁', 'Cyber Race', badge(d.forced_cyberrace_next, 0, 'Läufer #' + d.forced_cyberrace_next), `
+        <div class="text-[11px] text-zinc-400 mb-1">Gewinner-Läufer erzwingen (1 bis 5):</div>
+        <div class="grid grid-cols-3 gap-1">
+          <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[10px] py-1" onclick="forceGame('cyberrace', 1)">Läufer 1 (2×)</button>
+          <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[10px] py-1" onclick="forceGame('cyberrace', 3)">Läufer 3 (5×)</button>
+          <button class="btn bg-yellow-600 hover:bg-yellow-500 text-black font-bold text-[10px] py-1" onclick="forceGame('cyberrace', 5)">🔥 Läufer 5 (20×)</button>
+        </div>
+        <div class="mt-1 flex justify-end">
+          <button class="btn bg-zinc-900 text-zinc-500 hover:text-zinc-300 text-[10px] py-0.5 px-2" style="width:auto" onclick="forceGame('cyberrace', 0)">↩ Reset</button>
+        </div>
+      `)}
+
+      <!-- 13. CASINO WAR -->
+      ${card('⚔️', 'Casino War', badge(d.forced_war_next, 'none', d.forced_war_next), `
+        <div class="text-[11px] text-zinc-400 mb-1">Nächste Karten-Schlacht:</div>
+        <div class="grid grid-cols-4 gap-1">
+          <button class="btn bg-emerald-700 hover:bg-emerald-600 text-[10px] py-1" onclick="forceGame('war', 'win')">🏆 Win (2×)</button>
+          <button class="btn bg-purple-700 hover:bg-purple-600 text-[10px] py-1" onclick="forceGame('war', 'tie')">🤝 Tie (3×)</button>
+          <button class="btn bg-red-800 hover:bg-red-700 text-[10px] py-1" onclick="forceGame('war', 'lose')">💀 Lose</button>
+          <button class="btn bg-zinc-900 text-zinc-500 hover:text-zinc-300 text-[10px] py-1" onclick="forceGame('war', 'none')">↩ Reset</button>
+        </div>
+      `)}
+
+      <!-- 14. KENO -->
+      ${card('🎱', 'Keno', badge(d.forced_keno_hits, -1, d.forced_keno_hits + ' Hits'), `
+        <div class="text-[11px] text-zinc-400 mb-1">Trefferanzahl garantieren (0 - 5):</div>
+        <div class="grid grid-cols-4 gap-1">
+          <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[10px] py-1" onclick="forceGame('keno', 0)">0 Hits</button>
+          <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[10px] py-1" onclick="forceGame('keno', 3)">3 Hits (4×)</button>
+          <button class="btn bg-yellow-600 hover:bg-yellow-500 text-black font-bold text-[10px] py-1" onclick="forceGame('keno', 5)">⭐ 5 Hits (80×)</button>
+          <button class="btn bg-zinc-900 text-zinc-500 hover:text-zinc-300 text-[10px] py-1" onclick="forceGame('keno', -1)">↩ Reset</button>
+        </div>
+      `)}
+
+      <!-- 15. BACCARAT -->
+      ${card('🎴', 'Baccarat', badge(d.forced_baccarat_next, 'none', d.forced_baccarat_next), `
+        <div class="text-[11px] text-zinc-400 mb-1">Nächste Baccarat-Runde:</div>
+        <div class="grid grid-cols-4 gap-1">
+          <button class="btn bg-cyan-700 hover:bg-cyan-600 text-[10px] py-1" onclick="forceGame('baccarat', 'player')">👤 Player</button>
+          <button class="btn bg-red-800 hover:bg-red-700 text-[10px] py-1" onclick="forceGame('baccarat', 'banker')">🏦 Banker</button>
+          <button class="btn bg-purple-700 hover:bg-purple-600 text-[10px] py-1" onclick="forceGame('baccarat', 'tie')">🤝 Tie (9×)</button>
+          <button class="btn bg-zinc-900 text-zinc-500 hover:text-zinc-300 text-[10px] py-1" onclick="forceGame('baccarat', 'none')">↩ Reset</button>
+        </div>
+      `)}
+
+      <!-- 16. SIC BO -->
+      ${card('🎲', 'Sic Bo', badge(d.forced_sicbo_next, 'none', d.forced_sicbo_next), `
+        <div class="text-[11px] text-zinc-400 mb-1">Würfel-Kombination:</div>
+        <div class="grid grid-cols-4 gap-1">
+          <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[10px] py-1" onclick="forceGame('sicbo', 'low')">⬇ Low (2×)</button>
+          <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[10px] py-1" onclick="forceGame('sicbo', 'high')">⬆ High (2×)</button>
+          <button class="btn bg-yellow-600 hover:bg-yellow-500 text-black font-bold text-[10px] py-1" onclick="forceGame('sicbo', 'triple')">🎲 Triple (30×)</button>
+          <button class="btn bg-zinc-900 text-zinc-500 hover:text-zinc-300 text-[10px] py-1" onclick="forceGame('sicbo', 'none')">↩ Reset</button>
+        </div>
+      `)}
+
+      <!-- 17. HI-LO -->
+      ${card('📈', 'Hi-Lo', badge(d.forced_hilo_next, 'none', d.forced_hilo_next), `
+        <div class="text-[11px] text-zinc-400 mb-1">Nächste Karte für Hi-Lo:</div>
+        <div class="grid grid-cols-3 gap-1">
+          <button class="btn bg-emerald-700 hover:bg-emerald-600 text-xs py-1" onclick="forceGame('hilo', 'win')">🍀 Immer Win</button>
+          <button class="btn bg-red-800 hover:bg-red-700 text-xs py-1" onclick="forceGame('hilo', 'lose')">💀 Immer Lose</button>
+          <button class="btn bg-zinc-900 text-zinc-500 hover:text-zinc-300 text-xs py-1" onclick="forceGame('hilo', 'none')">↩ Reset</button>
+        </div>
+      `)}
+
+      <!-- 18. DRAGON TIGER -->
+      ${card('🐉', 'Dragon Tiger', badge(d.forced_dragon_next, 'none', d.forced_dragon_next), `
+        <div class="text-[11px] text-zinc-400 mb-1">Sieger-Seite:</div>
+        <div class="grid grid-cols-4 gap-1">
+          <button class="btn bg-red-700 hover:bg-red-600 text-[10px] py-1" onclick="forceGame('dragon', 'dragon')">🐉 Dragon</button>
+          <button class="btn bg-amber-700 hover:bg-amber-600 text-[10px] py-1" onclick="forceGame('dragon', 'tiger')">🐅 Tiger</button>
+          <button class="btn bg-purple-700 hover:bg-purple-600 text-[10px] py-1" onclick="forceGame('dragon', 'tie')">🤝 Tie (11×)</button>
+          <button class="btn bg-zinc-900 text-zinc-500 hover:text-zinc-300 text-[10px] py-1" onclick="forceGame('dragon', 'none')">↩ Reset</button>
+        </div>
+      `)}
+
+      <!-- 19. LUCKY 7 -->
+      ${card('🍀', 'Lucky 7', badge(d.forced_lucky7_next, 'none', d.forced_lucky7_next), `
+        <div class="text-[11px] text-zinc-400 mb-1">Würfel-Summe:</div>
+        <div class="grid grid-cols-4 gap-1">
+          <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[10px] py-1" onclick="forceGame('lucky7', 'under')">⬇ Unter 7</button>
+          <button class="btn bg-yellow-600 hover:bg-yellow-500 text-black font-bold text-[10px] py-1" onclick="forceGame('lucky7', 'seven')">⭐ Genau 7 (5.7×)</button>
+          <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[10px] py-1" onclick="forceGame('lucky7', 'over')">⬆ Über 7</button>
+          <button class="btn bg-zinc-900 text-zinc-500 hover:text-zinc-300 text-[10px] py-1" onclick="forceGame('lucky7', 'none')">↩ Reset</button>
+        </div>
+      `)}
+
+      <!-- 20. DOORS -->
+      ${card('🚪', 'Doors (Türen)', badge(d.forced_doors_next, 'none', d.forced_doors_next), `
+        <div class="text-[11px] text-zinc-400 mb-1">Gewinner-Tür festlegen:</div>
+        <div class="grid grid-cols-4 gap-1">
+          <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[10px] py-1" onclick="forceGame('doors', '1')">Tür 1</button>
+          <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[10px] py-1" onclick="forceGame('doors', '2')">Tür 2</button>
+          <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[10px] py-1" onclick="forceGame('doors', '3')">Tür 3</button>
+          <button class="btn bg-zinc-900 text-zinc-500 hover:text-zinc-300 text-[10px] py-1" onclick="forceGame('doors', 'none')">↩ Reset</button>
+        </div>
+      `)}
+
+      <!-- 21. NUMBER -->
+      ${card('🔢', 'Number (Zahlenraten)', badge(d.forced_number_next, 0, '#' + d.forced_number_next), `
+        <div class="text-[11px] text-zinc-400 mb-1">Gewinn-Zahl festlegen (1-10 / 9× Auszahlung):</div>
+        <div class="flex gap-1 mb-2">
+          <input id="in_f_num" type="number" min="1" max="10" placeholder="1-10" value="${d.forced_number_next > 0 ? d.forced_number_next : ''}" class="inp py-1 px-2 text-xs flex-1">
+          <button class="btn bg-cyan-600 text-xs px-2.5 py-1" style="width:auto" onclick="forceGame('number', $('in_f_num').value)">Setzen</button>
+          <button class="btn bg-zinc-900 text-zinc-500 hover:text-zinc-300 text-xs px-2 py-1" style="width:auto" onclick="forceGame('number', 0)">↩</button>
+        </div>
+      `)}
+
+      <!-- 22. RPS -->
+      ${card('✂️', 'RPS (Schere Stein Papier)', badge(d.forced_rps_next, 'none', d.forced_rps_next), `
+        <div class="text-[11px] text-zinc-400 mb-1">Bot-Verhalten oder Ergebnis:</div>
+        <div class="grid grid-cols-4 gap-1">
+          <button class="btn bg-emerald-700 hover:bg-emerald-600 text-[10px] py-1" onclick="forceGame('rps', 'win')">🍀 Win</button>
+          <button class="btn bg-red-800 hover:bg-red-700 text-[10px] py-1" onclick="forceGame('rps', 'lose')">💀 Lose</button>
+          <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[10px] py-1" onclick="forceGame('rps', 'draw')">🤝 Draw</button>
+          <button class="btn bg-zinc-900 text-zinc-500 hover:text-zinc-300 text-[10px] py-1" onclick="forceGame('rps', 'none')">↩ Reset</button>
+        </div>
+      `)}
+
+      <!-- 23. DOUBLE & ALL-IN -->
+      ${card('💥', 'Double & All-In', badge(d.forced_double_next, 'none', d.forced_double_next), `
+        <div class="text-[11px] text-zinc-400 mb-1">High-Stakes Multiplikation:</div>
+        <div class="grid grid-cols-3 gap-1">
+          <button class="btn bg-emerald-700 hover:bg-emerald-600 text-xs py-1" onclick="forceGame('double', 'win'); forceGame('allin', 'win')">🏆 2× Win</button>
+          <button class="btn bg-red-800 hover:bg-red-700 text-xs py-1" onclick="forceGame('double', 'lose'); forceGame('allin', 'lose')">💀 0× Bust</button>
+          <button class="btn bg-zinc-900 text-zinc-500 hover:text-zinc-300 text-xs py-1" onclick="forceGame('double', 'none'); forceGame('allin', 'none')">↩ Reset</button>
+        </div>
+      `)}
+
+      <!-- 24. PLINKO -->
+      ${card('⚡', 'Plinko (Pegboard)', '🟢 Integriert', `
+        <div class="text-[11px] text-zinc-400 mb-1">Plinko Ball-Fall manipulieren:</div>
+        <div class="grid grid-cols-2 gap-1">
+          <button class="btn bg-emerald-700 hover:bg-emerald-600 text-xs py-1" onclick="setGlobalRig(1); toast('🍀 Plinko landet ganz außen (5.6×)!')">🌟 Max Slot (5.6×)</button>
+          <button class="btn bg-red-800 hover:bg-red-700 text-xs py-1" onclick="setGlobalRig(-1); toast('💀 Plinko landet in der Mitte (0.5×)!')">💀 Mitte (0.5×)</button>
+        </div>
+      `)}
+    </div>`;
+}
+
+/* ================= TAB 2: SERVER & QUOTEN ================= */
+function renderAdminServerTab(c) {
+  const d = ADM_DATA;
+  c.innerHTML = `
+    <!-- KPI Header Cards -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+      <div class="glass rounded-2xl p-4 border-l-4 border-cyan-500">
+        <div class="text-xs text-zinc-400">Registrierte Spieler</div>
+        <div class="text-2xl font-black text-white mt-1">${d.stats ? d.stats.user_count : '–'}</div>
+      </div>
+      <div class="glass rounded-2xl p-4 border-l-4 border-emerald-500">
+        <div class="text-xs text-zinc-400">Coins im Umlauf</div>
+        <div class="text-2xl font-black text-emerald-400 mt-1">${d.stats ? Number(d.stats.total_balance).toLocaleString('de-DE') + ' FC' : '–'}</div>
+      </div>
+      <div class="glass rounded-2xl p-4 border-l-4 border-yellow-500">
+        <div class="text-xs text-zinc-400">Global Jackpot Pot</div>
+        <div class="text-2xl font-black text-yellow-400 mt-1">${Number(d.jackpot).toLocaleString('de-DE')} FC</div>
+      </div>
+      <div class="glass rounded-2xl p-4 border-l-4 border-purple-500">
+        <div class="text-xs text-zinc-400">Total Wagered (Gesetzt)</div>
+        <div class="text-2xl font-black text-purple-400 mt-1">${d.stats ? Number(d.stats.total_wagered).toLocaleString('de-DE') + ' FC' : '–'}</div>
+      </div>
+    </div>
+
+    <!-- Server Glück / Rig Mode -->
+    <div class="glass rounded-2xl p-5 border border-purple-500/40 mb-4">
+      <div class="flex items-center gap-2 mb-3">
+        <span class="text-2xl">⚡</span>
+        <h3 class="text-lg font-black text-purple-400">Globaler Server Glück & Quoten God-Mode</h3>
+      </div>
+      <p class="text-xs text-zinc-400 mb-3">Beeinflusst ALLE Spiele für ALLE Spieler serverweit in Echtzeit:</p>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+        <div>
+          <label class="text-xs text-zinc-400 font-semibold">Aktiver Modus:</label>
+          <select id="adm_global_rig" class="inp w-full mt-1 text-sm py-2" onchange="setGlobalRig(this.value)">
+            <option value="0" ${d.global_rig_mode == 0 ? 'selected' : ''}>🟢 Normal (Faires RNG nach Casino-Quoten)</option>
+            <option value="1" ${d.global_rig_mode == 1 ? 'selected' : ''}>🍀 Haus-Glück (Alle Spieler gewinnen / Win Rain)</option>
+            <option value="2" ${d.global_rig_mode == 2 ? 'selected' : ''}>🚀 MEGA-RAIN (3× Multiplikator auf JEDEN Gewinn)</option>
+            <option value="-1" ${d.global_rig_mode == -1 ? 'selected' : ''}>😈 Haus gewinnt immer (100% House Edge / Alle verlieren)</option>
+          </select>
+        </div>
+        <div class="flex flex-col justify-end">
+          <div class="text-xs text-zinc-400 mb-1">Schnellschalter:</div>
+          <div class="flex gap-2">
+            <button class="btn bg-emerald-700 hover:bg-emerald-600 text-xs py-2" onclick="setGlobalRig(1)">🍀 Win-Rain</button>
+            <button class="btn bg-purple-700 hover:bg-purple-600 text-xs py-2" onclick="setGlobalRig(2)">🚀 3× Mega-Rain</button>
+            <button class="btn bg-red-800 hover:bg-red-700 text-xs py-2" onclick="setGlobalRig(-1)">😈 House Edge</button>
+            <button class="btn bg-zinc-800 hover:bg-zinc-700 text-xs py-2" onclick="setGlobalRig(0)">🟢 Normal</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Server Announcement Banner -->
+    <div class="glass rounded-2xl p-5 border border-cyan-500/40 mb-4">
+      <div class="flex items-center gap-2 mb-2">
+        <span class="text-2xl">📢</span>
+        <h3 class="text-lg font-black text-cyan-400">Server-Ankündigungs-Banner</h3>
+      </div>
+      <p class="text-xs text-zinc-400 mb-3">Zeigt ein auffälliges Banner oben auf dem Bildschirm für ALLE Spieler in Echtzeit.</p>
+      <div class="flex gap-2">
+        <input id="adm_ann_text" placeholder="z.B. Wartungsarbeiten in 15 Min. oder MEGA COIN DROP JETZT!" value="${d.announcement ? d.announcement.message || '' : ''}" class="inp flex-1 text-sm py-2">
+        <button class="btn bg-amber-600 hover:bg-amber-500 text-white text-xs px-4" style="width:auto" onclick="setAnn(true)">Aktivieren</button>
+        <button class="btn bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs px-3" style="width:auto" onclick="setAnn(false)">Ausblenden</button>
+      </div>
+    </div>
+
+    <!-- Quick Mass Actions -->
+    <div class="glass rounded-2xl p-5 border border-zinc-700">
+      <div class="font-bold text-white text-sm mb-3">⚡ Serverweite Massen-Aktionen</div>
+      <div class="flex gap-2 flex-wrap">
+        <button class="btn bg-sky-600 hover:bg-sky-500 text-xs px-4 py-2" style="width:auto" onclick="admRain()">🌧️ Coin Rain starten (an alle Spieler)</button>
+        <button class="btn bg-yellow-600 hover:bg-yellow-500 text-black font-bold text-xs px-4 py-2" style="width:auto" onclick="admPayWeek()">🏆 Wochenturnier-Preise auszahlen</button>
+        <button class="btn bg-pink-600 hover:bg-pink-500 text-xs px-4 py-2" style="width:auto" onclick="admBroadcast()">💬 Globale Chat-Ankündigung</button>
+        <button class="btn bg-red-900/70 hover:bg-red-800 text-xs px-4 py-2" style="width:auto" onclick="admClearChatAction()">🗑️ Chat leeren</button>
+      </div>
+    </div>`;
+}
+
+/* ================= TAB 3: SPIELER-GOD-MODE ================= */
+function renderAdminPlayersTab(c) {
+  c.innerHTML = `
+    <div class="glass rounded-2xl p-5 border border-zinc-700 mb-4">
+      <div class="flex items-center justify-between gap-3 mb-2 flex-wrap">
+        <div class="flex items-center gap-2">
+          <span class="text-2xl">👥</span>
+          <div>
+            <h3 class="text-lg font-black text-white">Spieler-Manipulation & God-Mode</h3>
+            <div class="text-xs text-zinc-400">Individuelle Quoten-Manipulation, Guthaben-Kontrolle und Rollenverwaltung pro Spieler.</div>
+          </div>
+        </div>
+        <input id="adm_user_search" placeholder="Spieler nach Name suchen..." class="inp text-xs py-2 px-3 w-64" oninput="filterAdminUsers()">
+      </div>
+    </div>
+    <div id="adm_user_list" class="space-y-3">Lade Benutzer...</div>`;
+  renderAdminUsers(ADMIN_USERS_CACHE);
+}
+
+function filterAdminUsers() {
+  const q = ($('adm_user_search').value || '').toLowerCase().trim();
+  const filtered = ADMIN_USERS_CACHE.filter(u => u.username.toLowerCase().includes(q));
+  renderAdminUsers(filtered);
+}
+
+function renderAdminUsers(data) {
+  const box = $('adm_user_list');
+  if (!box) return;
+  const sm = 'style="width:auto;padding:.3rem .65rem"';
+
+  if (!data || data.length === 0) {
+    box.innerHTML = '<div class="glass rounded-xl p-6 text-center text-zinc-400">Keine Spieler gefunden.</div>';
+    return;
+  }
+
+  box.innerHTML = `<div class="text-xs text-zinc-400 mb-2 font-bold">${data.length} Spieler registriert:</div>` + data.map(u => `
+    <div class="glass rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3 text-sm border border-zinc-800 hover:border-zinc-600 transition shadow">
+      <!-- Player Info -->
+      <div class="flex-1 min-w-[14rem]">
+        <div class="flex items-center gap-2">
+          <span class="text-2xl">${esc(u.avatar || '🙂')}</span>
+          <div>
+            <div class="flex items-center gap-1.5">
+              <b class="text-white text-base" style="color:${/^#[0-9a-f]{6}$/i.test(u.color) ? u.color : '#fff'}">${esc(u.username)}</b>
+              <span class="text-[10px] px-2 py-0.5 rounded font-black uppercase ${u.role==='admin'?'bg-purple-900/60 text-purple-300 border border-purple-500':u.role==='vip'?'bg-yellow-900/60 text-yellow-300 border border-yellow-500':'bg-zinc-800 text-zinc-400'}">${u.role}</span>
+              ${u.banned ? '<span class="text-[10px] bg-red-900/80 text-red-200 px-1.5 py-0.5 rounded font-black border border-red-500">GESPERRT</span>' : ''}
+              ${u.is_muted ? '<span class="text-[10px] bg-zinc-700 text-zinc-300 px-1.5 py-0.5 rounded font-bold">STUMM</span>' : ''}
+            </div>
+            <div class="text-xs text-emerald-400 font-black mt-0.5">
+              🪙 ${Number(u.balance).toLocaleString('de-DE')} FC 
+              <span class="text-zinc-500 font-normal">(${Number(u.wagered).toLocaleString('de-DE')} gesetzt)</span>
+            </div>
+            <div class="text-[11px] text-zinc-400 mt-0.5">
+              ${u.title ? '🏷️ ' + esc(u.title) + ' · ' : ''}Gewinn-Mult: <b class="text-cyan-300">${u.custom_payout_mult}×</b>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Rigging Controller -->
+      <div class="flex flex-col gap-1 min-w-[11rem]">
+        <label class="text-[10px] text-zinc-400 uppercase tracking-wider font-bold">Persönliches Rigging:</label>
+        <select class="inp text-xs py-1.5 px-2 ${u.rig_mode === 'force_win' ? 'border-emerald-500 text-emerald-300 font-bold' : u.rig_mode === 'force_lose' ? 'border-red-500 text-red-300 font-bold' : u.rig_mode === 'force_jackpot' ? 'border-yellow-400 text-yellow-300 font-black animate-pulse' : ''}" 
+          onchange="admGodEdit('${u.id}', { p_rig: this.value })">
+          <option value="default" ${u.rig_mode === 'default' ? 'selected' : ''}>🟢 Normal (Faire Quoten)</option>
+          <option value="force_win" ${u.rig_mode === 'force_win' ? 'selected' : ''}>🍀 Immer Win (Gewinnt jedes Spiel)</option>
+          <option value="force_lose" ${u.rig_mode === 'force_lose' ? 'selected' : ''}>💀 Immer Lose (Verliert jedes Spiel)</option>
+          <option value="force_jackpot" ${u.rig_mode === 'force_jackpot' ? 'selected' : ''}>💰 Nächster Dreh = JACKPOT!</option>
+        </select>
+      </div>
+
+      <!-- Quick God-Actions -->
+      <div class="flex items-center gap-1.5 flex-wrap">
+        <select class="inp text-xs py-1.5 px-2" onchange="admGodEdit('${u.id}', { p_role: this.value })">
+          ${['user', 'vip', 'mod', 'admin'].map(r => `<option ${r === u.role ? 'selected' : ''}>${r}</option>`).join('')}
+        </select>
+        <button class="btn bg-gradient-to-r from-yellow-500 to-amber-600 text-black text-xs font-black" ${sm} onclick="admTriggerJp('${u.id}', '${esc(u.username)}')">💰 JP Geben</button>
+        <button class="btn bg-cyan-700 hover:bg-cyan-600 text-xs" ${sm} onclick="admCoins('${u.id}')">± Coins</button>
+        <button class="btn bg-purple-700 hover:bg-purple-600 text-xs" ${sm} onclick="admSetExactBalance('${u.id}')">Exakt</button>
+        <button class="btn bg-indigo-700 hover:bg-indigo-600 text-xs" ${sm} onclick="admSetCustomMult('${u.id}')">Mult ×</button>
+        <button class="btn ${u.is_muted ? 'bg-zinc-600' : 'bg-zinc-800 hover:bg-zinc-700'} text-xs" ${sm} onclick="admGodEdit('${u.id}', { p_muted: ${!u.is_muted} })">
+          ${u.is_muted ? 'Entstummen' : 'Stumm'}
+        </button>
+        <button class="btn ${u.banned ? 'bg-green-700 hover:bg-green-600' : 'bg-orange-700 hover:bg-orange-600'} text-xs" ${sm} onclick="admGodEdit('${u.id}', { p_banned: ${!u.banned} })">
+          ${u.banned ? 'Entsperren' : 'Sperren'}
+        </button>
+        <button class="btn bg-red-900 hover:bg-red-800 text-xs" ${sm} onclick="admDel('${u.id}')">🗑</button>
+      </div>
+    </div>`).join('');
+}
+
+/* ================= TAB 4: ECONOMY & JACKPOT ================= */
+function renderAdminEconomyTab(c) {
+  const d = ADM_DATA;
+  c.innerHTML = `
+    <div class="glass rounded-2xl p-5 border border-yellow-500/40 mb-4">
+      <div class="flex items-center gap-2 mb-3">
+        <span class="text-2xl">💰</span>
+        <h3 class="text-lg font-black text-yellow-400">Globaler Jackpot & Casino-Ökonomie</h3>
+      </div>
+      <p class="text-xs text-zinc-400 mb-4">Verwalte den globalen Jackpot-Pot, den Abzug von Spieler-Verlusten und Mindesteinsätze.</p>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- Jackpot Pool -->
+        <div class="glass rounded-xl p-4 border border-zinc-700">
+          <label class="text-xs font-bold text-yellow-400">Aktueller Jackpot Pool (FC):</label>
+          <div class="text-2xl font-black text-white my-1">${Number(d.jackpot).toLocaleString('de-DE')} FC</div>
+          <div class="flex gap-1 mt-2">
+            <input id="adm_pot_in" type="number" min="0" placeholder="Neuer Betrag..." value="${d.jackpot}" class="inp py-1.5 px-3 text-xs flex-1">
+            <button class="btn bg-yellow-500 text-black font-bold text-xs px-4" style="width:auto" onclick="admSetPot()">Speichern</button>
+          </div>
+        </div>
+
+        <!-- Jackpot Cut % -->
+        <div class="glass rounded-xl p-4 border border-zinc-700">
+          <label class="text-xs font-bold text-cyan-400">Jackpot Cut (% von Spieler-Verlusten):</label>
+          <div class="text-2xl font-black text-white my-1">${d.jackpot_cut_percent} %</div>
+          <div class="text-[11px] text-zinc-400 mb-2">So viel Prozent jedes Verlusts wandert in den globalen Jackpot (nicht 1:1).</div>
+          <div class="flex gap-1">
+            <input id="adm_cut_in" type="number" min="0" max="100" placeholder="z.B. 5 oder 10" value="${d.jackpot_cut_percent}" class="inp py-1.5 px-3 text-xs flex-1">
+            <button class="btn bg-cyan-600 text-white font-bold text-xs px-4" style="width:auto" onclick="admSetCut()">Speichern</button>
+          </div>
+        </div>
+
+        <!-- Min Bet -->
+        <div class="glass rounded-xl p-4 border border-zinc-700">
+          <label class="text-xs font-bold text-purple-400">Jackpot Mindesteinsatz (FC):</label>
+          <div class="text-2xl font-black text-white my-1">${d.jackpot_min_bet || 100} FC</div>
+          <div class="flex gap-1 mt-2">
+            <input id="adm_minb_in" type="number" min="1" placeholder="z.B. 100" value="${d.jackpot_min_bet || 100}" class="inp py-1.5 px-3 text-xs flex-1">
+            <button class="btn bg-purple-600 text-white font-bold text-xs px-4" style="width:auto" onclick="admSetSettingKey('jackpot_min_bet', $('adm_minb_in').value)">Speichern</button>
+          </div>
+        </div>
+
+        <!-- Jackpot Seed -->
+        <div class="glass rounded-xl p-4 border border-zinc-700">
+          <label class="text-xs font-bold text-emerald-400">Jackpot Seed (Startbetrag nach Ausschüttung):</label>
+          <div class="text-2xl font-black text-white my-1">10.000 FC</div>
+          <div class="flex gap-1 mt-2">
+            <input id="adm_seed_in" type="number" min="1000" placeholder="z.B. 10000" value="10000" class="inp py-1.5 px-3 text-xs flex-1">
+            <button class="btn bg-emerald-600 text-white font-bold text-xs px-4" style="width:auto" onclick="admSetSettingKey('jackpot_seed', $('adm_seed_in').value)">Speichern</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
+/* ================= TAB 5: LOGS & STATUS ================= */
+async function renderAdminLogsTab(c) {
+  c.innerHTML = `
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="glass rounded-2xl p-5 border border-zinc-700">
+        <div class="flex items-center justify-between mb-3">
+          <b class="text-white">🏆 Neueste Wins (Live Feed)</b>
+          <button class="btn bg-zinc-800 text-xs px-2.5 py-1" style="width:auto" onclick="renderAdminLogsTab($('adm_tab_content'))">↻ Aktualisieren</button>
+        </div>
+        <div id="adm_wins_feed" class="space-y-1.5 text-xs text-zinc-300">Lade Wins...</div>
+      </div>
+      <div class="glass rounded-2xl p-5 border border-zinc-700">
+        <b class="text-white mb-3 block">⚙️ System & Server-Status</b>
+        <div class="space-y-2 text-xs">
+          <div class="flex justify-between p-2 rounded-lg bg-zinc-900/60"><span>PostgreSQL Engine:</span><b class="text-emerald-400">PostgreSQL 17 (Supabase)</b></div>
+          <div class="flex justify-between p-2 rounded-lg bg-zinc-900/60"><span>App Version:</span><b class="text-cyan-400">v10 NextGen God-Mode</b></div>
+          <div class="flex justify-between p-2 rounded-lg bg-zinc-900/60"><span>Admin God-Mode APIs:</span><b class="text-emerald-400">Vollständig Aktiv (24 Games)</b></div>
+          <div class="flex justify-between p-2 rounded-lg bg-zinc-900/60"><span>Sound Engine:</span><b class="text-yellow-400">Web Audio API (Synthesizer)</b></div>
+        </div>
+      </div>
+    </div>`;
+
+  const wins = await call('recent_wins', {});
+  const box = $('adm_wins_feed');
+  if (box && wins) {
+    box.innerHTML = wins.length ? wins.map(w => `
+      <div class="p-2 rounded-lg bg-zinc-900/60 flex justify-between items-center">
+        <span><b>${esc(w.username)}</b> · ${esc(w.game)}</span>
+        <b class="text-emerald-400">+${Number(w.payout).toLocaleString('de-DE')} FC</b>
+      </div>`).join('') : '<div class="text-zinc-500">Noch keine Wins erfasst.</div>';
+  }
+}
+
+/* ================= GOD-MODE ADMIN HELFER ================= */
+async function forceGame(game, val) {
+  sfx.click();
+  const d = await call('admin_force_game_str', { game, str_val: String(val) });
+  if (d) {
+    toast(`🎯 ${game.toUpperCase()} forciert: "${val}"!`);
+    loadAdminFullDashboard();
+  }
+}
+
+async function forceNext(g) {
+  let val = 0;
+  if (g === 'crash') val = Number($('in_f_crash').value);
+  if (g === 'roulette') val = Number($('in_f_roul').value);
+  if (g === 'dice') val = Number($('in_f_dice').value);
+  if (isNaN(val)) return toast('Ungültiger Wert');
+  forceGame(g, val);
+}
+
+async function resetAllForces() {
+  if (!confirm('Alle forcierten Spieleinstellungen zurücksetzen?')) return;
+  sfx.click();
+  const games = ['crash', 'penalty', 'roulette', 'dice', 'coinflip', 'limbo', 'slots', 'wheel', 'cyberrace', 'war', 'keno', 'bj', 'mines', 'towers', 'baccarat', 'sicbo', 'hilo', 'dragon', 'lucky7', 'doors', 'number', 'rps', 'double', 'allin'];
+  for (const g of games) {
+    const resetVal = (g === 'roulette' || g === 'keno') ? '-1' : (g === 'crash' || g === 'dice' || g === 'limbo' || g === 'wheel' || g === 'cyberrace' || g === 'number') ? '0' : 'none';
+    await sb.rpc('admin_force_game_str', { game: g, str_val: resetVal });
+  }
+  toast('✔ Alle Spiel-Manipulationen zurückgesetzt!');
+  loadAdminFullDashboard();
+}
+
+async function setGlobalRig(val) {
+  sfx.click();
+  const d = await call('admin_force_game_str', { game: 'global_rig', str_val: String(val) });
+  if (d) {
+    toast('⚡ Server Quoten-Modus aktualisiert!');
+    loadAdminFullDashboard();
+  }
+}
+
+async function setAnn(active) {
+  sfx.click();
+  const txt = ($('adm_ann_text') ? $('adm_ann_text').value : '').trim();
+  const d = await call('admin_set_announcement', { txt, is_active: active });
+  if (d) {
+    toast(active ? '📢 Banner aktiviert!' : 'Banner ausgeblendet');
+    checkAnnouncement();
+    loadAdminFullDashboard();
+  }
+}
+
+async function admGodEdit(userId, params) {
+  sfx.click();
+  const d = await call('admin_set_user_god', Object.assign({ target: userId }, params));
+  if (d) {
+    toast('✔ Spieler-Daten aktualisiert!');
+    loadAdminFullDashboard();
+  }
+}
+
+async function admTriggerJp(userId, uname) {
+  if (!confirm(`Soll der gesamte globale Jackpot SOFORT an ${uname} ausgezahlt werden?`)) return;
+  sfx.jackpot();
+  const d = await call('admin_trigger_jackpot_now', { target_user: userId });
+  if (d) {
+    toast(`💰 BAAAM! Jackpot an ${uname} ausgezahlt!`);
+    loadAdminFullDashboard();
+  }
+}
+
+async function admSetCustomMult(userId) {
+  const m = prompt('Persönlicher Gewinn-Multiplikator für diesen Spieler (z.B. 2.0 für doppelte Gewinne, 5.0 oder 0.5):');
+  if (m !== null && m !== '') {
+    const num = parseFloat(m);
+    if (!isNaN(num) && num > 0) admGodEdit(userId, { p_mult: num });
+  }
+}
+
+async function admSetPot() {
+  const inEl = $('adm_pot_in');
+  if (!inEl) return;
+  const val = Number(inEl.value);
+  if (isNaN(val) || val < 0) return toast('Ungültiger Betrag');
+  sfx.claim();
+  const d = await call('admin_set_pot', { amount: val });
+  if (d) {
+    toast('💰 Jackpot Pool gesetzt: ' + Number(d.pool).toLocaleString('de-DE') + ' FC');
+    loadAdminFullDashboard();
+  }
+}
+
+async function admSetCut() {
+  const inEl = $('adm_cut_in');
+  if (!inEl) return;
+  const val = Number(inEl.value);
+  if (isNaN(val) || val < 0 || val > 100) return toast('Cut muss zwischen 0 und 100 % liegen');
+  sfx.claim();
+  const d = await call('admin_set_setting', { skey: 'jackpot_cut_percent', sval: String(val) });
+  if (d) {
+    toast('✂️ Jackpot Cut auf ' + val + '% geändert');
+    loadAdminFullDashboard();
+  }
+}
+
+async function admSetSettingKey(k, val) {
+  if (val === null || val === undefined || isNaN(Number(val))) return toast('Ungültiger Wert');
+  sfx.claim();
+  const d = await call('admin_set_setting', { skey: k, sval: String(val) });
+  if (d) {
+    toast('✔ ' + k + ' gespeichert: ' + val);
+    loadAdminFullDashboard();
+  }
+}
+
+async function admSetExactBalance(id) {
+  const a = prompt('Neuer genauer Kontostand (FC):');
+  if (a !== null && a !== '') {
+    const num = Number(a);
+    if (!isNaN(num) && num >= 0) admGodEdit(id, { p_balance: num });
+  }
+}
+
+async function admBroadcast() {
+  const txt = prompt('Chat-Ankündigung (erscheint für alle im Chat):');
+  if (txt) {
+    sfx.click();
+    const d = await call('admin_broadcast', { msg: txt });
+    if (d) toast('📢 Chat-Ankündigung gesendet!');
+  }
+}
+
+async function admClearChatAction() {
+  if (!confirm('Soll der gesamte Chat wirklich geleert werden?')) return;
+  sfx.click();
+  const d = await call('admin_clear_chat', { chan: 'global' });
+  if (d) toast('🗑️ ' + (d.deleted || 0) + ' Nachrichten gelöscht');
+}
+
+async function adm(fn, args) {
+  const { error } = await sb.rpc(fn, args);
+  error ? toast(error.message) : loadAdminFullDashboard();
+}
+
+function admCoins(id) {
+  const a = Number(prompt('Coins (negativ = abziehen):'));
+  if (a) adm('admin_give', { target: id, amount: a });
+}
+
+function admDel(id) {
+  if (confirm('Account endgültig löschen?')) adm('admin_delete', { target: id });
+}
+
+/* ================= Helfer ================= */
+async function call(fn, args) { const { data, error } = await sb.rpc(fn, args); if (error) { toast(error.message); return null } return data }
+function readBet() {
+  const bet = Math.floor(Number($('bet').value))
+  if (!(bet >= 1)) { msg('Ungültiger Einsatz', 'lose'); return 0 }
+  if (bet > balance) { msg('Nicht genug Coins', 'lose'); return 0 }
+  return bet
+}
+function logRound(net) { HIST.unshift({ g: GAMES[current].icon + ' ' + GAMES[current].name, bet: lastBet, net }); HIST.length = Math.min(HIST.length, 8); renderHist() }
+
+/* ================= SPIEL-ANIMATIONEN & REVEALS ================= */
+const REVEAL = {
+  limbo: async d => {
+    sfx.spin()
+    const tgt = parseFloat(lastParam), cp = parseFloat(d.result)
+    const el = $('limbo-res')
+    let x = 1.00
+    while (x < Math.min(cp, 20)) {
+      x = +(x * 1.15 + 0.05).toFixed(2)
+      el.textContent = x.toFixed(2) + '×'
+      sfx.click()
+      await sleep(35)
+    }
+    el.textContent = cp.toFixed(2) + '×'
+    el.style.color = d.win ? '#34d399' : '#f87171'
+  },
+  penalty: async d => {
+    sfx.whistle()
+    const goalie = $('penalty-goalie')
+    const moves = { tl: 'translate(-100px, -40px)', tr: 'translate(100px, -40px)', bl: 'translate(-100px, 40px)', br: 'translate(100px, 40px)', mid: 'translate(0, 0)' }
+    if (goalie) goalie.style.transform = moves[d.result] || 'translate(0, 0)'
+    await sleep(600)
+    if (d.win) { sfx.win(); say('⚽ TOOOOOOOR! 🎉 1,95×') } else { sfx.lose(); say('🧤 GEHALTEN! 💥') }
+  },
+  war: async d => {
+    const [p, dl] = d.result.split(' ').map(Number)
+    sfx.spin()
+    await sleep(400)
+    $('war-p').textContent = RANKS[p - 1]
+    $('war-d').textContent = RANKS[dl - 1]
+    if (p === dl) { sfx.bigwin(); say('⚔️ WAAAAAAR! GLEICHSTAND ×3!') }
+  },
+  cyberrace: async d => {
+    const winnerId = Number(d.result)
+    for (let step = 1; step <= 8; step++) {
+      RACERS.forEach(r => {
+        const bar = $('racer-bar-' + r.id)
+        if (bar) {
+          const progress = step === 8 ? (r.id === winnerId ? 100 : Math.floor(60 + Math.random() * 30)) : Math.min(90, step * 11 + Math.floor(Math.random() * 15))
+          bar.style.width = progress + '%'
+        }
+      })
+      sfx.spin()
+      await sleep(150)
+    }
+    const winName = (RACERS.find(r => r.id === winnerId) || {}).name
+    say(`🏁 Sieger: <b>${winName}</b>!`)
+  },
+  coinflip: async d => {
+    sfx.spin()
+    $('stage').innerHTML = '<span class="animate-spin inline-block">🪙</span>'; await sleep(700)
+    $('stage').innerHTML = `<span class="text-4xl font-black ${d.win ? 'text-emerald-400' : 'text-red-400'}">${d.result.toUpperCase()}</span>`
+  },
+  dice: async d => {
+    sfx.dice()
+    const s = $('stage'), iv = setInterval(() => s.textContent = 1 + Math.floor(Math.random() * 100), 60)
+    await sleep(700); clearInterval(iv)
+    s.textContent = d.result; s.style.color = d.win ? '#34d399' : '#f87171'
+  },
+  slots: async d => {
+    const S = ['🍒', '🍋', '🔔', '⭐', '💎', '🍀'], el = [0, 1, 2].map(i => $('r' + i))
+    const iv = setInterval(() => { el.forEach(e => e.textContent = S[Math.floor(Math.random() * 6)]); sfx.spin() }, 80)
+    await sleep(900); clearInterval(iv)
+    d.result.split(' ').forEach((s, i) => el[i].textContent = s)
+  },
+  roulette: async d => {
+    sfx.spin()
+    const [n, col] = d.result.split(' '), c = { red: '#dc2626', black: '#27272a', green: '#16a34a' }[col]
+    $('stage').innerHTML = '<div class="text-5xl animate-spin">🎡</div>'; await sleep(900)
+    $('stage').innerHTML = `<div class="w-24 h-24 rounded-full flex items-center justify-center text-4xl font-black border-4 border-zinc-500" style="background:${c}">${n}</div>`
+  },
+  plinko: async d => {
+    const b = $('ball'); let pos = 0
+    b.style.transition = 'none'; b.style.left = '50%'; b.style.top = '0'; await sleep(60)
+    b.style.transition = 'all .25s'
+    for (let i = 0; i < 8; i++) {
+      pos += d.result[i] === '1' ? 1 : -1
+      b.style.left = (50 + pos * 5.5) + '%'; b.style.top = ((i + 1) * 9 + 4) + '%'; sfx.click(); await sleep(290)
+    }
+    b.style.top = '82%'
+  },
+  wheel: async d => {
+    const c = (+d.result - 1) * 36 + 18, w = $('wheel')
+    wheelRot = (Math.floor(wheelRot / 360) + 6) * 360 - c
+    w.style.transition = 'transform 3.2s cubic-bezier(.1,.7,.1,1)'; w.style.transform = `rotate(${wheelRot}deg)`
+    const iv = setInterval(sfx.spin, 250)
+    await sleep(3200); clearInterval(iv)
+  },
+  keno: async d => {
+    document.querySelectorAll('.kc').forEach(b => b.classList.remove('hit', 'drawn'))
+    for (const n of d.result.split(',')) { await sleep(150); sfx.click(); $('k' + n).classList.add(kpicks.includes(+n) ? 'hit' : 'drawn') }
+  },
+  double: async d => {
+    if (!dnS) dnBase = lastBet
+    await sleep(500)
+    if (d.win) { dnS++; $('bet').value = Math.min(d.payout, d.balance); say('✅ ×2') }
+    else { dnS = 0; $('bet').value = dnBase; say('💥 0') }
+    $('dn').textContent = 'Streak: ' + dnS + (d.win ? ' – Einsatz = dein Gewinn, mach weiter!' : '')
+  },
+  allin: async d => { await sleep(900); say(d.win ? '🎉 ×2' : '💀') },
+  hilo: async d => {
+    await sleep(400)
+    say(`<div class="glass rounded-xl px-5 py-3">${RANKS[hiRef - 1]}</div><span class="text-3xl">→</span><div class="glass rounded-xl px-5 py-3 ${d.win ? 'text-emerald-400' : 'text-red-400'}">${RANKS[d.result - 1]}</div>`)
+  },
+  lucky7: async d => {
+    sfx.dice()
+    const [a, b] = d.result.split(' ')
+    const iv = setInterval(() => say(DICE[Math.floor(Math.random() * 6)] + DICE[Math.floor(Math.random() * 6)]), 80)
+    await sleep(800); clearInterval(iv)
+    say(DICE[a - 1] + DICE[b - 1] + `<span class="text-3xl">= ${+a + +b}</span>`)
+  },
+  dragon: async d => { const [a, b] = d.result.split(' '); await sleep(600); say(`🐉 ${RANKS[a - 1]} <span class="text-3xl">vs</span> 🐅 ${RANKS[b - 1]}`) },
+  doors: async d => { const [a] = [d.result]; await sleep(600); say([1, 2, 3].map(i => i == d.result ? '💎' : '💀').join(' ')) },
+  number: async d => { await sleep(600); say(`<span class="${d.win ? 'text-emerald-400' : 'text-red-400'}">${d.result}</span>`) },
+  rps: async d => { await sleep(500); say(`${RP[lastParam]} <span class="text-3xl">vs</span> ${RP[d.result]}`) },
+  baccarat: async d => { const [a, b] = d.result.split(' '); await sleep(600); say(`👤 ${a} <span class="text-3xl">vs</span> 🏦 ${b}`) },
+  sicbo: async d => { sfx.dice(); const x = d.result.split(' '); await sleep(700); say(x.map(n => DICE[n - 1]).join('') + `<span class="text-3xl">= ${x.reduce((t, n) => t + +n, 0)}</span>`) }
+}
+
+async function play(param) {
+  if (busy) return
+  const bet = Math.floor(Number($('bet').value))
+  if (!(bet >= 1)) return msg('Ungültiger Einsatz', 'lose')
+  if (bet > balance) return msg('Nicht genug Coins', 'lose')
+  sfx.bet()
+  busy = true; lastBet = bet; lastParam = param; setBtns(true); msg('')
+  const { data, error } = current === 'plinko' ? await sb.rpc('play_plinko', { bet_amount: bet, risk: plinkoRisk }) : await sb.rpc(current === 'baccarat' || current === 'sicbo' ? 'play_game2' : 'play_game_d', { game_name: current, bet_amount: bet, param })
+  if (error) { msg(error.message, 'lose'); sfx.lose(); busy = false; setBtns(false); return }
+  if (REVEAL[current]) await REVEAL[current](data)
+  setBalance(data.balance)
+  const net = data.payout - bet
+  if (net > 0) sfx.win(); else if (net < 0) sfx.lose(); else sfx.click()
+  msg(net > 0 ? `🎉 +${net.toLocaleString('de-DE')} FC` : net === 0 ? 'Einsatz zurück' : `−${bet - data.payout} FC`, net > 0 ? 'win' : 'lose')
+  HIST.unshift({ g: GAMES[current].icon + ' ' + GAMES[current].name, bet, net }); HIST.length = Math.min(HIST.length, 8); renderHist()
+  busy = false; setBtns(false)
+}
+
+function setBtns(dis) { document.querySelectorAll('.play').forEach(b => b.disabled = dis) }
+function setMode(m) { diceMode = m; sfx.click(); diceInfo() }
+function diceInfo() {
+  const over = diceMode === 'over', ch = over ? 100 - diceTarget : diceTarget - 1
+  $('dice-info').innerHTML = `Würfel ${over ? 'über' : 'unter'} <b class="text-white">${diceTarget}</b> • Chance <b class="text-white">${ch}%</b> • Gewinn <b class="text-emerald-400">${(98 / ch).toFixed(2)}×</b>`
+  $('m-over').classList.toggle('sel', over); $('m-under').classList.toggle('sel', !over)
+}
+
+function show(g) {
+  current = g; busy = false
+  $('title').textContent = GAMES[g].icon + ' ' + GAMES[g].name
+  $('desc').textContent = GAMES[g].desc
+  wheelRot = 0; $('view').innerHTML = VIEWS[g](); msg(''); renderHist(); clearInterval(chatTimer); clearInterval(dTimer); clearInterval(pvpTimer); stopSnake(); stopTetris(); cg_ = null; if (cr) { clearInterval(cr.timer); cr = null }; if (PAGEINIT[g]) PAGEINIT[g]()
+  if (g === 'dice') diceInfo()
+  if (g === 'limbo') updateLimboWinChance()
+  { const gr = NAVGROUPS.find(x => x[2].includes(g)); if (gr) delete navOpen[gr[1]] }
+  if (!GAMES[g].page && g !== 'lobby') sb.rpc('hint_game', { g })
+  renderNav()
+  $('sidebar').classList.add('-translate-x-full')
+}
+
+/* ================= CHAT, EARN, BOARD, COMMUNITY ETC ================= */
+const CHANS = [['global', '🌐 Global'], ['gambling', '🎰 Gambling'], ['games', '🎮 Games'], ['offtopic', '💭 Offtopic'], ['clan', '🏰 Clan']]
+let chatChan = 'global'
+VIEWS.chat = () => `<div class="flex gap-1 flex-wrap mb-3">${CHANS.map(([k, l]) => `<button class="px-3 py-1 rounded-lg text-sm ${k === chatChan ? 'bg-cyan-700' : 'bg-zinc-800'}" onclick="chatChan='${k}';show('chat')">${l}</button>`).join('')}</div>
+  <div id="chatbox" class="h-80 overflow-y-auto space-y-1 mb-3 text-sm"></div>
+  <div class="flex gap-2"><input id="chatin" maxlength="200" placeholder="Nachricht..." class="inp flex-1 min-w-0" onkeydown="if(event.key==='Enter')sendChat()"><button class="btn bg-cyan-600" style="width:auto" onclick="sendChat()">Senden</button></div>`
+PAGEINIT.chat = () => { loadChat(); chatTimer = setInterval(loadChat, 4000) }
+async function loadChat() {
+  const { data, error } = await sb.rpc('chat_list', { chan: chatChan }); const box = $('chatbox'); if (error || !box) return
+  const bottom = box.scrollHeight - box.scrollTop - box.clientHeight < 60
+  box.innerHTML = data.map(m => `<div><b>${nm(m)}:</b> ${esc(m.msg)}${ROLE === 'mod' || ROLE === 'admin' ? ` <button class="text-red-400" onclick="chatDel(${m.id})">✕</button>` : ''}</div>`).join('')
+  if (bottom) box.scrollTop = box.scrollHeight
+}
+async function sendChat() {
+  const i = $('chatin'), m = i.value.trim(); if (!m) return
+  sfx.click()
+  const { error } = await sb.rpc('chat_send', { m, chan: chatChan }); if (error) return toast(error.message)
+  i.value = ''; await loadChat(); $('chatbox').scrollTop = 1e6
+}
+async function chatDel(id) { await sb.rpc('chat_delete', { msg_id: id }); loadChat() }
+
+const nm = u => `<span class="cursor-pointer" data-u="${esc(u.username)}" onclick="showProfile(this.dataset.u)" style="color:${/^#[0-9a-f]{6}$/i.test(u.color) ? u.color : '#fff'}">${esc(u.avatar || '')} ${esc(u.username)}</span>${BADGE[u.role] || ''}${u.title ? ` <i class="text-xs text-zinc-400">${esc(u.title)}</i>` : ''}`
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
+const BADGE = { admin: '🛡️', mod: '🔧', vip: '⭐' }
+
+VIEWS.earn = () => `<div class="grid grid-cols-2 gap-3 mb-5">
+  <div id="dailybox" class="glass rounded-xl p-4 text-center col-span-2">Lade...</div>
+  <button class="btn bg-cyan-600" onclick="claimHourly()">⏰ Stunden-Bonus +50</button></div>
+  <div class="glass rounded-xl p-4 mb-3"><b>👆 Klick-Challenge</b><div class="text-xs text-zinc-400 mb-3">10 Sekunden so oft klicken wie möglich – bis 40 Coins.</div><button id="clickbtn" class="btn bg-emerald-600" onclick="clickGame()">Start</button></div>
+  <div class="glass rounded-xl p-4"><b>⚡ Reaktionstest</b><div class="text-xs text-zinc-400 mb-3">Klick, sobald der Button grün wird – bis 40 Coins.</div><button id="reactbtn" class="btn bg-zinc-700" onclick="reactGame()">Start</button></div>
+  <div id="lvlbox" class="mt-4"></div><div id="missions" class="mt-4"></div>`
+
+async function claimHourly() { const { data, error } = await sb.rpc('claim_hourly'); if (error) return toast(error.message); sfx.claim(); setBalance(data.balance); toast('⏰ +' + data.reward + ' Coins') }
+async function mini(kind, score) { const { data, error } = await sb.rpc('claim_mini', { mini_kind: kind, mini_score: score }); if (error) return toast(error.message); sfx.claim(); setBalance(data.balance); toast('🎉 +' + data.reward + ' Coins') }
+function clickGame() { sfx.click(); const b = $('clickbtn'); if (!cg) { cg = { n: 0 }; b.textContent = 'Klick! 0'; setTimeout(() => { const n = cg.n; cg = null; b.textContent = 'Start'; mini('click', n) }, 10000); return } cg.n++; b.textContent = 'Klick! ' + cg.n }
+function reactGame() { sfx.click(); const b = $('reactbtn'); if (!rg) { b.textContent = 'Warte...'; b.className = 'btn bg-red-700'; rg = { ready: false }; rg.to = setTimeout(() => { rg.ready = true; rg.t = performance.now(); b.textContent = 'JETZT!'; b.className = 'btn bg-green-500' }, 1500 + Math.random() * 2500); return } if (!rg.ready) { clearTimeout(rg.to); rg = null; b.textContent = 'Zu früh! Nochmal'; b.className = 'btn bg-zinc-700'; return } const ms = Math.round(performance.now() - rg.t); rg = null; b.textContent = ms + ' ms – nochmal?'; b.className = 'btn bg-zinc-700'; mini('reaction', ms) }
+
+PAGEINIT.earn = async () => {
+  loadMissions(); loadLevel()
+  const box = $('dailybox'); if (!box) return
+  const { data: d, error: derr } = await sb.rpc('daily_status')
+  if (derr) { box.innerHTML = '⚠️ Daily-Fehler: ' + esc(derr.message); return }
+  if (!d) { box.innerHTML = '<button class="btn bg-yellow-500 text-black" onclick="claimDaily()">🎁 Daily abholen</button>'; return }
+  const t0 = Date.now(), cur = d.streak % 7 || (d.streak ? 7 : 0)
+  const draw = () => {
+    const left = Math.max(0, d.secs_left - Math.floor((Date.now() - t0) / 1000))
+    if (!left && !d.can_claim) { clearInterval(dTimer); return PAGEINIT.earn() }
+    box.innerHTML = `<div class="font-bold mb-2">🎁 Daily Streak: ${d.streak} 🔥</div><div class="flex justify-center gap-1 mb-3">${[1, 2, 3, 4, 5, 6, 7].map(i => `<span class="w-8 h-8 rounded-full flex items-center justify-center text-xs ${i <= cur ? 'bg-emerald-600' : 'bg-zinc-800'}">${i}</span>`).join('')}</div>` +
+      (d.can_claim ? `<button class="btn bg-yellow-500 text-black" onclick="claimDaily()">Abholen +${d.reward} FC</button>` : `<div class="text-zinc-400 text-sm">Nächstes Daily in ${Math.floor(left / 3600)}h ${Math.floor(left % 3600 / 60)}m ${left % 60}s (dann +${d.reward} FC)</div>`)
+  }
+  clearInterval(dTimer); draw(); dTimer = setInterval(draw, 1000)
+}
+
+async function claimDaily() { sfx.click(); const { data, error } = await sb.rpc('claim_daily'); if (error) return toast(error.message); sfx.claim(); setBalance(data.balance); toast('🎁 +' + data.reward + ' Coins • Streak ' + data.streak + ' 🔥'); if (current === 'earn') show('earn') }
+
+/* ---- Leaderboard ---- */
+VIEWS.board = () => '<div id="lb" class="text-zinc-400">Lade...</div>'
+PAGEINIT.board = async () => {
+  const { data, error } = await sb.rpc('leaderboard'); if (error) return $('lb').textContent = error.message
+  const list = (t, a, u) => `<div class="font-bold mb-2 mt-4">${t}</div>` + a.map((x, i) => `<div class="flex justify-between glass rounded-lg px-3 py-2 mb-1"><span>${['🥇', '🥈', '🥉'][i] || (i + 1) + '.'} ${nm(x)}</span><b class="text-emerald-400">${Number(x.balance).toLocaleString('de-DE')} ${u}</b></div>`).join('')
+  $('lb').innerHTML = (await tournamentHtml()) + list('💰 Reichste Spieler', data.rich, 'FC') + list('🎰 Meist gesetzt', data.wager, 'FC')
+}
+
+/* ---- Spieler & Profile ---- */
+VIEWS.players = () => `<div class="glass rounded-xl p-4 mb-4"><b>🎁 Coins verschenken</b>
+  <div class="flex gap-2 mt-2"><input id="gto" placeholder="Username" class="inp flex-1 min-w-0"><input id="gam" type="number" min="1" placeholder="FC" class="inp w-24"><button class="btn bg-pink-600" style="width:auto" onclick="gift()">Senden</button></div>
+  <div class="text-xs text-zinc-500 mt-1">Limit: 5.000 FC pro Tag</div></div>
+  <input id="pq" placeholder="Spieler suchen..." class="inp w-full mb-3" oninput="loadPlayers()"><div id="plist"></div>`
+PAGEINIT.players = () => loadPlayers()
+async function loadPlayers() { const d = await call('players_list', { q: ($('pq') || {}).value || '' }); if (!d || !$('plist')) return; $('plist').innerHTML = d.map(u => `<div class="glass rounded-lg px-3 py-2 mb-1 flex justify-between items-center"><span>${u.online ? '🟢' : '⚪'} ${nm(u)} <span class="text-xs text-zinc-500">Lv ${u.level}</span></span><button class="text-pink-400" data-u="${esc(u.username)}" onclick="$('gto').value=this.dataset.u;$('gam').focus()">🎁</button></div>`).join('') }
+async function gift() { sfx.click(); const d = await call('send_coins', { to_user: $('gto').value.trim(), amount: +$('gam').value }); if (!d) return; sfx.claim(); setBalance(d.balance); toast('🎁 Gesendet!'); $('gam').value = '' }
+async function showProfile(name) {
+  sfx.click()
+  const u = await call('get_profile', { uname: name }); if (!u) return toast('Profil nicht gefunden')
+  clearInterval(chatTimer); $('title').textContent = '🙍 ' + u.username; $('desc').textContent = 'Spielerprofil'; msg('')
+  $('view').innerHTML = `<div class="text-center"><div class="text-7xl mb-2">${esc(u.avatar)}</div><div class="text-2xl font-black" style="color:${/^#[0-9a-f]{6}$/i.test(u.color) ? u.color : '#fff'}">${esc(u.username)} ${BADGE[u.role] || ''}</div>
+    <div class="text-zinc-400 text-sm">${u.clan ? '🛡️ [' + esc(u.clan) + '] · ' : ''}${esc(u.title || 'Spieler')} · Level ${u.level} · ${u.online ? '🟢 online' : '⚪ offline'}</div>
+    <div class="my-4 italic text-zinc-300">${esc(u.bio || 'Keine Bio.')}</div>
+    <div class="grid grid-cols-3 gap-2 text-sm mb-4"><div class="glass rounded-lg p-2">🪙<br><b>${Number(u.balance).toLocaleString('de-DE')}</b></div><div class="glass rounded-lg p-2">🎰 gesetzt<br><b>${Number(u.wagered).toLocaleString('de-DE')}</b></div><div class="glass rounded-lg p-2">🔥 Streak<br><b>${u.streak}</b></div></div>
+    <button class="btn bg-pink-600" data-u="${esc(u.username)}" onclick="show('players');$('gto').value=this.dataset.u">🎁 Coins schenken</button></div>`
+}
+
+/* ---- Shop ---- */
+VIEWS.shop = () => '<div id="shop" class="text-zinc-400">Lade...</div>'
+PAGEINIT.shop = async () => {
+  const cat = await call('shop_catalog', {}); if (!cat || !$('shop')) return
+  const owned = ME.owned || [], eq = { avatar: ME.avatar, color: ME.color, title: ME.title }
+  const sec = (slot, label) => `<div class="flex justify-between items-center mt-5 mb-2"><b>${label}</b><button class="text-xs text-zinc-500" onclick="shopAct('equip','reset_${slot}')">zurücksetzen</button></div><div class="grid grid-cols-2 gap-2">` +
+    cat.filter(i => i.slot === slot).map(i => {
+      const has = owned.includes(i.id), on = eq[slot] === i.v
+      const show_ = slot === 'color' ? `<span style="color:${i.v}">■ ${esc(i.name)}</span>` : esc(i.v)
+      return `<div class="glass rounded-xl p-3 text-center ${on ? 'sel' : ''}"><div class="${slot === 'avatar' ? 'text-3xl' : 'font-bold'} mb-2">${show_}</div>` +
+        (has ? `<button class="btn bg-cyan-700" style="padding:.3rem" onclick="shopAct('equip','${i.id}')">${on ? '✔ Aktiv' : 'Anlegen'}</button>`
+          : i.rare ? `<div class="text-xs text-purple-300 py-1">🔒 ${esc(i.how)}</div>` : `<button class="btn bg-yellow-500 text-black" style="padding:.3rem" onclick="shopAct('shop_buy','${i.id}')">${i.price.toLocaleString('de-DE')} FC</button>`) + '</div>'
+    }).join('') + '</div>'
+  $('shop').innerHTML = `<div class="glass rounded-xl p-4"><b>Bio</b><div class="flex gap-2 mt-2"><input id="bio" maxlength="80" value="${esc(ME.bio || '')}" class="inp flex-1 min-w-0"><button class="btn bg-cyan-600" style="width:auto" onclick="saveBio()">Speichern</button></div></div>` + sec('avatar', '😎 Avatare') + sec('color', '🎨 Namensfarben') + sec('title', '🏷️ Titel')
+}
+async function shopAct(fn, id) { sfx.click(); const d = await call(fn, { item: id }); if (!d) return; sfx.claim(); setBalance(d.balance); await loadProfile(); show('shop') }
+async function saveBio() { const d = await call('set_bio', { t: $('bio').value }); if (d) { ME.bio = $('bio').value; toast('Bio gespeichert') } }
+
+/* ---- Battle Pass & Achievements ---- */
+const BPITEM = { 10: '🔥', 20: '👾', 30: '🏆+Titel' }
+VIEWS.bp = () => '<div id="bpbox" class="text-zinc-400">Lade...</div>'
+PAGEINIT.bp = async () => {
+  const d = await call('bp_info', {}), box = $('bpbox'); if (!d || !box) return
+  const f = n => Number(n).toLocaleString('de-DE'), days = Math.floor(d.secs_left / 86400)
+  const rows = Array.from({ length: 30 }, (_, i) => i + 1).map(t => {
+    const fr = d.free_claimed.includes(t), pr = d.prem_claimed.includes(t), ok = t <= d.tier, it = BPITEM[t] ? ' ' + BPITEM[t] : ''
+    const free = fr ? `<span class="text-zinc-500">✔ ${t * 100}</span>` : ok ? `<button class="btn bg-emerald-700" style="width:auto;padding:.2rem .6rem" onclick="bpClaim(${t},'free')">+${t * 100}</button>` : `<span class="text-zinc-600">${t * 100}</span>`
+    const prem = !d.premium ? '<span class="text-zinc-600">🔒</span>' : pr ? '<span class="text-yellow-500">✔ ⭐</span>' : ok ? `<button class="btn bg-yellow-500 text-black" style="width:auto;padding:.2rem .6rem" onclick="bpClaim(${t},'premium')">⭐ +${t * 200}${it}</button>` : `<span class="text-zinc-600">⭐ ${t * 200}${it}</span>`
+    return `<div class="glass rounded-lg px-3 py-2 mb-1 flex justify-between items-center text-sm ${ok ? '' : 'opacity-60'}"><b>Stufe ${t}</b><span class="flex gap-2 items-center">${free}${prem}</span></div>`
+  }).join('')
+  box.innerHTML = `<div class="glass rounded-xl p-4 mb-3"><div class="font-bold">🎫 Season ${d.season} <span class="text-xs text-zinc-400">(noch ${days} Tage)</span></div>
+    <div class="h-2 rounded bg-zinc-800 my-2"><div class="h-2 rounded bg-cyan-500" style="width:${Math.min(100, (d.xp % 400) / 4)}%"></div></div>
+    <div class="text-xs text-zinc-400">Stufe ${d.tier}/30 · ${f(d.xp)} XP</div>
+    ${d.premium ? '<div class="text-yellow-400 text-sm mt-2">⭐ Premium aktiv</div>' : '<button class="btn bg-yellow-500 text-black mt-3" onclick="bpPremium()">⭐ Premium freischalten (25.000 FC)</button>'}</div>` + rows
+}
+async function bpClaim(t, track) { const d = await call('bp_claim', { btier: t, btrack: track }); if (!d) return; sfx.claim(); setBalance(d.balance); toast('🎫 +' + d.reward + ' FC'); await loadProfile(); PAGEINIT.bp() }
+async function bpPremium() { if (!confirm('Premium für diese Season kaufen (25.000 FC)?')) return; const d = await call('bp_premium', {}); if (d) { sfx.bigwin(); setBalance(d.balance); PAGEINIT.bp() } }
+
+VIEWS.ach = () => '<div id="achbox" class="text-zinc-400">Lade...</div>'
+PAGEINIT.ach = async () => {
+  const d = await call('ach_list', {}), box = $('achbox'); if (!d || !box) return
+  const f = n => Number(n).toLocaleString('de-DE')
+  box.innerHTML = d.map(a => `<div class="glass rounded-xl p-3 mb-2"><div class="flex justify-between text-sm mb-1"><span>🏅 ${esc(a.name)}</span><b class="text-yellow-400">+${f(a.reward)} FC</b></div>
+    <div class="h-2 rounded bg-zinc-800 mb-2"><div class="h-2 rounded bg-emerald-500" style="width:${Math.min(100, a.progress / a.target * 100)}%"></div></div>` +
+    (a.claimed ? '<div class="text-xs text-zinc-500">✔ abgeholt</div>' : a.progress >= a.target ? `<button class="btn bg-emerald-600" style="padding:.3rem" onclick="achClaim('${a.id}')">Belohnung abholen</button>` : `<div class="text-xs text-zinc-500">${f(a.progress)} / ${f(a.target)}</div>`) + '</div>').join('')
+}
+async function achClaim(id) { const d = await call('ach_claim', { aid: id }); if (d) { sfx.claim(); setBalance(d.balance); toast('🏅 +' + d.reward + ' FC'); PAGEINIT.ach() } }
+
+/* ---- Community, Freunde, Feed, Stats ---- */
+VIEWS.community = () => '<div id="comm" class="text-zinc-400">Lade...</div>'
+PAGEINIT.community = () => loadCommunity()
+async function loadCommunity() {
+  const [g, l, c] = await Promise.all([call('goal_info', {}), call('lottery_info', {}), call('clans_list', {})])
+  if (!$('comm')) return; let h = ''
+  if (g) {
+    const pct = Math.min(100, g.total / g.target * 100)
+    h += `<div class="glass rounded-xl p-4 mb-3"><b>🎯 Community-Ziel (heute)</b><div class="h-3 rounded bg-zinc-800 my-2"><div class="h-3 rounded bg-cyan-500" style="width:${pct}%"></div></div><div class="text-xs">${Math.floor(g.total).toLocaleString('de-DE')} / ${g.target.toLocaleString('de-DE')} FC</div></div>`
+  }
+  if (l) {
+    h += `<div class="glass rounded-xl p-4 mb-3"><b>🎟️ Stündliche Lotterie</b><div class="text-2xl font-black text-yellow-400 my-1">Pot: ${Number(l.pot).toLocaleString('de-DE')} FC</div><div class="flex gap-2 mt-2">${[1, 5, 10].map(n => `<button class="btn bg-yellow-500 text-black text-xs" onclick="lotBuy(${n})">${n}× Ticket (${n * l.price})</button>`).join('')}</div></div>`
+  }
+  $('comm').innerHTML = h
+}
+async function lotBuy(n) { const d = await call('lottery_buy', { cnt: n }); if (d) { sfx.bet(); setBalance(d.balance); toast('🎟️ Tickets gekauft!'); loadCommunity() } }
+
+VIEWS.feed = () => '<div id="fbox" class="text-zinc-400">Lade...</div>'
+PAGEINIT.feed = () => { loadFeed(); pvpTimer = setInterval(loadFeed, 10000) }
+async function loadFeed() { const d = await call('activity_feed', {}), b = $('fbox'); if (!d || !b) return; b.innerHTML = d.length ? d.map(x => `<div class="glass rounded-lg px-3 py-2 mb-1 text-sm flex justify-between gap-3"><span>${esc(x.txt)}</span><span class="text-xs text-zinc-500 shrink-0">${new Date(x.ts).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}</span></div>`).join('') : 'Noch nichts passiert.' }
+
+VIEWS.stats = () => '<div id="st" class="text-zinc-400">Lade...</div>'
+PAGEINIT.stats = async () => {
+  const d = await call('stats_me', {}); if (!d || !$('st')) return
+  const f = n => Number(n).toLocaleString('de-DE'), t = d.total, rtp = t.wagered > 0 ? (t.won / t.wagered * 100).toFixed(1) + ' %' : '–'
+  $('st').innerHTML = `<div class="grid grid-cols-2 gap-2 mb-4">${[['🎲 Runden', f(t.plays)], ['💸 Gesetzt', f(t.wagered)], ['💰 Ausgezahlt', f(t.won)], ['📈 Rückzahlung', rtp], ['🏅 Beste Auszahlung', f(t.best)]].map(([a, b]) => `<div class="glass rounded-xl p-3"><div class="text-xs text-zinc-400">${a}</div><div class="text-xl font-black text-white">${b}</div></div>`).join('')}</div>`
+}
+
+VIEWS.friends = () => `<div class="flex gap-2 mb-3"><input id="fadd" placeholder="Username" class="inp flex-1 min-w-0"><button class="btn bg-cyan-600" style="width:auto" onclick="friendAct('friend_request',{uname:$('fadd').value})">Anfrage senden</button></div><div id="flist"></div><div id="dmbox" class="mt-4"></div>`
+PAGEINIT.friends = () => { dmWith = null; loadFriends(); pvpTimer = setInterval(() => { loadFriends(); if (dmWith) loadDm() }, 4000) }
+async function friendAct(fn, args) { const d = await call(fn, args); if (d) { sfx.click(); toast('✔ Erledigt'); loadFriends() } }
+async function loadFriends() {
+  const d = await call('friends_list', {}); if (!d || !$('flist')) return
+  $('flist').innerHTML = (d.friends.length ? d.friends.map(u => `<div class="glass rounded-lg px-3 py-2 mb-1 flex justify-between items-center text-sm"><span>${u.online ? '🟢' : '⚪'} ${nm(u)}</span><button data-u="${esc(u.username)}" onclick="openDm(this.dataset.u)">💬</button></div>`).join('') : '<div class="text-zinc-500 text-sm">Noch keine Freunde hinzugefügt.</div>')
+}
+function openDm(name) { dmWith = name; $('dmbox').innerHTML = `<div class="glass rounded-xl p-3"><div class="font-bold mb-2">💬 ${esc(name)}</div><div id="dmmsgs" class="h-56 overflow-y-auto space-y-1 mb-2 text-sm"></div><div class="flex gap-2"><input id="dmin" class="inp flex-1 min-w-0" placeholder="Nachricht..." onkeydown="if(event.key==='Enter')dmSend()"><button class="btn bg-cyan-600" style="width:auto" onclick="dmSend()">Senden</button></div></div>`; loadDm() }
+async function loadDm() { const d = await call('dm_list', { with_user: dmWith }), b = $('dmmsgs'); if (!d || !b) return; b.innerHTML = d.map(m => `<div class="${m.mine ? 'text-right text-cyan-300' : 'text-zinc-200'}">${esc(m.msg)}</div>`).join(''); b.scrollTop = b.scrollHeight }
+async function dmSend() { const i = $('dmin'), m = i.value.trim(); if (!m) return; sfx.click(); const d = await call('dm_send', { to_user: dmWith, m }); if (d) { i.value = ''; loadDm() } }
+
+/* ---- Schach, Duelle & Mini-Games ---- */
+VIEWS.duel = () => `<div class="glass rounded-xl p-4 mb-3"><b>⚔️ Duell erstellen</b><div class="flex gap-2 mt-2"><select id="dgame" class="inp py-2"><option value="coinflip">🪙 Coinflip</option><option value="dice">🎲 Dice</option></select><input id="dbet" type="number" min="10" value="100" class="inp flex-1 min-w-0"><button class="btn bg-pink-600" style="width:auto" onclick="duelCreate()">Erstellen</button></div></div><div id="dlist"></div>`
+PAGEINIT.duel = () => { loadDuels(); pvpTimer = setInterval(loadDuels, 4000) }
+async function loadDuels() { const d = await call('duel_list', {}); if (!d || !$('dlist')) return; $('dlist').innerHTML = d.open.map(x => `<div class="glass rounded-lg px-3 py-2 mb-1 flex justify-between items-center text-sm"><span>${nm(x)} · ${x.game} · <b class="text-yellow-400">${x.bet} FC</b></span>${x.mine ? '' : `<button class="btn bg-pink-600" style="width:auto;padding:.2rem .6rem" onclick="duelAct('duel_accept',${x.id})">Annehmen</button>`}</div>`).join('') || '<div class="text-zinc-500 text-sm">Keine offenen Duelle.</div>' }
+async function duelCreate() { sfx.bet(); const d = await call('duel_create', { dgame: $('dgame').value, b: Math.floor(+$('dbet').value) }); if (d) { setBalance(d.balance); toast('⚔️ Duell erstellt'); loadDuels() } }
+async function duelAct(fn, id) { sfx.click(); const d = await call(fn, { did: id }); if (!d) return; setBalance(d.balance); if (d.win) sfx.win(); else sfx.lose(); loadDuels() }
+
+VIEWS.chess = () => '<div id="chessbox" class="text-zinc-400">Lade...</div>'
+PAGEINIT.chess = () => chessLobby()
+async function chessLobby() {
+  const d = await call('chess_lobby', {}); if (!d || !$('chessbox')) return
+  $('chessbox').innerHTML = `<div class="glass rounded-xl p-4 mb-3 flex justify-between items-center"><div><b>♟️ Elo: ${d.me.elo}</b></div><button class="btn bg-emerald-600" style="width:auto" onclick="chessNew()">Neue Partie</button></div>` + (d.open.map(g => `<div class="glass rounded-lg px-3 py-2 mb-1 flex justify-between items-center text-sm"><span>${nm(g)}</span><button class="btn bg-cyan-700" style="width:auto;padding:.2rem .6rem" onclick="chessJoin(${g.id})">Annehmen</button></div>`).join('') || '<div class="text-zinc-500 text-sm">Keine Partien offen.</div>')
+}
+async function chessNew() { sfx.click(); const d = await call('chess_create', {}); if (d) toast('Partie erstellt!') }
+async function chessJoin(id) { sfx.click(); const d = await call('chess_join', { gid: id }); if (d) toast('Beigetreten!') }
+
+/* ---- Future Games (Snake, Typing, Trivia, Tetris) ---- */
+VIEWS.snake = () => `<div id="cbar"></div><canvas id="snk" width="300" height="300" class="mx-auto rounded-xl bg-zinc-900 border border-zinc-700 block"></canvas><div class="text-center my-3"><b>Punkte: <span id="snkscore">0</span></b></div><button class="btn bg-emerald-600" onclick="snakeStart()">Start</button><div id="lbox" class="mt-4"></div>`
+PAGEINIT.snake = () => FG('snake')
+let snk = null
+function stopSnake() { if (snk) { clearInterval(snk.timer); document.removeEventListener('keydown', snk.key); snk = null } }
+function snakeStart() {
+  sfx.click(); stopSnake(); const c = $('snk'), x = c.getContext('2d'), N = 15, S = 20; $('snkscore').textContent = 0
+  snk = { body: [[7, 7], [6, 7]], dir: [1, 0], nd: [1, 0], food: [10, 7], score: 0 }
+  const place = () => { do { snk.food = [Math.floor(Math.random() * N), Math.floor(Math.random() * N)] } while (snk.body.some(b => b[0] === snk.food[0] && b[1] === snk.food[1])) }
+  snk.key = e => { const m = { ArrowUp: [0, -1], w: [0, -1], ArrowDown: [0, 1], s: [0, 1], ArrowLeft: [-1, 0], a: [-1, 0], ArrowRight: [1, 0], d: [1, 0] }[e.key]; if (m) snk.nd = m }
+  document.addEventListener('keydown', snk.key)
+  snk.timer = setInterval(() => {
+    snk.dir = snk.nd; const h = [snk.body[0][0] + snk.dir[0], snk.body[0][1] + snk.dir[1]]
+    if (h[0] < 0 || h[1] < 0 || h[0] >= N || h[1] >= N || snk.body.some(b => b[0] === h[0] && b[1] === h[1])) { const sc = snk.score; stopSnake(); sfx.lose(); toast('💥 Game Over: ' + sc); return submitScore('snake', sc) }
+    snk.body.unshift(h)
+    if (h[0] === snk.food[0] && h[1] === snk.food[1]) { sfx.claim(); snk.score++; $('snkscore').textContent = snk.score; place() } else snk.body.pop()
+    x.fillStyle = '#18181b'; x.fillRect(0, 0, 300, 300); x.fillStyle = '#f43f5e'; x.fillRect(snk.food[0] * S + 2, snk.food[1] * S + 2, S - 4, S - 4)
+    x.fillStyle = '#34d399'; snk.body.forEach(b => x.fillRect(b[0] * S + 1, b[1] * S + 1, S - 2, S - 2))
+  }, 110)
+}
+
+VIEWS.typing = () => `<div id="cbar"></div><div id="tprompt" class="glass rounded-xl p-4 mb-3 text-lg leading-relaxed">Drücke Start und tippe den Text so schnell du kannst.</div><input id="tin" class="inp w-full mb-3" disabled oninput="typingInput()"><button class="btn bg-emerald-600" onclick="typingStart()">Start</button><div id="lbox" class="mt-4"></div>`
+PAGEINIT.typing = () => FG('typing')
+const TTEXT = ['Die schnelle braune Katze springt über den faulen Hund und läuft weiter durch den dunklen Wald', 'Wer zuletzt lacht lacht am besten aber wer zuerst tippt gewinnt am Ende das Rennen']
+let ty = null
+function typingRender(v) { $('tprompt').innerHTML = [...ty.t].map((c, k) => `<span style="color:${k >= v.length ? '#a1a1aa' : v[k] === c ? '#34d399' : '#f87171'}">${c}</span>`).join('') }
+function typingStart() { sfx.click(); ty = { t: TTEXT[Math.floor(Math.random() * TTEXT.length)], t0: 0 }; const i = $('tin'); i.value = ''; i.disabled = false; i.focus(); typingRender('') }
+function typingInput() { if (!ty) return; const v = $('tin').value; if (!ty.t0) ty.t0 = Date.now(); sfx.click(); typingRender(v); if (v === ty.t) { const wpm = Math.min(220, Math.round(ty.t.length / 5 / ((Date.now() - ty.t0) / 60000))); $('tin').disabled = true; $('tprompt').innerHTML += `<div class="mt-3 text-xl font-black text-emerald-400">${wpm} WPM</div>`; ty = null; sfx.win(); submitScore('typing', wpm) } }
+
+VIEWS.trivia = () => `<div id="cbar"></div><div id="tvbox" class="glass rounded-xl p-5 mb-3 text-center"><button class="btn bg-emerald-600" onclick="triviaStart()">10 Fragen starten</button></div><div id="lbox"></div>`
+PAGEINIT.trivia = () => FG('trivia')
+const QS = [['Hauptstadt von Australien?', ['Sydney', 'Canberra', 'Melbourne', 'Perth'], 1], ['Wie viele Planeten hat unser Sonnensystem?', ['7', '8', '9', '10'], 1], ['Welches Element hat das Symbol Au?', ['Silber', 'Gold', 'Argon'], 1], ['Was ist 7 × 8?', ['54', '56', '58'], 1]]
+let tv = null
+function triviaStart() { sfx.click(); tv = { q: [...QS], i: 0, s: 0 }; triviaShow() }
+function triviaShow() { const [q, o] = tv.q[tv.i]; $('tvbox').innerHTML = `<div class="text-xs text-zinc-400 mb-2">Frage ${tv.i + 1}/${tv.q.length} · ${tv.s} Punkte</div><div class="text-lg font-bold mb-4">${q}</div>` + o.map((t, k) => `<button class="btn bg-zinc-800 mb-2" onclick="triviaAnswer(${k})">${t}</button>`).join('') }
+function triviaAnswer(k) { const [, o, c] = tv.q[tv.i]; if (k === c) { tv.s++; sfx.win() } else sfx.lose(); tv.i++; if (tv.i < tv.q.length) return triviaShow(); const sc = tv.s; tv = null; $('tvbox').innerHTML = `<div class="text-4xl font-black mb-3">${sc} Punkte 🎉</div><button class="btn bg-emerald-600" onclick="triviaStart()">Nochmal</button>`; submitScore('trivia', sc) }
+
+VIEWS.tetris = () => `<div id="cbar"></div><canvas id="ttc" width="200" height="400" class="mx-auto rounded-xl bg-zinc-900 border border-zinc-700 block"></canvas><div class="text-center my-2"><b>Punkte: <span id="ttscore">0</span></b></div><button class="btn bg-emerald-600" onclick="tetrisStart()">Start</button><div id="lbox" class="mt-4"></div>`
+PAGEINIT.tetris = () => FG('tetris')
+let tt = null
+function stopTetris() { if (tt) { clearInterval(tt.timer); document.removeEventListener('keydown', tt.key); tt = null } }
+function tetrisStart() { sfx.click(); stopTetris(); tt = { score: 0 }; $('ttscore').textContent = 0; toast('Tetris läuft! Pfeiltasten zum Steuern.') }
+
+async function submitScore(game, sc) { const d = await call('submit_score', { sgame: game, sc }); if (d && d.reward) { sfx.claim(); setBalance(d.balance); toast('🎯 +' + d.reward + ' FC') } }
+async function loadScores(g) { const d = await call('scores_top', { sgame: g }), b = $('lbox'); if (d && b) b.innerHTML = '<div class="font-bold mb-2">🏆 Bestenliste</div>' + d.map((x, i) => `<div class="flex justify-between glass rounded-lg px-3 py-2 mb-1 text-sm"><span>${i + 1}. ${nm(x)}</span><b>${x.best}</b></div>`).join('') }
+function FG(g) { loadScores(g) }
+
+function renderHist() {
+  $('hist').innerHTML = HIST.length ? '<div class="text-xs text-zinc-500 mb-1">Letzte Spiele</div>' + HIST.map(h => `<div class="glass rounded-lg px-3 py-2 flex justify-between"><span>${h.g}</span><span class="text-zinc-400">${h.bet} FC</span><b class="${h.net > 0 ? 'text-emerald-400' : h.net < 0 ? 'text-red-400' : 'text-zinc-400'}">${h.net > 0 ? '+' : ''}${h.net}</b></div>`).join('') : ''
+}
+async function delMe() { if (!confirm('Account endgültig löschen?') || !confirm('Wirklich sicher?')) return; const { error } = await sb.rpc('delete_me'); if (error) return toast(error.message); logout() }
+async function loadMissions() { const d = await call('missions_list', {}); if (d && $('missions')) $('missions').innerHTML = '<div class="font-bold mb-2">📋 Tagesmissionen</div>' + d.map(m => `<div class="glass rounded-xl p-3 mb-2 flex justify-between text-sm"><span>${m.label}</span><b class="text-yellow-400">+${m.reward} FC</b></div>`).join('') }
+async function loadLevel() { const d = await call('level_info', {}); if (d && $('lvlbox')) $('lvlbox').innerHTML = `<div class="glass rounded-xl p-3 flex justify-between items-center"><div><b>⭐ Level ${d.level}</b></div>${d.reward > 0 ? `<button class="btn bg-yellow-500 text-black text-xs" style="width:auto" onclick="claimLevel()">+${d.reward} FC</button>` : ''}</div>` }
+async function claimLevel() { const d = await call('level_claim', {}); if (d) { sfx.claim(); setBalance(d.balance); toast('⭐ +' + d.reward + ' FC'); loadLevel() } }
+async function tournamentHtml() { const t = await call('tournament_board', {}); if (!t) return ''; return `<div class="glass rounded-xl p-4 mb-2"><div class="font-bold">🏆 Wochenturnier</div><div class="text-xs text-zinc-400">1. Platz: 5.000 FC</div></div>` }
+async function admRain() { const t = Number(prompt('Gesamtsumme für alle Spieler (FC):')); if (t > 0) { const d = await call('admin_rain', { total: t }); if (d) toast('🌧️ ' + d.each + ' FC an ' + d.count + ' Spieler') } }
+async function admPayWeek() { const d = await call('admin_pay_week', {}); if (d) toast('🏆 Gewinner bezahlt') }
+
+/* ---------- Auth ---------- */
+const fakeEmail = u => u.toLowerCase().replace(/[^a-z0-9]/g, '') + '@future.community'
+$('registerBtn').addEventListener('click', async () => {
+  sfx.click()
+  setStatus('Registrierung läuft...')
+  const username = $('username').value.trim(), password = $('password').value
+  if (username.length < 3) return setStatus('Username muss min. 3 Zeichen haben', 'error')
+  if (password.length < 6) return setStatus('Passwort muss min. 6 Zeichen haben', 'error')
+  const { error } = await sb.auth.signUp({ email: fakeEmail(username), password, options: { data: { username } } })
+  if (error) { sfx.lose(); setStatus('Fehler: ' + error.message, 'error') } else { sfx.claim(); setStatus('Account erstellt! Jetzt einloggen.', 'success') }
+})
+$('loginBtn').addEventListener('click', async () => {
+  sfx.click()
+  setStatus('Login läuft...')
+  const username = $('username').value.trim(), password = $('password').value
+  if (!username || !password) return setStatus('Bitte Username und Passwort eingeben', 'error')
+  const { error } = await sb.auth.signInWithPassword({ email: fakeEmail(username), password })
+  if (error) { sfx.lose(); setStatus('Login fehlgeschlagen: ' + error.message, 'error') }
+})
+async function logout() { sfx.click(); await sb.auth.signOut(); location.reload() }
+
+sb.auth.onAuthStateChange((event, session) => {
+  if (!session) return
+  $('auth-screen').style.display = 'none'
+  $('app').classList.remove('hidden')
+  setTimeout(() => { if (!$('view').innerHTML) show(current); loadProfile() }, 0)
+})
+</script>
+</body>
+</html>
