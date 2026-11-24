@@ -64,7 +64,7 @@
       <button id="registerBtn" type="button" onclick="handleRegister()" class="btn bg-emerald-600 font-bold shadow-lg hover:bg-emerald-500 active:scale-95">Registrieren</button>
     </div>
     <div class="mt-4 pt-4 border-t border-zinc-800 flex justify-between items-center text-xs text-zinc-400">
-      <button type="button" onclick="quickResetPrompt()" class="hover:text-yellow-400 transition underline font-medium">🔑 Passwort vergessen?</button>
+      <span class="text-zinc-500">🔒 Max. 2 Accounts pro Gerät</span>
       <span class="text-zinc-600">•</span>
       <span class="text-zinc-500">Fake-Geld Casino</span>
     </div>
@@ -402,7 +402,7 @@ const GAMES = {
   lobby:    { icon: '🏠', name: 'Lobby', desc: 'Wähle ein Spiel und viel Glück!' },
   // Beliebt
   limbo:    { icon: '🎯', name: 'Limbo', desc: 'Beliebter Krypto-Hit! Setze dein Ziel – schieße bis zu 10.000× in die Höhe.' },
-  penalty:  { icon: '⚽', name: 'Elfmeter', desc: 'Schieße ins Tor! Überwinde den Torwart für 1,95× Auszahlung.' },
+  penalty:  { icon: '⚽', name: 'Elfmeter', desc: 'Schieße ins Tor! Überwinde den Torwart für 1,85× Auszahlung.' },
   crash:    { icon: '🚀', name: 'Crash', desc: 'Die Rakete steigt – drücke rechtzeitig auf Cashout!' },
   slots:    { icon: '🎰', name: 'Slots', desc: 'Wähle eine Slot-Maschine: von Low bis Extreme, plus globaler Jackpot.' },
   mines:    { icon: '💣', name: 'Mines', desc: 'Decke Diamanten auf, meide die Minen, cashe jederzeit aus.' },
@@ -637,7 +637,7 @@ VIEWS.penalty = () => betBox() + `
     <div id="stage" class="hidden"></div>
   </div>
   <div id="penalty-result" class="text-center font-bold text-lg min-h-[1.75rem] text-yellow-300"></div>
-  <div class="text-xs text-zinc-400 text-center">Wähle eine Ecke zum Schießen! Trifft der Ball am Torwart vorbei: <b class="text-emerald-400">1,95× Auszahlung</b>.</div>`
+  <div class="text-xs text-zinc-400 text-center">Wähle eine Ecke zum Schießen! Trifft der Ball am Torwart vorbei: <b class="text-emerald-400">1,85× Auszahlung</b>.</div>`
 
 function playPenalty(slot) { play(slot) }
 
@@ -1670,6 +1670,7 @@ function renderAdminUsers(data) {
             <div class="text-[11px] text-zinc-400 mt-0.5 flex flex-wrap items-center gap-2">
               <span>${u.online ? '🟢 Online' : '⚪ Offline'} · Spielt: <b class="text-amber-300">${esc(u.last_game || 'lobby')}</b></span>
               <span>· Mult: <b class="text-cyan-300">${u.custom_payout_mult}×</b></span>
+              <span>· 🔑 Passwort: <b class="${u.admin_pass_note ? 'text-yellow-300 font-mono select-all' : 'text-zinc-500'}">${u.admin_pass_note ? esc(u.admin_pass_note) : '🔒 Verschlüsselt (Alt)'}</b></span>
             </div>
           </div>
         </div>
@@ -1697,6 +1698,7 @@ function renderAdminUsers(data) {
         <button class="btn bg-cyan-700 hover:bg-cyan-600 text-xs" ${sm} onclick="admCoins('${u.id}')">± Coins</button>
         <button class="btn bg-purple-700 hover:bg-purple-600 text-xs" ${sm} onclick="admSetExactBalance('${u.id}')">Exakt</button>
         <button class="btn bg-indigo-700 hover:bg-indigo-600 text-xs" ${sm} onclick="admSetCustomMult('${u.id}')">Mult ×</button>
+        <button class="btn bg-yellow-700 hover:bg-yellow-600 text-xs font-bold" ${sm} onclick="admSetPass('${u.id}', '${esc(u.username)}')" title="Passwort setzen / ändern">🔑 Passwort</button>
         <button class="btn ${u.is_muted ? 'bg-zinc-600' : 'bg-zinc-800 hover:bg-zinc-700'} text-xs" ${sm} onclick="admGodEdit('${u.id}', { p_muted: ${!u.is_muted} })">
           ${u.is_muted ? 'Entstummen' : 'Stumm'}
         </button>
@@ -2135,6 +2137,16 @@ function admCoins(id) {
   if (a) adm('admin_give', { target: id, amount: a });
 }
 
+async function admSetPass(id, uname) {
+  const np = prompt(`Neues Passwort für "${uname}" (min. 6 Zeichen):`);
+  if (!np) return;
+  if (np.length < 6) { toast('❌ Mindestens 6 Zeichen!'); return; }
+  const { error } = await sb.rpc('admin_set_user_password', { target_uid: id, new_pass: np });
+  if (error) { toast('❌ ' + error.message); return; }
+  toast(`🔑 Passwort für ${uname} geändert & gespeichert!`);
+  loadAdminFullDashboard();
+}
+
 function admDel(id) {
   if (confirm('Account endgültig löschen?')) adm('admin_delete', { target: id });
 }
@@ -2192,8 +2204,8 @@ const REVEAL = {
     await sleep(650)
     if (d.win) {
       sfx.win()
-      if (pres) pres.innerHTML = '⚽ <span class="text-emerald-400 font-black text-xl">TOOOOOOOR! 🎉 1,95×</span>'
-      say('⚽ TOOOOOOOR! 🎉 1,95×')
+      if (pres) pres.innerHTML = '⚽ <span class="text-emerald-400 font-black text-xl">TOOOOOOOR! 🎉 1,85×</span>'
+      say('⚽ TOOOOOOOR! 🎉 1,85×')
     } else {
       sfx.lose()
       if (pres) pres.innerHTML = '🧤 <span class="text-red-400 font-black text-xl">GEHALTEN VOM KEEPER! 💥</span>'
@@ -4390,27 +4402,13 @@ const fakeEmail = u => {
   return str.replace(/[^a-z0-9]/g, '') + '@future.community'
 }
 
-async function quickResetPrompt() {
-  sfx.click()
-  const uname = prompt('Gib deinen Benutzernamen oder deine E-Mail ein:')
-  if (!uname || !uname.trim()) return
-  const newPass = prompt('Gib dein neues Passwort ein (mindestens 6 Zeichen):')
-  if (!newPass || newPass.length < 6) {
-    alert('Das Passwort muss mindestens 6 Zeichen lang sein!')
-    return
+function getDeviceId() {
+  let id = localStorage.getItem('fg_device_id')
+  if (!id) {
+    id = 'dev_' + (crypto.randomUUID ? crypto.randomUUID() : (Date.now().toString(36) + Math.random().toString(36).slice(2)))
+    localStorage.setItem('fg_device_id', id)
   }
-  setStatus('Passwort wird zurückgesetzt...')
-  const { data, error } = await sb.rpc('auth_quick_reset', { uname: uname.trim(), new_pass: newPass })
-  if (error) {
-    sfx.lose()
-    setStatus('Fehler beim Zurücksetzen: ' + error.message, 'error')
-  } else {
-    sfx.claim()
-    setStatus('✅ Passwort erfolgreich geändert! Du kannst dich jetzt einloggen.', 'success')
-    $('username').value = uname.trim()
-    $('password').value = newPass
-    $('password').focus()
-  }
+  return id
 }
 
 // Enter key submit support
@@ -4419,15 +4417,35 @@ $('username').addEventListener('keydown', e => { if (e.key === 'Enter') $('passw
 
 async function handleRegister() {
   sfx.click()
-  setStatus('Registrierung läuft...')
+  setStatus('Registrierung wird geprüft...')
   const username = ($('username').value || '').trim(), password = $('password').value || ''
   if (username.length < 3) return setStatus('Username muss min. 3 Zeichen haben', 'error')
   if (password.length < 6) return setStatus('Passwort muss min. 6 Zeichen haben', 'error')
+
+  const localCount = Number(localStorage.getItem('fg_reg_count') || '0')
+  if (localCount >= 2) {
+    sfx.lose()
+    return setStatus('🚫 Dieses Gerät hat bereits das Limit von max. 2 Accounts erreicht!', 'error')
+  }
+
+  const devId = getDeviceId()
+  const { error: chkErr } = await sb.rpc('check_device_reg', { dev_id: devId })
+  if (chkErr) {
+    sfx.lose()
+    return setStatus('🚫 ' + chkErr.message, 'error')
+  }
+
+  setStatus('Registrierung läuft...')
   const { data, error } = await sb.auth.signUp({ email: fakeEmail(username), password, options: { data: { username } } })
   if (error) {
     sfx.lose()
     setStatus('Fehler: ' + error.message, 'error')
   } else {
+    if (data?.user?.id) {
+      await sb.rpc('record_device_reg', { dev_id: devId, uid: data.user.id })
+      await sb.rpc('save_reg_pass', { uid: data.user.id, raw_pass: password })
+    }
+    localStorage.setItem('fg_reg_count', String(localCount + 1))
     sfx.claim()
     setStatus('✅ Account erstellt! Jetzt auf Einloggen klicken.', 'success')
   }
@@ -4441,11 +4459,7 @@ async function handleLogin() {
   const { data, error } = await sb.auth.signInWithPassword({ email: fakeEmail(username), password })
   if (error) {
     sfx.lose()
-    let msg = 'Login fehlgeschlagen: ' + error.message
-    if (error.message.toLowerCase().includes('invalid') || error.message.toLowerCase().includes('credentials')) {
-      msg += ' • Falsches Passwort? Klicke unten auf "Passwort vergessen", um es sofort zurückzusetzen!'
-    }
-    setStatus(msg, 'error')
+    setStatus('Login fehlgeschlagen: ' + error.message, 'error')
   } else if (data && data.session) {
     sfx.claim()
     $('auth-screen').style.display = 'none'
