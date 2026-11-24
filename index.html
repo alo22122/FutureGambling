@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://gxxblyzjxsagwmgjvhyu.supabase.co wss://gxxblyzjxsagwmgjvhyu.supabase.co data: blob:;">
 <title>Future Gambling - NextGen Gaming</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
@@ -430,7 +431,7 @@ const GAMES = {
   rps:      { icon: '✊', name: 'Schere Stein Papier', desc: 'Sieg 2,4×, Unentschieden gibt 0,5× zurück.' },
   bomb:     { icon: '💣', name: 'Bomben-Entschärfer', desc: 'Schneide den richtigen von 3 Drähten durch für 2,75×!' },
   darts:    { icon: '🎯', name: 'Dart-Meister', desc: 'Wirf auf die Scheibe! Bullseye gibt fette 12×!' },
-  horses:   { icon: '🏇', name: 'Pferderennen', desc: 'Wette auf deinen Favoriten (2,2× bis 12×)!' },
+  horses:   { icon: '🏇', name: 'Pferderennen', desc: 'Wette auf deinen Favoriten (1,9× bis 7,5×)!' },
   cases:    { icon: '📦', name: 'Kisten Öffnen', desc: 'CS:GO-Style Case Opening! Zieh seltene Items bis 50× Jackpot.', page: true },
   crypto:   { icon: '📈', name: 'Krypto-Börse', desc: 'Live Kerzenchart! Trade mit 2× bis 50× Hebel Long oder Short.', page: true },
   luxury:    { icon: '🏎️', name: 'VIP Luxus-Shop', desc: 'Kaufe Sportwagen, Villen & Jets als Trophäen für dein Profil.', page: true },
@@ -438,7 +439,7 @@ const GAMES = {
   raffle:    { icon: '🎟️', name: 'Admin-Verlosung', desc: 'Kaufe Lose für den Mega-Jackpot! Der Admin lost den Sieger live aus.', page: true },
   royale:    { icon: '⚡', name: 'Last Man Standing', desc: 'Squid-Game Battle-Royale! 1.000 FC Einsatz, 30% fliegen pro Runde raus.', page: true },
   prophet:   { icon: '🧠', name: 'Admin-Prophet', desc: 'Wette mit JA oder NEIN auf Live-Events des Admins!', page: true },
-  deal:      { icon: '💼', name: 'Deal or No Deal', desc: '12 Koffer bis 25×! Nimmst du das Banker-Angebot an?', page: true },
+  deal:      { icon: '💼', name: 'Deal or No Deal', desc: '12 Koffer bis 2,5×! Nimmst du das Banker-Angebot an?', page: true },
   votes:     { icon: '🗳️', name: 'Abstimmungen & Ideen', desc: 'Schlage neue Features vor und stimme für die besten Ideen ab!', page: true },
   forbes:    { icon: '📜', name: 'Forbes Top 10', desc: 'Reichen- & Luxus-Pranger: Gesamtwert aus Coins + Autos + Villen + Jets!', page: true },
   hof:       { icon: '🏛️', name: 'Hall of Fame', desc: 'Casino-Weltrekorde! Höchste Einzelsiege, Crash-Rekorde & längste Streaks.', page: true },
@@ -3718,7 +3719,7 @@ REVEAL.darts = async d => {
 let chosenHorse = 1
 VIEWS.horses = () => betBox() + `
   <div class="glass rounded-2xl p-4 mb-3 space-y-2 border border-zinc-800">
-    ${[[1,'🐎 Blitzpfeil','2,2×'],[2,'🦄 Sternenstaub','3,5×'],[3,'🦓 Schattenläufer','6,0×'],[4,'🐉 Goldhengst','12,0×']].map(([id,nm,od])=>`
+    ${[[1,'🐎 Blitzpfeil','1,9×'],[2,'🦄 Sternenstaub','2,8×'],[3,'🦓 Schattenläufer','4,0×'],[4,'🐉 Goldhengst','7,5×']].map(([id,nm,od])=>`
       <div onclick="chosenHorse=${id};document.querySelectorAll('.hrow').forEach(x=>x.classList.remove('border-yellow-400'));this.classList.add('border-yellow-400')" class="hrow cursor-pointer rounded-xl p-2 bg-zinc-900 border-2 ${chosenHorse===id?'border-yellow-400':'border-zinc-800'}">
         <div class="flex justify-between text-xs font-bold mb-1"><span>${nm}</span><span class="text-yellow-400">${od}</span></div>
         <div class="h-2 rounded bg-zinc-800 overflow-hidden"><div id="hbar_${id}" class="h-full bg-emerald-500 transition-all duration-150" style="width:5%"></div></div>
