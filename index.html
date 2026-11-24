@@ -501,7 +501,7 @@ async function loadProfile() {
     hb = setInterval(async () => {
       const { data } = await sb.rpc('poll_troll')
       if (data) {
-        if (data.troll) triggerClientTroll(data.troll, data.msg)
+        if (data.troll) triggerClientTroll(data.troll, data.msg, data.no_prank)
         updateLiveDropBanner(data.drop)
         updateLiveQuizBanner(data.quiz)
         updateLockdownState(data.lockdown, data.lockdown_reason)
@@ -2725,6 +2725,16 @@ function renderAdminTrollTab(c) {
         </div>
       </div>
 
+      <div class="p-3 rounded-xl bg-zinc-900/90 border border-pink-500/40 mb-4 flex flex-wrap items-center justify-between gap-2">
+        <div class="text-xs">
+          <b class="text-pink-300">😈 Ernst-Modus (Kein "Nur ein Prank!" anzeigen):</b>
+          <span class="text-zinc-400 ml-1">Wenn AN, wird die Prank-Auflösung komplett versteckt!</span>
+        </div>
+        <label class="flex items-center gap-2 cursor-pointer text-xs font-black">
+          <input id="troll_no_prank" type="checkbox" onchange="trollNoPrank=this.checked" class="w-4 h-4 accent-pink-500">
+          <span class="text-rose-400">Prank-Text verstecken</span>
+        </label>
+      </div>
       <div class="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">Einzel-Trolls (für ausgewählten Spieler):</div>
       <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-5">
         <button onclick="fireSelectedTroll('shake')" class="btn bg-zinc-800 hover:bg-pink-700 text-xs py-2.5 border border-zinc-700">📳 Screen Shake</button>
@@ -2746,6 +2756,11 @@ function renderAdminTrollTab(c) {
         <button onclick="fireSelectedTroll('tiny')" class="btn bg-zinc-800 hover:bg-cyan-600 text-xs py-2.5 border border-zinc-700">🐭 Winzig-Modus (10s)</button>
         <button onclick="fireSelectedTroll('sound_spam')" class="btn bg-zinc-800 hover:bg-orange-600 text-xs py-2.5 border border-zinc-700">🔊 Sound-Spam</button>
         <button onclick="fireSelectedTroll('freeze')" class="btn bg-zinc-800 hover:bg-rose-800 text-xs py-2.5 border border-zinc-700">🛑 Freeze (6s)</button>
+        <button onclick="fireSelectedTroll('bsod')" class="btn bg-blue-900/80 hover:bg-blue-700 text-xs py-2.5 border border-blue-500">💀 Bluescreen (10s)</button>
+        <button onclick="fireSelectedTroll('hacked')" class="btn bg-emerald-950 hover:bg-emerald-800 text-xs py-2.5 border border-emerald-500 text-emerald-300">👾 Hacked Terminal</button>
+        <button onclick="fireSelectedTroll('blur')" class="btn bg-zinc-800 hover:bg-cyan-800 text-xs py-2.5 border border-zinc-700">😵 Blind-Blur (10s)</button>
+        <button onclick="fireSelectedTroll('invert')" class="btn bg-zinc-800 hover:bg-purple-800 text-xs py-2.5 border border-zinc-700">🌗 Negativ-Farben</button>
+        <button onclick="fireSelectedTroll('earthquake')" class="btn bg-red-950 hover:bg-red-800 text-xs py-2.5 border border-red-600">🌋 Mega-Erdbeben</button>
       </div>
 
       <div class="p-4 rounded-xl bg-indigo-950/30 border border-indigo-500/40 mb-4">
@@ -2779,13 +2794,14 @@ function renderAdminTrollTab(c) {
   `
 }
 
+let trollNoPrank = false
 async function fireSelectedTroll(type) {
   const uid = ($('troll_target') || {}).value
   if (!uid) return toast('Kein Spieler gewählt')
   const msg = ($('troll_msg_in') || {}).value || ''
   if (type === 'custom_msg' && !msg.trim()) return toast('Bitte zuerst eine Nachricht eingeben!')
   sfx.click()
-  const d = await call('admin_troll_player', { target_id: uid, troll_type: type, custom_msg: msg || null })
+  const d = await call('admin_troll_player', { target_id: uid, troll_type: type, custom_msg: msg || null, no_prank: trollNoPrank })
   if (d) toast('🤡 Troll "' + type + '" abgeschickt!')
 }
 
@@ -2793,7 +2809,7 @@ async function fireAllTroll(type) {
   if (!confirm('Wirklich ALLE Online-Spieler mit "' + type + '" trollen?')) return
   sfx.click()
   const msg = ($('troll_msg_in') || {}).value || ''
-  const d = await call('admin_troll_all', { troll_type: type, custom_msg: msg || null })
+  const d = await call('admin_troll_all', { troll_type: type, custom_msg: msg || null, no_prank: trollNoPrank })
   if (d) toast('☢️ Chaos an ' + d.count + ' Online-Spieler gesendet!')
 }
 
@@ -2816,57 +2832,133 @@ async function admTroll(uid, type, uname) {
   if (d) toast('🕵️ Troll "' + type + '" an ' + uname + ' gesendet!')
 }
 
-function triggerClientTroll(type, customMsg) {
+function triggerClientTroll(type, customMsg, noPrank = false) {
   const appEl = $('app') || document.body
+  const root = document.documentElement
   if (type === 'shake') {
     sfx.lose()
     toast('😵 ERDBEBEN IM CASINO!')
     appEl.classList.add('shake')
-    setTimeout(() => appEl.classList.remove('shake'), 2800)
+    setTimeout(() => appEl.classList.remove('shake'), 3000)
+  } else if (type === 'earthquake') {
+    sfx.jackpot()
+    toast('🌋 MEGA-ERDBEBEN!')
+    appEl.classList.add('mega-quake')
+    setTimeout(() => appEl.classList.remove('mega-quake'), 5000)
   } else if (type === 'upside_down') {
     sfx.whistle()
     toast('🙃 Alles steht Kopf!')
-    document.body.classList.add('upside-down')
-    setTimeout(() => document.body.classList.remove('upside-down'), 10000)
+    appEl.classList.add('upside-down')
+    setTimeout(() => appEl.classList.remove('upside-down'), 10000)
+  } else if (type === 'mirror') {
+    sfx.whistle(); toast('🪞 Spiegelverkehrte Welt (10s)!')
+    appEl.classList.add('mirror-mode')
+    setTimeout(() => appEl.classList.remove('mirror-mode'), 10000)
   } else if (type === 'glitch_disco') {
-    sfx.jackpot()
-    toast('🌈 MATRIX DISCO MODUS!')
-    document.body.classList.add('disco-glitch')
-    setTimeout(() => document.body.classList.remove('disco-glitch'), 8000)
+    sfx.jackpot(); toast('🌈 MATRIX DISCO MODUS!')
+    root.classList.add('disco-glitch')
+    setTimeout(() => root.classList.remove('disco-glitch'), 8000)
+  } else if (type === 'blur') {
+    sfx.whistle(); toast('😵 Wo ist meine Brille?!')
+    appEl.classList.add('blur-blind')
+    setTimeout(() => appEl.classList.remove('blur-blind'), 10000)
+  } else if (type === 'invert') {
+    sfx.whistle(); toast('🌗 Negativ-Dimension!')
+    root.classList.add('invert-mode')
+    setTimeout(() => root.classList.remove('invert-mode'), 10000)
+  } else if (type === 'comic') {
+    sfx.click(); toast('🔠 COMIC SANS MODUS AKTIVIERT!')
+    document.body.classList.add('comic-mode')
+    setTimeout(() => document.body.classList.remove('comic-mode'), 12000)
+  } else if (type === 'spin') {
+    sfx.whistle(); toast('🌀 SCHWINDEL-ANFALL!')
+    appEl.classList.add('spin-dizzy')
+    setTimeout(() => appEl.classList.remove('spin-dizzy'), 4500)
+  } else if (type === 'tiny') {
+    sfx.whistle(); toast('🐭 Geschrumpft!')
+    appEl.classList.add('tiny-mode')
+    setTimeout(() => appEl.classList.remove('tiny-mode'), 10000)
   } else if (type === 'siren') {
-    sfx.jackpot()
-    toast('🚨 CASINO ALARM! ACHTUNG!')
+    sfx.jackpot(); toast('🚨 CASINO ALARM! ACHTUNG!')
     const ov = document.createElement('div')
-    ov.style.cssText = 'position:fixed;inset:0;z-index:95;pointer-events:none;background:rgba(239,68,68,0.28);animation:glow 0.3s infinite alternate'
+    ov.style.cssText = 'position:fixed;inset:0;z-index:180;pointer-events:none;animation:sirenFlash 0.35s infinite'
     document.body.appendChild(ov)
-    setTimeout(() => ov.remove(), 3500)
+    setTimeout(() => ov.remove(), 4500)
+  } else if (type === 'strobe') {
+    sfx.jackpot()
+    const st = document.createElement('div')
+    st.style.cssText = 'position:fixed;inset:0;z-index:180;pointer-events:none;background:#fff;animation:strobeFlash 0.14s infinite'
+    document.body.appendChild(st); setTimeout(() => st.remove(), 3500)
+  } else if (type === 'lag') {
+    sfx.lose(); toast('🐌 Verbindung hängt...')
+    appEl.style.pointerEvents = 'none'; appEl.style.opacity = '0.45'
+    setTimeout(() => { appEl.style.pointerEvents = ''; appEl.style.opacity = '1'; if (!noPrank) toast('Verbindung wiederhergestellt!') }, 4500)
   } else if (type === 'fake_bankrupt') {
     sfx.lose()
     const real = balance
     if ($('balance')) $('balance').textContent = '0'
     if ($('balance2')) $('balance2').textContent = '0'
     toast('💸 DEIN KONTO WURDE GEPLÜNDERT! (0 FC)')
-    setTimeout(() => { setBalance(real); sfx.claim(); toast('😂 Nur Spaß! Deine Coins sind sicher.') }, 5000)
+    setTimeout(() => { setBalance(real); if (!noPrank) { sfx.claim(); toast('😂 Nur Spaß! Deine Coins sind sicher.') } }, 6000)
+  } else if (type === 'tax') {
+    sfx.lose(); const real = balance; const half = Math.floor(real * 0.5)
+    if ($('balance')) $('balance').textContent = half.toLocaleString('de-DE')
+    if ($('balance2')) $('balance2').textContent = half.toLocaleString('de-DE')
+    toast('💸 FINANZAMT: 50% Casino-Steuer abgezogen!')
+    setTimeout(() => { setBalance(real); if (!noPrank) { sfx.claim(); toast('😂 Nur ein Steuer-Prank!') } }, 6000)
+  } else if (type === 'fake_loss') {
+    sfx.lose()
+    toast(noPrank ? '📉 SYSTEM-ABZUG: -500.000 FC wurden abgebucht!' : '📉 FEHLER: -500.000 FC wurden abgezogen! (Prank 😂)')
+  } else if (type === 'ghost') {
+    sfx.jackpot()
+    const g = document.createElement('div')
+    g.style.cssText = 'position:fixed;inset:0;z-index:220;background:rgba(0,0,0,0.96);display:flex;align-items:center;justify-content:center;font-size:13rem;animation:pop .2s'
+    g.textContent = '👻'
+    document.body.appendChild(g)
+    setTimeout(() => g.remove(), 1800)
+  } else if (type === 'sound_spam') {
+    [0, 250, 500, 750, 1000, 1250].forEach(ms => setTimeout(() => { sfx.whistle(); sfx.bigwin() }, ms))
+    toast('🔊 LAUTSTÄRKE TEST!')
+  } else if (type === 'freeze') {
+    sfx.lose()
+    const fr = document.createElement('div')
+    fr.style.cssText = 'position:fixed;inset:0;z-index:210;background:rgba(0,0,0,0.88);display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:900;color:#f87171'
+    fr.textContent = '🔒 SITZUNG GESPERRT (6 Sekunden)...'
+    document.body.appendChild(fr); setTimeout(() => fr.remove(), 6000)
+  } else if (type === 'bsod') {
+    sfx.lose()
+    const bs = document.createElement('div')
+    bs.style.cssText = 'position:fixed;inset:0;z-index:250;background:#0078d7;color:#fff;padding:10% 12%;font-family:Segoe UI,sans-serif;display:flex;flex-direction:column;justify-content:center'
+    bs.innerHTML = '<div style="font-size:6rem;line-height:1;margin-bottom:1.5rem">:(</div><div style="font-size:1.6rem;margin-bottom:1rem">Auf dem PC ist ein Problem aufgetreten. Er muss neu gestartet werden.</div><div style="font-size:1.2rem;opacity:.9">Stillstandcode: CASINO_CRITICAL_OVERLOAD</div><div style="font-size:1rem;margin-top:2rem;opacity:.8">23% abgeschlossen</div>'
+    document.body.appendChild(bs); setTimeout(() => bs.remove(), 9000)
+  } else if (type === 'hacked') {
+    sfx.jackpot()
+    const hk = document.createElement('div')
+    hk.style.cssText = 'position:fixed;inset:0;z-index:250;background:#020b02;color:#22c55e;padding:2rem;font-family:monospace;font-size:1rem;overflow:hidden'
+    hk.innerHTML = '<div class="text-2xl font-black text-red-500 mb-3 animate-pulse">⚠️ SYSTEM COMPROMISED - ROOT ACCESS GRANTED</div><div>&gt; Connecting to user wallet... OK</div><div>&gt; Bypassing 2FA... OK</div><div>&gt; Transferring all FutureCoins (FC) to offshore server...</div><div class="mt-3 text-yellow-400 font-bold">PROGRESS: [██████████████░░░░] 84%</div>'
+    document.body.appendChild(hk); setTimeout(() => hk.remove(), 7500)
   } else if (type === 'fake_ban') {
     const m = $('troll-jp-modal')
     if (!m) return
     $('troll-jp-icon').textContent = '🔒'
     $('troll-jp-title').textContent = 'ACCOUNT GESPERRT!'
-    $('troll-jp-amount').textContent = 'ZU VIEL GLÜCK'
+    $('troll-jp-amount').textContent = 'VERSTOSS ERKANNT'
     $('troll-jp-amount').className = 'text-2xl font-black text-red-500 mb-3'
-    $('troll-jp-sub').textContent = 'Verbindung zum Server wird getrennt...'
+    $('troll-jp-sub').textContent = 'Dein Konto wurde wegen Regelverstoß gesperrt. Kontaktiere einen Admin.'
     $('troll-jp-close').classList.add('hidden')
     m.classList.remove('hidden')
     sfx.lose()
-    setTimeout(() => {
-      sfx.claim()
-      $('troll-jp-icon').textContent = '🤡'
-      $('troll-jp-title').textContent = 'HAHA PRANK!'
-      $('troll-jp-amount').textContent = 'ALLES OK 😂'
-      $('troll-jp-amount').className = 'text-2xl font-black text-emerald-400 mb-3'
-      $('troll-jp-sub').textContent = 'Du wurdest vom Admin geprankt!'
-      $('troll-jp-close').classList.remove('hidden')
-    }, 3500)
+    if (!noPrank) {
+      setTimeout(() => {
+        sfx.claim()
+        $('troll-jp-icon').textContent = '🤡'
+        $('troll-jp-title').textContent = 'HAHA PRANK!'
+        $('troll-jp-amount').textContent = 'ALLES OK 😂'
+        $('troll-jp-amount').className = 'text-2xl font-black text-emerald-400 mb-3'
+        $('troll-jp-sub').textContent = 'Du wurdest vom Admin geprankt!'
+        $('troll-jp-close').classList.remove('hidden')
+      }, 3500)
+    }
   } else if (type === 'custom_msg') {
     const m = $('troll-jp-modal')
     if (!m) return
@@ -2877,53 +2969,6 @@ function triggerClientTroll(type, customMsg) {
     $('troll-jp-close').classList.remove('hidden')
     m.classList.remove('hidden')
     sfx.whistle()
-  } else if (type === 'mirror') {
-    sfx.whistle(); toast('🪞 Spiegelverkehrte Welt (10s)!')
-    document.body.classList.add('mirror-mode')
-    setTimeout(() => document.body.classList.remove('mirror-mode'), 10000)
-  } else if (type === 'comic') {
-    sfx.click(); toast('🔠 COMIC SANS MODUS AKTIVIERT!')
-    document.body.classList.add('comic-mode')
-    setTimeout(() => document.body.classList.remove('comic-mode'), 12000)
-  } else if (type === 'spin') {
-    sfx.whistle(); toast('🌀 SCHWINDEL-ANFALL!')
-    appEl.classList.add('spin-dizzy')
-    setTimeout(() => appEl.classList.remove('spin-dizzy'), 4200)
-  } else if (type === 'lag') {
-    sfx.lose(); toast('🐌 Verbindung hängt... (Fake Lag)')
-    document.body.style.pointerEvents = 'none'; document.body.style.opacity = '0.5'
-    setTimeout(() => { document.body.style.pointerEvents = ''; document.body.style.opacity = '1'; toast('Verbindung wiederhergestellt!') }, 4000)
-  } else if (type === 'tax') {
-    sfx.lose(); const real = balance; const half = Math.floor(real * 0.5)
-    if ($('balance')) $('balance').textContent = half.toLocaleString('de-DE')
-    toast('💸 FINANZAMT: 50% Casino-Steuer abgezogen!')
-    setTimeout(() => { setBalance(real); sfx.claim(); toast('😂 Nur ein Steuer-Prank!') }, 5000)
-  } else if (type === 'ghost') {
-    sfx.jackpot()
-    const g = document.createElement('div')
-    g.style.cssText = 'position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.95);display:flex;align-items:center;justify-content:center;font-size:12rem;animation:pop .2s'
-    g.textContent = '👻'
-    document.body.appendChild(g)
-    setTimeout(() => g.remove(), 1600)
-  } else if (type === 'strobe') {
-    sfx.jackpot()
-    const st = document.createElement('div')
-    st.style.cssText = 'position:fixed;inset:0;z-index:180;pointer-events:none;background:white;opacity:0.65;animation:glow 0.08s infinite alternate'
-    document.body.appendChild(st); setTimeout(() => st.remove(), 3500)
-  } else if (type === 'fake_loss') {
-    sfx.lose(); toast('📉 FEHLER: -500.000 FC wurden abgezogen! (Prank 😂)')
-  } else if (type === 'tiny') {
-    sfx.whistle(); toast('🐭 Wer hat die Seite geschrumpft?!')
-    document.body.style.transform = 'scale(0.65)'; document.body.style.transition = 'transform 0.5s'
-    setTimeout(() => { document.body.style.transform = '' }, 10000)
-  } else if (type === 'sound_spam') {
-    [0, 300, 600, 900, 1200].forEach(ms => setTimeout(() => { sfx.whistle(); sfx.bigwin() }, ms))
-  } else if (type === 'freeze') {
-    sfx.lose()
-    const fr = document.createElement('div')
-    fr.style.cssText = 'position:fixed;inset:0;z-index:190;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:900;color:#f87171'
-    fr.textContent = '🔒 ADMIN PAUSE (6 Sekunden)...'
-    document.body.appendChild(fr); setTimeout(() => fr.remove(), 6000)
   } else if (type === 'fake_jackpot') {
     const m = $('troll-jp-modal')
     if (!m) return
@@ -2935,375 +2980,19 @@ function triggerClientTroll(type, customMsg) {
     $('troll-jp-close').classList.add('hidden')
     m.classList.remove('hidden')
     sfx.jackpot()
-    setTimeout(() => {
-      sfx.lose()
-      $('troll-jp-icon').textContent = '🤡'
-      $('troll-jp-title').textContent = 'HAHA REINGELEGT!'
-      $('troll-jp-amount').textContent = '0 FC'
-      $('troll-jp-amount').className = 'text-4xl font-black text-red-500 mb-3'
-      $('troll-jp-sub').textContent = 'Du wurdest live vom Admin getrollt! 😂'
-      $('troll-jp-close').classList.remove('hidden')
-    }, 3000)
-  }
-}
-
-/* ================= VIP LUXUS-SHOP & TROPHÄEN ================= */
-const LUXURY_ITEMS = [
-  { id: 'rolex', icon: '⌚', name: 'Rolex Daytona Gold', price: 25000, desc: 'Pure Eleganz am Handgelenk.' },
-  { id: 'porsche', icon: '🏎️', name: 'Porsche 911 GT3 RS', price: 120000, desc: 'Für die schnelle Fahrt zum Casino.' },
-  { id: 'lambo', icon: '🐂', name: 'Lamborghini Aventador', price: 350000, desc: 'V12-Sound vor dem Eingang.' },
-  { id: 'bugatti', icon: '⚡', name: 'Bugatti Chiron', price: 1500000, desc: '1.500 PS reiner Luxus.' },
-  { id: 'villa', icon: '🏝️', name: 'Strandvilla Ibiza', price: 2500000, desc: 'Eigener Pool direkt am Meer.' },
-  { id: 'penthouse', icon: '🏙️', name: 'Dubai Sky Penthouse', price: 5000000, desc: 'Über den Wolken der Wüste.' },
-  { id: 'jet', icon: '✈️', name: 'Privatjet Gulfstream G650', price: 15000000, desc: 'Nie wieder Economy fliegen.' },
-  { id: 'island', icon: '🌋', name: 'Eigene Privatinsel', price: 50000000, desc: 'Dein eigenes Königreich.' }
-]
-
-function renderProfileTrophies(owned) {
-  const arr = (owned || []).filter(x => x.startsWith('lux:')).map(x => LUXURY_ITEMS.find(i => 'lux:' + i.id === x)).filter(Boolean)
-  if (!arr.length) return ''
-  return '<div class="glass rounded-xl p-3 mb-4 border border-yellow-500/30"><div class="text-xs font-bold text-yellow-400 mb-2">🏆 VIP Luxus-Trophäen (' + arr.length + ')</div><div class="flex flex-wrap justify-center gap-2">' +
-    arr.map(i => '<span class="px-2.5 py-1 rounded-lg bg-zinc-900/90 border border-yellow-500/40 text-xs font-bold" title="' + esc(i.name) + '">' + i.icon + ' ' + esc(i.name) + '</span>').join('') +
-    '</div></div>'
-}
-
-VIEWS.luxury = () => '<div id="luxbox" class="grid grid-cols-1 md:grid-cols-2 gap-3">Lade Luxus-Shop...</div>'
-PAGEINIT.luxury = async () => {
-  await loadProfile()
-  const box = $('luxbox'); if (!box) return
-  const owned = ME.owned || []
-  box.innerHTML = LUXURY_ITEMS.map(item => {
-    const has = owned.includes('lux:' + item.id)
-    return `<div class="glass rounded-2xl p-4 border ${has ? 'border-yellow-400/70 bg-yellow-950/10' : 'border-zinc-800'} flex flex-col justify-between gap-3">
-      <div class="flex items-center gap-3">
-        <div class="text-4xl">${item.icon}</div>
-        <div>
-          <div class="font-black text-white">${item.name}</div>
-          <div class="text-xs text-zinc-400">${item.desc}</div>
-        </div>
-      </div>
-      <div class="flex items-center justify-between pt-2 border-t border-zinc-800/80">
-        <b class="text-yellow-400 font-mono">${item.price.toLocaleString('de-DE')} FC</b>
-        ${has ? '<span class="text-xs font-black text-emerald-400 px-3 py-1 rounded-lg bg-emerald-950/50 border border-emerald-500/40">✔ Im Besitz</span>' : `<button class="btn bg-gradient-to-r from-yellow-500 to-amber-600 text-black font-black text-xs" style="width:auto;padding:.4rem .9rem" onclick="buyLuxury('${item.id}')">Kaufen</button>`}
-      </div>
-    </div>`
-  }).join('')
-}
-
-async function buyLuxury(id) {
-  sfx.click()
-  const d = await call('luxury_buy', { item_id: id })
-  if (!d) return
-  sfx.bigwin()
-  setBalance(d.balance)
-  ME.owned = d.owned
-  toast('💎 Gekauft: ' + d.item + '!')
-  PAGEINIT.luxury()
-}
-
-/* ================= CS:GO CASE OPENING ================= */
-const CASE_DEFS = {
-  starter: { name: 'Anfänger-Kiste', cost: 500, icon: '📦', color: 'border-cyan-500/50', items: [
-    { icon: '🧦', name: 'Alte Socke', mult: 0.1, rarity: 'gray' }, { icon: '🪙', name: 'Silber-Chip', mult: 0.5, rarity: 'blue' },
-    { icon: '🔮', name: 'Amethyst', mult: 1.45, rarity: 'purple' }, { icon: '⚡', name: 'Neon-Kern', mult: 3.2, rarity: 'pink' },
-    { icon: '💎', name: 'Blut-Diamant', mult: 8.5, rarity: 'red' }, { icon: '👑', name: 'Gold-Krone', mult: 20.0, rarity: 'gold' }
-  ]},
-  neon: { name: 'Neon-Cyber-Kiste', cost: 2500, icon: '⚡', color: 'border-blue-500/60', items: [
-    { icon: '🧦', name: 'Alte Socke', mult: 0.1, rarity: 'gray' }, { icon: '🪙', name: 'Silber-Chip', mult: 0.5, rarity: 'blue' },
-    { icon: '🔮', name: 'Amethyst', mult: 1.45, rarity: 'purple' }, { icon: '⚡', name: 'Neon-Kern', mult: 3.2, rarity: 'pink' },
-    { icon: '💎', name: 'Blut-Diamant', mult: 8.5, rarity: 'red' }, { icon: '👑', name: 'Cyber-Krone', mult: 25.0, rarity: 'gold' }
-  ]},
-  highroller: { name: 'High Roller Kiste', cost: 10000, icon: '💼', color: 'border-purple-500/60', items: [
-    { icon: '🧦', name: 'Alte Socke', mult: 0.1, rarity: 'gray' }, { icon: '🪙', name: 'Silber-Chip', mult: 0.5, rarity: 'blue' },
-    { icon: '🔮', name: 'Amethyst', mult: 1.45, rarity: 'purple' }, { icon: '⚡', name: 'Neon-Kern', mult: 3.2, rarity: 'pink' },
-    { icon: '💎', name: 'Fire Serpent', mult: 8.5, rarity: 'red' }, { icon: '👑', name: 'Dragon Lore', mult: 30.0, rarity: 'gold' }
-  ]},
-  emerald: { name: 'Smaragd-Kiste', cost: 25000, icon: '🍀', color: 'border-emerald-500/70', items: [
-    { icon: '🧦', name: 'Alte Socke', mult: 0.1, rarity: 'gray' }, { icon: '🪙', name: 'Silber-Chip', mult: 0.5, rarity: 'blue' },
-    { icon: '🔮', name: 'Amethyst', mult: 1.45, rarity: 'purple' }, { icon: '⚡', name: 'Neon-Kern', mult: 3.2, rarity: 'pink' },
-    { icon: '💎', name: 'Smaragd-Herz', mult: 8.5, rarity: 'red' }, { icon: '👑', name: 'Emerald Knife', mult: 35.0, rarity: 'gold' }
-  ]},
-  diamond: { name: 'Diamant-Tresor', cost: 50000, icon: '💎', color: 'border-sky-400', items: [
-    { icon: '🧦', name: 'Alte Socke', mult: 0.1, rarity: 'gray' }, { icon: '🪙', name: 'Silber-Chip', mult: 0.5, rarity: 'blue' },
-    { icon: '🔮', name: 'Amethyst', mult: 1.45, rarity: 'purple' }, { icon: '⚡', name: 'Neon-Kern', mult: 3.2, rarity: 'pink' },
-    { icon: '💎', name: 'Blut-Diamant', mult: 8.5, rarity: 'red' }, { icon: '👑', name: 'Koh-i-Noor', mult: 40.0, rarity: 'gold' }
-  ]},
-  god: { name: 'God Kiste', cost: 100000, icon: '👑', color: 'border-yellow-400', items: [
-    { icon: '🧦', name: 'Alte Socke', mult: 0.1, rarity: 'gray' }, { icon: '🪙', name: 'Silber-Chip', mult: 0.5, rarity: 'blue' },
-    { icon: '🔮', name: 'Amethyst', mult: 1.45, rarity: 'purple' }, { icon: '⚡', name: 'Neon-Kern', mult: 3.2, rarity: 'pink' },
-    { icon: '💎', name: 'M4A4 Howl', mult: 8.5, rarity: 'red' }, { icon: '👑', name: 'Karambit Gold', mult: 50.0, rarity: 'gold' }
-  ]},
-  bronze: { name: 'Bronze-Kiste', cost: 1000, icon: '🥉', color: 'border-amber-700', items: [
-    { icon: '🧦', name: 'Alte Socke', mult: 0.1, rarity: 'gray' }, { icon: '🪙', name: 'Silber-Chip', mult: 0.5, rarity: 'blue' },
-    { icon: '🔮', name: 'Amethyst', mult: 1.45, rarity: 'purple' }, { icon: '⚡', name: 'Neon-Kern', mult: 3.2, rarity: 'pink' },
-    { icon: '💎', name: 'Blut-Diamant', mult: 8.5, rarity: 'red' }, { icon: '👑', name: 'Bronze-Krone', mult: 22.0, rarity: 'gold' }
-  ]},
-  ruby: { name: 'Rubin-Kiste', cost: 5000, icon: '❤️', color: 'border-rose-500', items: [
-    { icon: '🧦', name: 'Alte Socke', mult: 0.1, rarity: 'gray' }, { icon: '🪙', name: 'Silber-Chip', mult: 0.5, rarity: 'blue' },
-    { icon: '🔮', name: 'Amethyst', mult: 1.45, rarity: 'purple' }, { icon: '⚡', name: 'Neon-Kern', mult: 3.2, rarity: 'pink' },
-    { icon: '💎', name: 'Blut-Diamant', mult: 8.5, rarity: 'red' }, { icon: '👑', name: 'Rubin-Krone', mult: 28.0, rarity: 'gold' }
-  ]},
-  galaxy: { name: 'Galaxie-Kiste', cost: 250000, icon: '🌌', color: 'border-indigo-400', items: [
-    { icon: '🧦', name: 'Alte Socke', mult: 0.1, rarity: 'gray' }, { icon: '🪙', name: 'Silber-Chip', mult: 0.5, rarity: 'blue' },
-    { icon: '🔮', name: 'Amethyst', mult: 1.45, rarity: 'purple' }, { icon: '⚡', name: 'Neon-Kern', mult: 3.2, rarity: 'pink' },
-    { icon: '💎', name: 'Blut-Diamant', mult: 8.5, rarity: 'red' }, { icon: '👑', name: 'Schwarzes-Loch', mult: 60.0, rarity: 'gold' }
-  ]},
-  titan: { name: 'Titan-Ultra-Kiste', cost: 500000, icon: '🌋', color: 'border-red-500', items: [
-    { icon: '🧦', name: 'Alte Socke', mult: 0.1, rarity: 'gray' }, { icon: '🪙', name: 'Silber-Chip', mult: 0.5, rarity: 'blue' },
-    { icon: '🔮', name: 'Amethyst', mult: 1.45, rarity: 'purple' }, { icon: '⚡', name: 'Neon-Kern', mult: 3.2, rarity: 'pink' },
-    { icon: '💎', name: 'Quanten-Kern', mult: 8.5, rarity: 'red' }, { icon: '👑', name: 'Titan-Relikt', mult: 75.0, rarity: 'gold' }
-  ]},
-  omega: { name: 'Omega-Götter-Kiste', cost: 1000000, icon: '🔱', color: 'border-yellow-300', items: [
-    { icon: '🧦', name: 'Alte Socke', mult: 0.1, rarity: 'gray' }, { icon: '🪙', name: 'Silber-Chip', mult: 0.5, rarity: 'blue' },
-    { icon: '🔮', name: 'Amethyst', mult: 1.45, rarity: 'purple' }, { icon: '⚡', name: 'Neon-Kern', mult: 3.2, rarity: 'pink' },
-    { icon: '💎', name: 'Blut-Diamant', mult: 8.5, rarity: 'red' }, { icon: '👑', name: 'Omega-Zepter', mult: 100.0, rarity: 'gold' }
-  ]}
-}
-const RARITY_CLS = {
-  gray: 'border-zinc-600 bg-zinc-900 text-zinc-400',
-  blue: 'border-blue-500 bg-blue-950/40 text-blue-300',
-  purple: 'border-purple-500 bg-purple-950/40 text-purple-300',
-  pink: 'border-pink-500 bg-pink-950/40 text-pink-300',
-  red: 'border-red-500 bg-red-950/50 text-red-300',
-  gold: 'border-yellow-400 bg-yellow-950/60 text-yellow-300 shadow-[0_0_20px_rgba(250,204,21,0.5)]'
-}
-let caseCur = 'starter', caseBusy = false
-
-VIEWS.cases = () => `
-  <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
-    ${Object.entries(CASE_DEFS).map(([k, c]) => `
-      <button onclick="selectCase('${k}')" id="casebtn_${k}" class="glass rounded-xl p-3 text-center border-2 transition ${caseCur === k ? c.color + ' bg-zinc-800/80' : 'border-zinc-800 hover:border-zinc-700'}">
-        <div class="text-3xl mb-1">${c.icon}</div>
-        <div class="font-bold text-xs text-white">${c.name}</div>
-        <div class="text-xs font-mono text-yellow-400 font-black">${c.cost.toLocaleString('de-DE')} FC</div>
-      </button>
-    `).join('')}
-  </div>
-  <div class="relative w-full h-36 glass rounded-2xl border-2 border-zinc-700 overflow-hidden mb-4 flex items-center bg-zinc-950/90">
-    <div class="absolute left-1/2 top-0 bottom-0 w-1 bg-red-500 z-20 shadow-[0_0_12px_#ef4444] -translate-x-1/2"></div>
-    <div id="case-tape" class="flex gap-2 px-4 items-center" style="will-change: transform;">
-      <div class="text-zinc-500 text-sm mx-auto">Wähle eine Kiste und drücke auf Öffnen!</div>
-    </div>
-  </div>
-  <button id="case-open-btn" onclick="openCaseNow()" class="btn bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 text-black font-black text-lg py-3 shadow-lg mb-3">📦 Kiste öffnen</button>
-  <div id="case-res" class="text-center min-h-[2rem]"></div>
-  <div class="glass rounded-xl p-3 mt-3"><div class="text-xs font-bold text-zinc-400 mb-2">Mögliche Drops:</div><div id="case-loot" class="grid grid-cols-3 sm:grid-cols-6 gap-2 text-center text-xs"></div></div>
-`
-
-PAGEINIT.cases = () => { renderCaseLoot() }
-function selectCase(k) {
-  if (caseBusy) return
-  sfx.click(); caseCur = k
-  Object.keys(CASE_DEFS).forEach(x => {
-    const b = $('casebtn_' + x); if (!b) return
-    b.className = 'glass rounded-xl p-3 text-center border-2 transition ' + (x === k ? CASE_DEFS[x].color + ' bg-zinc-800/80' : 'border-zinc-800 hover:border-zinc-700')
-  })
-  renderCaseLoot()
-}
-function renderCaseLoot() {
-  const box = $('case-loot'); if (!box) return
-  box.innerHTML = CASE_DEFS[caseCur].items.map(i => `<div class="rounded-lg p-2 border ${RARITY_CLS[i.rarity]}"><div class="text-2xl">${i.icon}</div><div class="font-bold truncate">${i.name}</div><div class="font-mono">${i.mult}×</div></div>`).join('')
-}
-
-async function openCaseNow() {
-  if (caseBusy) return
-  sfx.click()
-  const d = await call('case_open', { case_type: caseCur })
-  if (!d) return
-  caseBusy = true
-  $('case-open-btn').disabled = true
-  $('case-res').innerHTML = '<span class="text-zinc-400 animate-pulse">Kiste wird geöffnet...</span>'
-
-  const pool = CASE_DEFS[caseCur].items
-  const WIN_IDX = 36, TOTAL = 45, CARD_W = 112 // 104px + 8px gap
-  const tapeItems = []
-  for (let i = 0; i < TOTAL; i++) {
-    if (i === WIN_IDX) tapeItems.push({ icon: d.icon, name: d.name, mult: d.mult, rarity: d.rarity })
-    else {
-      const r = Math.random()
-      const pick = r < 0.35 ? pool[0] : r < 0.65 ? pool[1] : r < 0.85 ? pool[2] : r < 0.95 ? pool[3] : r < 0.99 ? pool[4] : pool[5]
-      tapeItems.push(pick)
+    if (!noPrank) {
+      setTimeout(() => {
+        sfx.lose()
+        $('troll-jp-icon').textContent = '🤡'
+        $('troll-jp-title').textContent = 'HAHA REINGELEGT!'
+        $('troll-jp-amount').textContent = '0 FC'
+        $('troll-jp-amount').className = 'text-4xl font-black text-red-500 mb-3'
+        $('troll-jp-sub').textContent = 'Du wurdest live vom Admin getrollt! 😂'
+        $('troll-jp-close').classList.remove('hidden')
+      }, 3000)
     }
   }
-
-  const tape = $('case-tape')
-  tape.style.transition = 'none'
-  tape.style.transform = 'translateX(0px)'
-  tape.innerHTML = tapeItems.map(it => `<div class="shrink-0 w-[104px] h-24 rounded-xl border-2 ${RARITY_CLS[it.rarity]} flex flex-col items-center justify-center p-1.5 text-center"><div class="text-3xl">${it.icon}</div><div class="text-[10px] font-bold truncate w-full mt-1">${it.name}</div><div class="text-[10px] font-mono">${it.mult}×</div></div>`).join('')
-
-  // Force reflow
-  tape.offsetHeight
-  const containerW = tape.parentElement.clientWidth
-  const jitter = (Math.random() - 0.5) * 60
-  const targetX = -(WIN_IDX * CARD_W + 52 - containerW / 2 + jitter)
-
-  // Synchronized ticks slowing down
-  const tickTimes = [100,200,310,430,560,700,860,1040,1240,1470,1730,2030,2380,2780,3250,3800,4450]
-  tickTimes.forEach(ms => setTimeout(() => { if (current === 'cases') sfx.tick() }, ms))
-
-  tape.style.transition = 'transform 5s cubic-bezier(0.1, 0.88, 0.18, 1)'
-  tape.style.transform = `translateX(${targetX}px)`
-
-  await sleep(5100)
-  setBalance(d.balance)
-  if (d.rarity === 'gold') sfx.jackpot()
-  else if (d.payout >= d.cost) sfx.bigwin()
-  else sfx.lose()
-
-  $('case-res').innerHTML = `<div class="glass rounded-xl p-3 border-2 ${RARITY_CLS[d.rarity]} inline-block px-6">
-    <div class="text-3xl">${d.icon}</div>
-    <div class="font-black text-base">${d.name} (${d.mult}×)</div>
-    <div class="text-sm font-mono font-bold ${d.payout >= d.cost ? 'text-emerald-400' : 'text-red-400'}">+${Number(d.payout).toLocaleString('de-DE')} FC</div>
-  </div>`
-  caseBusy = false
-  $('case-open-btn').disabled = false
 }
-
-/* ================= FAKE KRYPTO-BÖRSE / DAY-TRADING ================= */
-const COINS = {
-  FTC:  { name: 'FutureCoin', price: 1000, vol: 0.018, hist: [] },
-  MOON: { name: 'MoonRocket', price: 420,  vol: 0.032, hist: [] },
-  DOGE: { name: 'DogeFuture', price: 50,   vol: 0.045, hist: [] }
-}
-Object.values(COINS).forEach(c => {
-  let p = c.price
-  for (let i = 0; i < 28; i++) {
-    const o = p, ch = (Math.random() - 0.49) * c.vol * p, cl = Math.max(1, o + ch)
-    const hi = Math.max(o, cl) * (1 + Math.random() * 0.008), lo = Math.min(o, cl) * (1 - Math.random() * 0.008)
-    c.hist.push({ o, c: cl, h: hi, l: lo }); p = cl
-  }
-  c.price = p
-})
-let cryCoin = 'FTC', cryLev = 10, cryPos = null, cryTimer = null
-
-VIEWS.crypto = () => `
-  <div class="flex gap-2 mb-3">
-    ${Object.entries(COINS).map(([k, c]) => `<button id="cry_${k}" onclick="selectCoin('${k}')" class="btn text-xs py-2 ${cryCoin===k?'bg-cyan-600':'bg-zinc-800'}">${k} · <span id="cryp_${k}">${c.price.toFixed(2)}</span>$</button>`).join('')}
-  </div>
-  <div class="glass rounded-2xl p-3 border border-zinc-700 mb-3">
-    <div class="flex justify-between items-center mb-2">
-      <b id="cry-title" class="text-white text-sm">FutureCoin (FTC)</b>
-      <span id="cry-cur" class="font-mono font-black text-emerald-400 text-lg">${COINS[cryCoin].price.toFixed(2)} $</span>
-    </div>
-    <canvas id="crypto-chart" width="600" height="210" class="w-full h-48 rounded-xl bg-zinc-950"></canvas>
-  </div>
-  <div id="cry-controls" class="glass rounded-2xl p-4 border border-zinc-800">
-    <div class="grid grid-cols-2 gap-3 mb-3">
-      <div>
-        <label class="text-xs text-zinc-400">Einsatz (FC)</label>
-        <input id="cry-bet" type="number" min="10" value="500" class="inp w-full mt-1">
-      </div>
-      <div>
-        <label class="text-xs text-zinc-400">Hebel: <b id="cry-lev-lbl" class="text-yellow-400">${cryLev}×</b></label>
-        <input id="cry-lev" type="range" min="2" max="50" value="${cryLev}" class="w-full accent-yellow-400 mt-3" oninput="cryLev=+this.value;$('cry-lev-lbl').textContent=this.value+'×'">
-      </div>
-    </div>
-    <div id="cry-action-btns" class="grid grid-cols-2 gap-3">
-      <button onclick="openCryptoPos('long')" class="btn bg-emerald-600 hover:bg-emerald-500 font-black">📈 LONG (Steigt)</button>
-      <button onclick="openCryptoPos('short')" class="btn bg-red-600 hover:bg-red-500 font-black">📉 SHORT (Fällt)</button>
-    </div>
-    <div id="cry-open-pos" class="hidden mt-3 p-3 rounded-xl bg-zinc-900 border border-zinc-700"></div>
-  </div>
-`
-
-PAGEINIT.crypto = () => {
-  drawCryptoChart()
-  if (cryTimer) clearInterval(cryTimer)
-  cryTimer = setInterval(tickCryptoMarket, 2000)
-}
-function selectCoin(k) {
-  if (cryPos) return toast('Schließe zuerst deine offene Position!')
-  sfx.click(); cryCoin = k
-  Object.keys(COINS).forEach(x => { const b = $('cry_' + x); if (b) b.className = 'btn text-xs py-2 ' + (x === k ? 'bg-cyan-600' : 'bg-zinc-800') })
-  if ($('cry-title')) $('cry-title').textContent = COINS[k].name + ' (' + k + ')'
-  drawCryptoChart()
-}
-function tickCryptoMarket() {
-  if (current !== 'crypto') { clearInterval(cryTimer); return }
-  Object.entries(COINS).forEach(([k, c]) => {
-    const o = c.price, ch = (Math.random() - 0.495) * c.vol * o, cl = Math.max(1, o + ch)
-    const hi = Math.max(o, cl) * (1 + Math.random() * 0.008), lo = Math.min(o, cl) * (1 - Math.random() * 0.008)
-    c.hist.push({ o, c: cl, h: hi, l: lo })
-    if (c.hist.length > 32) c.hist.shift()
-    c.price = cl
-    if ($('cryp_' + k)) $('cryp_' + k).textContent = cl.toFixed(2)
-  })
-  if ($('cry-cur')) $('cry-cur').textContent = COINS[cryCoin].price.toFixed(2) + ' $'
-  drawCryptoChart()
-  updateCryptoPos()
-}
-function drawCryptoChart() {
-  const cv = $('crypto-chart'); if (!cv) return
-  const ctx = cv.getContext('2d'), h = COINS[cryCoin].hist, W = cv.width, H = cv.height
-  ctx.clearRect(0, 0, W, H)
-  const min = Math.min(...h.map(x => x.l)) * 0.995, max = Math.max(...h.map(x => x.h)) * 1.005, rng = Math.max(0.01, max - min)
-  const yOf = v => H - 15 - ((v - min) / rng) * (H - 30)
-  const cw = (W - 20) / h.length
-  h.forEach((c, i) => {
-    const x = 10 + i * cw + cw / 2, up = c.c >= c.o
-    ctx.strokeStyle = up ? '#34d399' : '#f87171'; ctx.fillStyle = up ? '#10b981' : '#ef4444'
-    ctx.beginPath(); ctx.moveTo(x, yOf(c.h)); ctx.lineTo(x, yOf(c.l)); ctx.stroke()
-    const y1 = yOf(Math.max(c.o, c.c)), y2 = yOf(Math.min(c.o, c.c))
-    ctx.fillRect(x - cw * 0.3, y1, cw * 0.6, Math.max(2, y2 - y1))
-  })
-  if (cryPos) {
-    ctx.strokeStyle = '#facc15'; ctx.setLineDash([4, 4])
-    ctx.beginPath(); ctx.moveTo(0, yOf(cryPos.entry)); ctx.lineTo(W, yOf(cryPos.entry)); ctx.stroke()
-    ctx.setLineDash([])
-  }
-}
-async function openCryptoPos(side) {
-  if (cryPos) return
-  const bet = Math.floor(+$('cry-bet').value)
-  sfx.bet()
-  const d = await call('crypto_trade_open', { bet_amount: bet, coin_name: cryCoin, trade_side: side, lev: cryLev })
-  if (!d) return
-  setBalance(d.balance)
-  cryPos = { id: d.pos_id, coin: cryCoin, side, bet: d.bet, lev: cryLev, entry: COINS[cryCoin].price }
-  $('cry-action-btns').classList.add('hidden')
-  $('cry-open-pos').classList.remove('hidden')
-  updateCryptoPos()
-}
-function updateCryptoPos() {
-  if (!cryPos || !$('cry-open-pos')) return
-  const cur = COINS[cryPos.coin].price
-  const diff = (cur - cryPos.entry) / cryPos.entry * (cryPos.side === 'long' ? 1 : -1)
-  const pnlPct = diff * cryPos.lev
-  if (pnlPct <= -0.95) {
-    cryPos = null
-    sfx.lose()
-    $('cry-action-btns').classList.remove('hidden')
-    $('cry-open-pos').classList.add('hidden')
-    toast('💥 LIQUIDIERT! Einsatz verloren.')
-    return
-  }
-  const val = Math.max(0, Math.floor(cryPos.bet * (1 + pnlPct)))
-  const net = val - cryPos.bet
-  $('cry-open-pos').innerHTML = `
-    <div class="flex justify-between text-xs text-zinc-400 mb-2">
-      <span>${cryPos.side === 'long' ? '📈 LONG' : '📉 SHORT'} ${cryPos.coin} (${cryPos.lev}×)</span>
-      <span>Entry: <b>${cryPos.entry.toFixed(2)}$</b></span>
-    </div>
-    <div class="text-center text-2xl font-black mb-3 ${net >= 0 ? 'text-emerald-400' : 'text-red-400'}">
-      ${net >= 0 ? '+' : ''}${net.toLocaleString('de-DE')} FC (${(pnlPct * 100).toFixed(1)}%)
-    </div>
-    <button onclick="closeCryptoPos(${val})" class="btn bg-yellow-500 text-black font-black">💰 Position Schließen (${val.toLocaleString('de-DE')} FC)</button>
-  `
-}
-async function closeCryptoPos(val) {
-  if (!cryPos) return
-  const pos = cryPos; cryPos = null
-  const d = await call('crypto_trade_close', { pos_id: pos.id, payout_amount: val })
-  if (d) {
-    setBalance(d.balance)
-    if (d.payout > pos.bet) sfx.win(); else sfx.lose()
-    toast('📈 Position geschlossen: ' + Number(d.payout).toLocaleString('de-DE') + ' FC')
-  }
-  $('cry-action-btns').classList.remove('hidden')
-  $('cry-open-pos').classList.add('hidden')
-  drawCryptoChart()
-}
-
 
 /* ================= LIVE GOLDREGEN DROPS ================= */
 let activeDropId = null
