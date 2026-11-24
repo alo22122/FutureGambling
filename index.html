@@ -1780,7 +1780,7 @@ function renderAdminEconomyTab(c) { setTimeout(() => { admLoadCustomSlots(); adm
     </div>
 
     <!-- Allgemeine Ökonomie -->
-    <div class="glass rounded-2xl p-5 border border-zinc-700">
+    <div class="glass rounded-2xl p-5 border border-zinc-700 mb-4">
       <div class="font-bold text-white text-base mb-3">⚙️ Plattform-Ökonomie & Jackpot-Einstellungen</div>
       <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
         <div class="glass rounded-xl p-3 border border-zinc-700">
@@ -1803,6 +1803,31 @@ function renderAdminEconomyTab(c) { setTimeout(() => { admLoadCustomSlots(); adm
             <input id="adm_mass_give" type="number" min="100" placeholder="z.B. 10000" class="inp py-1 px-2 text-xs flex-1">
             <button class="btn bg-emerald-600 text-xs px-3 py-1 font-bold" style="width:auto" onclick="admMassGive()">Verteilen</button>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SAISON-RESET / TOTALER SPIELER-DATEN-WIPE -->
+    <div class="glass rounded-2xl p-5 border-2 border-red-500/60 bg-red-950/15">
+      <div class="font-black text-lg text-red-400 mb-1">🏆 Saison-Reset &amp; Totaler Spieler-Wipe</div>
+      <div class="text-xs text-zinc-300 mb-3">
+        Archiviert die <b>Top 3 Spieler</b> automatisch in der <b>Hall of Fame</b> und löscht danach <b>ALLE Spielerdaten</b>
+        (Coins, Tresor, Wagered, Level, Prestige, Battle Pass, Achievements, Missionen, Shop-Items, Streaks, Schach-Elo, Clans, Freunde, Chat, Win-Logs &amp; laufende Spiele).
+        Logins, Rollen, Admin-Passwort-Notizen &amp; das 2-Account-Gerätelimit bleiben erhalten.
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+        <div>
+          <label class="text-xs text-zinc-400 font-bold block mb-1">Season-Name (optional):</label>
+          <input id="adm_season_name" type="text" placeholder="z.B. Season 1" class="inp w-full text-xs">
+        </div>
+        <div>
+          <label class="text-xs text-zinc-400 font-bold block mb-1">Neues Startguthaben (FC):</label>
+          <input id="adm_season_start" type="number" min="0" value="1000" class="inp w-full text-xs font-mono">
+        </div>
+        <div>
+          <button onclick="admSeasonReset()" class="btn bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-500 hover:to-rose-600 text-white font-black text-xs w-full py-2.5 shadow-lg">
+            💥 Saison-Reset &amp; Total-Wipe starten
+          </button>
         </div>
       </div>
     </div>`;
@@ -2012,6 +2037,25 @@ async function admResetAllProfilesModal() {
     toast('🔄 HARD RESET ERFOLGREICH! ' + d.count + ' Spieler auf ' + startBal + ' FC zurückgesetzt.');
     loadAdminFullDashboard();
   }
+}
+
+async function admSeasonReset() {
+  const sname = ($('adm_season_name')?.value || '').trim();
+  const startBal = Math.max(0, Number($('adm_season_start')?.value ?? 1000) || 0);
+  const word = prompt(
+    '💥 TOTALER SAISON-WIPE!\n\n' +
+    '• Top 3 Spieler werden in der Hall of Fame verewigt.\n' +
+    '• ALLE Spielerdaten (Geld, Tresor, Items, Level, Battle Pass, Achievements, Missionen, Streaks, Chat, Logs, Runden) werden KOMPLETT gelöscht!\n' +
+    '• Startguthaben danach: ' + startBal.toLocaleString('de-DE') + ' FC\n\n' +
+    'Tippe genau RESET ein, um fortzufahren:'
+  );
+  if (word !== 'RESET') { toast('Saison-Reset abgebrochen.'); return; }
+  sfx.jackpot();
+  const { data, error } = await sb.rpc('admin_season_reset', { start_balance: startBal, season_label: sname || null });
+  if (error) { toast('❌ ' + error.message); return; }
+  toast(`🏆 ${data.season_name} gestartet! Top ${data.archived_top} in Hall of Fame gespeichert, alle Daten gewiped!`);
+  await loadProfile();
+  loadAdminFullDashboard();
 }
 
 async function admMassGive() {
@@ -4213,7 +4257,14 @@ PAGEINIT.hof = async () => {
   box.innerHTML = `
     <div class="glass rounded-2xl p-4 mb-4 border border-yellow-400/50 bg-gradient-to-r from-yellow-950/30 via-zinc-900 to-amber-950/20 text-center">
       <div class="text-2xl font-black gold-shimmer">🏛️ CASINO HALL OF FAME</div>
-      <div class="text-xs text-zinc-400 mt-1">Permanente Ruhmeshalle aller legendären Future Gambling Weltrekorde</div>
+      <div class="text-xs text-zinc-400 mt-1">Permanente Ruhmeshalle aller legendären Future Gambling Weltrekorde &amp; Saison-Champions</div>
+    </div>
+    <div class="glass rounded-2xl p-4 mb-4 border-2 border-yellow-400/60 bg-yellow-950/15">
+      <div class="font-black text-yellow-300 mb-2 flex items-center gap-2"><span>👑</span><span>Saison-Champions (Top 3 pro Season)</span></div>
+      <div class="space-y-1.5 text-xs">${(d.season_champions||[]).map(x => {
+        const medal = x.rank === 1 ? '🥇' : x.rank === 2 ? '🥈' : '🥉';
+        return `<div class="flex justify-between items-center py-1.5 border-b border-zinc-800/60"><span><b class="text-amber-300">${esc(x.season_name)}</b> · ${medal} #${x.rank} ${esc(x.avatar||'')} <b>${esc(x.username)}</b></span><b class="text-emerald-400">${f(x.final_balance)} FC <span class="text-zinc-500 font-normal">(${f(x.final_wagered)} Umsatz)</span></b></div>`;
+      }).join('') || '<div class="text-zinc-500">Noch keine abgeschlossene Season.</div>'}</div>
     </div>
     <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
       ${card('Höchster Einzelsieg aller Zeiten', '💰', (d.biggest_wins||[]).map((x,i)=>`<div class="flex justify-between py-1 border-b border-zinc-800/60"><span><b>#${i+1} ${esc(x.username)}</b> (${esc(x.game)})</span><b class="text-emerald-400">+${f(x.payout)} FC</b></div>`).join(''))}
