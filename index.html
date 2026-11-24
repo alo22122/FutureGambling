@@ -201,7 +201,8 @@
         <button id="bigWinsTickerToggle" onclick="toggleBigWinsTicker()" class="shrink-0 text-xs px-2.5 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700" title="Gewinn-Ticker an/aus">✕</button>
       </div>
       <h2 id="title" class="text-2xl md:text-3xl font-black mb-1 tracking-tight"></h2>
-      <p id="desc" class="text-zinc-400 text-sm mb-5"></p>
+      <p id="desc" class="text-zinc-400 text-sm mb-2"></p>
+      <div id="gameGuideWrap" class="mb-4"></div>
       <div id="view" class="glass rounded-2xl p-4 md:p-6"></div>
       <div id="msg" class="mt-5 text-center text-xl font-bold min-h-[2rem]"></div>
       <div id="hist" class="mt-6 space-y-1 text-sm"></div>
@@ -430,30 +431,30 @@ const GAMES = {
   towers:   { icon: '🗼', name: 'Towers', desc: 'Steige 8 Ebenen auf – wähle deine Schwierigkeit!' },
   plinko:   { icon: '🟡', name: 'Plinko', desc: 'Ball fallen lassen – die Ränder zahlen bis 5,6×.' },
   // Tischspiele
-  war:      { icon: '⚔️', name: 'Casino War', desc: 'High-Card War! Höhere Karte schlägt den Dealer (2×), bei Gleichstand WAR (3×).' },
-  roulette: { icon: '🎡', name: 'Roulette', desc: 'Rot/Schwarz = 2×, Grün (0) = 14×.' },
-  baccarat: { icon: '🎴', name: 'Baccarat', desc: 'Player, Banker oder Tie – wer kommt näher an 9?' },
-  poker:    { icon: '♦️', name: 'Video Poker', desc: 'Jacks or Better: Karten halten, tauschen, bis 800×.' },
-  sicbo:    { icon: '🔮', name: 'Sic Bo', desc: 'Drei Würfel: Low, High oder Triple (30×).' },
-  dragon:   { icon: '🐉', name: 'Dragon Tiger', desc: 'Höhere Karte gewinnt: Drache, Tiger oder Tie (11×).' },
+  war:      { icon: '⚔️', name: 'Casino War', desc: 'High-Card War! Höhere Karte schlägt den Dealer (1,75×), Gleichstand zahlt 2,0×.' },
+  roulette: { icon: '🎡', name: 'Roulette', desc: 'Europäisches Roulette (0–36): Rot/Schwarz = 2×, Grün (0) = 14×.' },
+  baccarat: { icon: '🎴', name: 'Baccarat', desc: 'Player oder Banker (1,95×) oder Tie (8,5×) – wer kommt näher an 9?' },
+  poker:    { icon: '♦️', name: 'Video Poker', desc: 'Jacks or Better: 5 Karten ziehen, beste halten, tauschen – bis 800×.' },
+  sicbo:    { icon: '🔮', name: 'Sic Bo', desc: 'Drei Würfel: Low/High (1,95×) oder Triple-Pasch (28×).' },
+  dragon:   { icon: '🐉', name: 'Dragon Tiger', desc: 'Höhere Karte gewinnt: Drache/Tiger (1,95×) oder Tie (10×).' },
   // Schnelle Spiele
-  cyberrace:{ icon: '🏎️', name: 'Cyber Race', desc: 'Wähle einen von 5 Renn-Gleitern. Live-Rennen um bis zu 20× Gewinn!' },
-  coinflip: { icon: '🪙', name: 'Coinflip', desc: 'Kopf oder Zahl – gewinne das Doppelte (2×).' },
-  dice:     { icon: '🎲', name: 'Dice', desc: 'Wähle deine Zahl. Je riskanter, desto höher der Gewinn.' },
-  wheel:    { icon: '🎯', name: 'Glücksrad', desc: 'Dreh das Rad – Gewinne bis 4×.' },
-  keno:     { icon: '🔢', name: 'Keno', desc: 'Tippe 5 Zahlen von 40 – bis zu 80×.' },
-  double:   { icon: '💰', name: 'Double or Nothing', desc: 'Verdopple oder verliere alles. Dein Gewinn wird direkt neu gesetzt.' },
-  allin:    { icon: '🔥', name: 'All In', desc: 'Dein ganzes Guthaben auf eine Karte: 48 % für 2×.' },
-  hilo:     { icon: '🃏', name: 'Hi-Lo', desc: 'Höher oder niedriger als die Karte? Je riskanter, desto mehr.' },
-  lucky7:   { icon: '7️⃣', name: 'Lucky 7', desc: 'Zwei Würfel: unter 7, über 7 oder genau 7 (5,7×).' },
-  doors:    { icon: '🚪', name: 'Schatztüren', desc: 'Drei Türen, hinter einer liegt 2,8×.' },
-  number:   { icon: '🔟', name: 'Lucky Number', desc: 'Rate die Zahl von 1 bis 10 – 9×.' },
-  rps:      { icon: '✊', name: 'Schere Stein Papier', desc: 'Sieg 2,4×, Unentschieden gibt 0,5× zurück.' },
+  cyberrace:{ icon: '🏎️', name: 'Cyber Race', desc: 'Wähle einen von 5 Renn-Gleitern. Live-Rennen von 2× bis 18× Gewinn!' },
+  coinflip: { icon: '🪙', name: 'Coinflip', desc: '50/50 Kopf oder Zahl – klassischer Münzwurf für 1,92× Auszahlung.' },
+  dice:     { icon: '🎲', name: 'Dice', desc: 'Stelle deine Gewinnchance frei ein (5%–94%) – bis zu 19× Multiplikator.' },
+  wheel:    { icon: '🎯', name: 'Glücksrad', desc: '10 Segmente: Dreh das Rad für direkte Multiplikatoren bis 4×.' },
+  keno:     { icon: '🔢', name: 'Keno', desc: 'Wähle 5 Glückszahlen aus 40 – 5 Treffer zahlen 75×!' },
+  double:   { icon: '💰', name: 'Double or Nothing', desc: 'Alles oder nichts: 46,5 % Chance auf 2× pro Stufe.' },
+  allin:    { icon: '🔥', name: 'All In', desc: 'Setze dein gesamtes Guthaben auf eine Karte: 46 % Chance auf 2×!' },
+  hilo:     { icon: '🃏', name: 'Hi-Lo', desc: 'Ist die nächste Karte höher oder niedriger? Dynamische faire Quoten.' },
+  lucky7:   { icon: '7️⃣', name: 'Lucky 7', desc: 'Zwei Würfel: Unter/Über 7 (2,15×) oder exakt Summe 7 (5,2×).' },
+  doors:    { icon: '🚪', name: 'Schatztüren', desc: 'Wähle eine von 3 geheimen Türen – hinter einer liegt 2,8×.' },
+  number:   { icon: '🔟', name: 'Lucky Number', desc: 'Tippe die exakte Zahl von 1 bis 10 für 9× Gewinn.' },
+  rps:      { icon: '✊', name: 'Schere Stein Papier', desc: 'Sieg zahlt 2,35×, bei Unentschieden gibt es 0,5× zurück.' },
   bomb:     { icon: '💣', name: 'Bomben-Entschärfer', desc: 'Schneide den richtigen von 3 Drähten durch für 2,75×!' },
-  darts:    { icon: '🎯', name: 'Dart-Meister', desc: 'Wirf auf die Scheibe! Bullseye gibt fette 12×!' },
-  horses:   { icon: '🏇', name: 'Pferderennen', desc: 'Wette auf deinen Favoriten (1,9× bis 7,5×)!' },
-  cases:    { icon: '📦', name: 'Kisten Öffnen', desc: 'CS:GO-Style Case Opening! Zieh seltene Items bis 50× Jackpot.', page: true },
-  crypto:   { icon: '📈', name: 'Krypto-Börse', desc: 'Live Kerzenchart! Trade mit 2× bis 50× Hebel Long oder Short.', page: true },
+  darts:    { icon: '🎯', name: 'Dart-Meister', desc: 'Wirf auf die Scheibe! Bullseye zahlt 12×!' },
+  horses:   { icon: '🏇', name: 'Pferderennen', desc: 'Wette auf eines von 4 Rennpferden (1,9× bis 7,5×)!' },
+  cases:    { icon: '📦', name: 'Kisten Öffnen', desc: '11 Mystery-Kisten von 500 FC bis 1 Mio. FC! Ziehe seltene Relikte bis 35×.', page: true },
+  crypto:   { icon: '📈', name: 'Krypto-Hebel', desc: 'Echtzeit-Trading (Long/Short, 2×–25× Hebel)! Cashe aus bevor du liquidiert wirst.', page: true },
   luxury:    { icon: '🏎️', name: 'VIP Luxus-Shop', desc: 'Kaufe Sportwagen, Villen & Jets als Trophäen für dein Profil.', page: true },
   livewheel: { icon: '🎡', name: 'Live-Event Rad', desc: 'Alle Spieler wetten gleichzeitig – der Admin stoppt das Rad live!', page: true },
   raffle:    { icon: '🎟️', name: 'Admin-Verlosung', desc: 'Kaufe Lose für den Mega-Jackpot! Der Admin lost den Sieger live aus.', page: true },
@@ -560,26 +561,27 @@ async function checkAnnouncement() {
 
 /* ---------- Navigation ---------- */
 const NAVGROUPS = [
-  ['⭐', 'Beliebt', ['deal', 'prophet', 'royale', 'raffle', 'livewheel', 'cases', 'crypto', 'limbo', 'penalty', 'slots', 'crash', 'mines', 'blackjack', 'towers', 'plinko']],
-  ['🃏', 'Tischspiele', ['war', 'roulette', 'baccarat', 'sicbo', 'dragon', 'poker', 'hilo']],
-  ['⚡', 'Schnelle Spiele', ['bomb', 'darts', 'horses', 'cyberrace', 'coinflip', 'dice', 'double', 'allin', 'lucky7', 'rps', 'number', 'doors', 'wheel', 'keno']],
-  ['⚔️', 'PvP', ['livepoker', 'duel', 'chess', 'versus']],
-  ['🎮', 'Future Games', ['snake', 'typing', 'trivia', 'tetris']],
-  ['🌍', 'Community', ['court', 'hof', 'votes', 'forbes', 'stocks', 'community', 'friends', 'chat', 'clanhq', 'feed', 'players', 'board']],
-  ['👤', 'Mein Konto', ['vault', 'leagues', 'bank', 'luxury', 'earn', 'bp', 'ach', 'shop', 'stats', 'admin']]
+  ['🔥', 'Casino Hits', ['slots', 'cases', 'crash', 'mines', 'plinko', 'towers', 'limbo', 'deal', 'crypto']],
+  ['🎪', 'Live & Events', ['livewheel', 'raffle', 'royale', 'prophet', 'livepoker']],
+  ['🃏', 'Tisch & Karten', ['blackjack', 'roulette', 'poker', 'baccarat', 'dragon', 'war', 'sicbo', 'hilo']],
+  ['⚡', 'Schnellspiele', ['penalty', 'coinflip', 'dice', 'cyberrace', 'horses', 'bomb', 'darts', 'wheel', 'keno', 'lucky7', 'doors', 'number', 'rps', 'double', 'allin']],
+  ['⚔️', 'PvP & Arcade', ['duel', 'chess', 'versus', 'snake', 'typing', 'trivia', 'tetris']],
+  ['💎', 'Bank & Wirtschaft', ['vault', 'stocks', 'bank', 'luxury', 'forbes']],
+  ['🌍', 'Community & Ruhm', ['chat', 'hof', 'board', 'leagues', 'clanhq', 'community', 'court', 'votes', 'friends', 'players', 'feed']],
+  ['👤', 'Konto & Boni', ['earn', 'bp', 'ach', 'shop', 'stats', 'admin']]
 ]
 const navOpen = {}
-const grpOpen = (name, keys) => name in navOpen ? navOpen[name] : (name === 'Beliebt' || keys.includes(current))
+const grpOpen = (name, keys) => name in navOpen ? navOpen[name] : (name === 'Casino Hits' || keys.includes(current))
 function toggleGroup(name) { const g = NAVGROUPS.find(x => x[1] === name); navOpen[name] = !grpOpen(name, g[2]); renderNav() }
 function renderNav() {
   const ok = k => GAMES[k] && (!GAMES[k].admin || ROLE === 'admin')
-  const btn = k => `<button class="nav ${k === current ? 'on' : ''}" onclick="show('${k}')"><span class="text-lg">${GAMES[k].icon}</span>${GAMES[k].name}</button>`
+  const btn = k => `<button class="nav ${k === current ? 'on' : ''}" onclick="show('${k}')"><span class="text-lg">${GAMES[k].icon}</span><span class="truncate">${GAMES[k].name}</span></button>`
   const listed = NAVGROUPS.flatMap(g => g[2]).concat('lobby'), rest = Object.keys(GAMES).filter(k => !listed.includes(k))
   const groups = rest.length ? NAVGROUPS.concat([['➕', 'Mehr', rest]]) : NAVGROUPS
   $('nav').innerHTML = btn('lobby') + groups.map(([ic, name, keys]) => {
     keys = keys.filter(ok); if (!keys.length) return ''
     const open = grpOpen(name, keys)
-    return `<div><button class="nhead" onclick="toggleGroup('${name}')"><span>${ic} ${name}</span><span>${open ? '▾' : '▸'}</span></button>${open ? keys.map(btn).join('') : ''}</div>`
+    return `<div><button class="nhead" onclick="toggleGroup('${name}')"><span>${ic} ${name} <span class="text-[10px] text-zinc-500">(${keys.length})</span></span><span>${open ? '▾' : '▸'}</span></button>${open ? keys.map(btn).join('') : ''}</div>`
   }).join('')
 }
 let _tickerCnt = 0
@@ -652,8 +654,111 @@ const VIEWS = {
 let PM = [5.6, 2.1, 1.1, 1, 0.5, 1, 1.1, 2.1, 5.6]
 const WM = [0, 0.5, 0, 1.5, 0, 2, 0, 1, 0, 4]
 
-VIEWS.lobby = () => `<div class="grid grid-cols-2 md:grid-cols-4 gap-3">${Object.entries(GAMES).filter(([k, g]) => k !== 'lobby' && !g.page).map(([k, g]) =>
-  `<button onclick="sfx.click();show('${k}')" class="glass rounded-2xl p-4 text-left hover:border-cyan-500 transition"><div class="text-3xl mb-1">${g.icon}</div><div class="font-bold text-sm">${g.name}</div><div class="text-[11px] text-zinc-400 mt-1 line-clamp-2">${g.desc}</div></button>`).join('')}</div>`
+let lobbyCat = 'all', lobbySearch = ''
+const LOBBY_TABS = [
+  ['all', '🔥 Alle'],
+  ['hits', '🎰 Hits & Slots'],
+  ['live', '🎪 Live-Shows'],
+  ['table', '🃏 Tisch & Karten'],
+  ['fast', '⚡ Schnellspiele'],
+  ['pvp', '⚔️ PvP & Arcade'],
+  ['eco', '💎 Bank & Ruhm']
+]
+const LOBBY_MAP = {
+  hits: ['slots', 'cases', 'crash', 'mines', 'plinko', 'towers', 'limbo', 'deal', 'crypto'],
+  live: ['livewheel', 'raffle', 'royale', 'prophet', 'livepoker'],
+  table: ['blackjack', 'roulette', 'poker', 'baccarat', 'dragon', 'war', 'sicbo', 'hilo'],
+  fast: ['penalty', 'coinflip', 'dice', 'cyberrace', 'horses', 'bomb', 'darts', 'wheel', 'keno', 'lucky7', 'doors', 'number', 'rps', 'double', 'allin'],
+  pvp: ['duel', 'chess', 'versus', 'snake', 'typing', 'trivia', 'tetris'],
+  eco: ['vault', 'stocks', 'bank', 'luxury', 'forbes', 'hof', 'leagues', 'earn', 'bp']
+}
+const GAME_BADGES = {
+  slots: ['🏆 Global Pot', 'text-yellow-300 border-yellow-500/40 bg-yellow-950/30'],
+  cases: ['11 Kisten · bis 35×', 'text-pink-300 border-pink-500/40 bg-pink-950/30'],
+  crash: ['Live Cashout · 1000×', 'text-emerald-300 border-emerald-500/40 bg-emerald-950/30'],
+  mines: ['Strategie · 94% RTP', 'text-cyan-300 border-cyan-500/40 bg-cyan-950/30'],
+  plinko: ['Low/Mid/High · 26×', 'text-amber-300 border-amber-500/40 bg-amber-950/30'],
+  towers: ['8 Ebenen · 4 Modi', 'text-purple-300 border-purple-500/40 bg-purple-950/30'],
+  limbo: ['Bis 10.000×', 'text-cyan-300 border-cyan-500/40 bg-cyan-950/30'],
+  deal: ['12 Koffer · Banker', 'text-yellow-300 border-yellow-500/40 bg-yellow-950/30'],
+  crypto: ['2×–25× Hebel', 'text-emerald-300 border-emerald-500/40 bg-emerald-950/30'],
+  blackjack: ['Blackjack 2,5×', 'text-white border-zinc-600 bg-zinc-800/80'],
+  roulette: ['Grün 14× · Rot/Schw. 2×', 'text-red-300 border-red-500/40 bg-red-950/30'],
+  poker: ['Royal Flush 800×', 'text-purple-300 border-purple-500/40 bg-purple-950/30'],
+  penalty: ['Tor = 1,85×', 'text-emerald-300 border-emerald-500/40 bg-emerald-950/30'],
+  coinflip: ['50/50 · 1,92×', 'text-cyan-300 border-cyan-500/40 bg-cyan-950/30'],
+  vault: ['+1% Zinsen / Tag', 'text-cyan-300 border-cyan-500/40 bg-cyan-950/30'],
+  luxury: ['8 Status-Trophäen', 'text-yellow-300 border-yellow-500/40 bg-yellow-950/30']
+}
+
+function setLobbyCat(c) { sfx.click(); lobbyCat = c; renderLobbyGrid() }
+function renderLobbyGrid() {
+  const gEl = $('lobby_grid'), tEl = $('lobby_tabs')
+  if (!gEl) return
+  if (tEl) {
+    tEl.innerHTML = LOBBY_TABS.map(([id, lbl]) => `<button onclick="setLobbyCat('${id}')" class="px-3.5 py-2 rounded-xl text-xs font-black whitespace-nowrap transition border ${lobbyCat === id ? 'bg-gradient-to-r from-cyan-600 to-emerald-600 text-white border-cyan-400 shadow-lg' : 'bg-zinc-900/80 text-zinc-300 border-zinc-700 hover:bg-zinc-800'}">${lbl}</button>`).join('')
+  }
+  const allowed = lobbyCat === 'all' ? Object.values(LOBBY_MAP).flat() : (LOBBY_MAP[lobbyCat] || [])
+  const seen = new Set()
+  const items = allowed.filter(k => {
+    if (seen.has(k) || !GAMES[k]) return false
+    seen.add(k)
+    if (!lobbySearch) return true
+    const q = lobbySearch.toLowerCase()
+    return GAMES[k].name.toLowerCase().includes(q) || GAMES[k].desc.toLowerCase().includes(q)
+  })
+  if (!items.length) {
+    gEl.innerHTML = '<div class="col-span-full text-center text-zinc-500 py-8">Kein Spiel für diese Suche gefunden.</div>'
+    return
+  }
+  gEl.innerHTML = items.map(k => {
+    const g = GAMES[k], bd = GAME_BADGES[k]
+    return `<button onclick="sfx.click();show('${k}')" class="glass rounded-2xl p-4 text-left hover:border-cyan-400 hover:-translate-y-0.5 transition-all flex flex-col justify-between border border-zinc-800 group shadow">
+      <div>
+        <div class="flex items-start justify-between gap-2 mb-1.5">
+          <div class="text-3xl group-hover:scale-110 transition-transform">${g.icon}</div>
+          ${bd ? `<span class="text-[10px] px-2 py-0.5 rounded-full font-bold border ${bd[1]}">${bd[0]}</span>` : ''}
+        </div>
+        <div class="font-black text-white text-sm">${g.name}</div>
+        <div class="text-[11px] text-zinc-400 mt-1 line-clamp-2 leading-relaxed">${g.desc}</div>
+      </div>
+      <div class="mt-3 pt-2 border-t border-zinc-800/80 flex items-center justify-between text-[11px] text-cyan-400 font-bold">
+        <span>Jetzt öffnen</span><span>→</span>
+      </div>
+    </button>`
+  }).join('')
+}
+
+VIEWS.lobby = () => `
+  <div class="space-y-4">
+    <!-- Quick Action Hero Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <button onclick="sfx.click();show('slots');setTimeout(()=>openSlot('globalpot'),60)" class="jackpot-card rounded-2xl p-4 text-left hover:scale-[1.01] transition cursor-pointer">
+        <div class="text-[10px] font-black uppercase text-yellow-400">🏆 Echter Global Pot Slot</div>
+        <div class="text-lg font-black text-white mt-0.5">Global Pot Jagd</div>
+        <div class="text-xs text-zinc-300 mt-1">Knacke den gesamten Server-Jackpot mit 5× 🏆!</div>
+      </button>
+      <button onclick="sfx.click();show('cases')" class="glass rounded-2xl p-4 text-left border border-pink-500/40 bg-pink-950/15 hover:border-pink-400 transition cursor-pointer">
+        <div class="text-[10px] font-black uppercase text-pink-300">📦 Mystery Unboxings</div>
+        <div class="text-lg font-black text-white mt-0.5">11 Kisten Öffnen</div>
+        <div class="text-xs text-zinc-300 mt-1">Von Starter (500 FC) bis Omega-Kiste (1 Mio. FC)!</div>
+      </button>
+      <button onclick="sfx.click();show('earn')" class="glass rounded-2xl p-4 text-left border border-emerald-500/40 bg-emerald-950/15 hover:border-emerald-400 transition cursor-pointer">
+        <div class="text-[10px] font-black uppercase text-emerald-300">🎁 Gratis FutureCoins</div>
+        <div class="text-lg font-black text-white mt-0.5">Boni &amp; Missionen</div>
+        <div class="text-xs text-zinc-300 mt-1">Daily-Streak, Stunden-Bonus &amp; Tagesmissionen abholen.</div>
+      </button>
+    </div>
+
+    <!-- Search & Category Tabs -->
+    <div class="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center justify-between">
+      <div id="lobby_tabs" class="flex gap-1.5 overflow-x-auto pb-1" style="scrollbar-width:none"></div>
+      <input id="lobby_search" value="${esc(lobbySearch)}" oninput="lobbySearch=this.value;renderLobbyGrid()" placeholder="🔍 Spiel suchen (z.B. Crash, Kisten, Poker)..." class="inp text-xs py-2 px-3 sm:w-64">
+    </div>
+
+    <div id="lobby_grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3"></div>
+  </div>`
+PAGEINIT.lobby = () => renderLobbyGrid()
 
 /* ================= NEUE GAMES: LIMBO, PENALTY, WAR, CYBER RACE ================= */
 VIEWS.limbo = () => betBox() + `
@@ -664,13 +769,13 @@ VIEWS.limbo = () => betBox() + `
   <label class="text-xs text-zinc-400">Ziel-Multiplikator (z.B. 2.00× oder 50.00×)</label>
   <div class="flex gap-2 mt-1 mb-4">
     <input id="limbo-tgt" type="number" step="0.1" min="1.05" max="10000" value="2.00" class="inp flex-1" oninput="updateLimboWinChance()" />
-    <span id="limbo-chance" class="text-xs text-zinc-400 flex items-center px-3 glass rounded-xl">Chance: 49.0%</span>
+    <span id="limbo-chance" class="text-xs text-zinc-400 flex items-center px-3 glass rounded-xl">Chance: 47.5%</span>
   </div>
   <button class="btn play bg-emerald-600 font-bold" onclick="playLimbo()">Rakete starten</button>`
 
 function updateLimboWinChance() {
   const val = Number($('limbo-tgt').value) || 2
-  const ch = Math.max(0.01, Math.min(95, 98 / val)).toFixed(1)
+  const ch = Math.max(0.01, Math.min(92, 95 / val)).toFixed(1)
   if ($('limbo-chance')) $('limbo-chance').textContent = `Chance: ${ch}%`
 }
 function playLimbo() {
@@ -952,23 +1057,23 @@ const row = a => '<div class="flex gap-3 flex-wrap">' + a.map(([l, p, c]) => `<b
 const stg = (t, h = 'h-32') => `<div id="stage" class="${h} flex items-center justify-center text-6xl font-black gap-4">${t}</div>`
 const say = h => { const el = $('stage'); if (el) el.innerHTML = h; const pres = $('penalty-result'); if (pres && !el) pres.innerHTML = h; }
 
-VIEWS.double = () => { dnS = 0; dnBase = lastBet; return betBox() + stg('💰') + '<div id="dn" class="text-center text-sm text-zinc-400 mb-4">Streak: 0 – Gewinne werden automatisch neu gesetzt</div>' + row([['💥 Double or Nothing', 'x', 'bg-orange-600']]) }
-VIEWS.allin = () => `<input id="bet" type="hidden" value="${balance}">` + stg('🔥', 'h-36') + `<div class="text-center text-zinc-400 mb-4">Dein ganzes Guthaben (${balance} FC) – 48 % Chance auf 2×</div><button class="btn play bg-red-600" onclick="$('bet').value=balance;play('x')">🔥 ALL IN</button>`
+VIEWS.double = () => { dnS = 0; dnBase = lastBet; return betBox() + stg('💰') + '<div id="dn" class="text-center text-sm text-zinc-400 mb-4">Streak: 0 – 46,5 % Chance auf 2×</div>' + row([['💥 Double or Nothing (2×)', 'x', 'bg-orange-600']]) }
+VIEWS.allin = () => `<input id="bet" type="hidden" value="${balance}">` + stg('🔥', 'h-36') + `<div class="text-center text-zinc-400 mb-4">Dein ganzes Guthaben (${balance.toLocaleString('de-DE')} FC) – 46 % Chance auf 2×</div><button class="btn play bg-red-600" onclick="$('bet').value=balance;play('x')">🔥 ALL IN</button>`
 VIEWS.hilo = () => {
-  const up = 13 - hiRef, lo = hiRef - 1, m = c => (0.97 * 13 / c).toFixed(2)
+  const up = 13 - hiRef, lo = hiRef - 1, m = c => (0.94 * 13 / c).toFixed(2)
   return betBox() + stg(`<div class="glass rounded-xl px-6 py-4">${RANKS[hiRef - 1]}</div>`) + '<div class="flex gap-3 mb-3">' +
     (up ? `<button class="btn play bg-emerald-600" onclick="play('higher:${hiRef}')">⬆ Höher ${m(up)}×</button>` : '') +
     (lo ? `<button class="btn play bg-rose-600" onclick="play('lower:${hiRef}')">⬇ Niedriger ${m(lo)}×</button>` : '') +
     '</div><button class="btn bg-zinc-800" onclick="sfx.click();newRef()">🔄 Neue Karte</button>'
 }
 function newRef() { lastBet = Math.floor(Number($('bet').value)) || lastBet; hiRef = 1 + Math.floor(Math.random() * 13); show('hilo') }
-VIEWS.lucky7 = () => betBox() + stg('🎲 🎲') + row([['⬇ Unter 7 · 2.3×', 'under', 'bg-cyan-600'], ['7 · 5.7×', 'seven', 'bg-yellow-600'], ['⬆ Über 7 · 2.3×', 'over', 'bg-pink-600']])
-VIEWS.dragon = () => betBox() + stg('🐉 vs 🐅') + row([['🐉 Dragon 2.05×', 'dragon', 'bg-red-600'], ['Tie 11×', 'tie', 'bg-zinc-700'], ['🐅 Tiger 2.05×', 'tiger', 'bg-orange-600']])
-VIEWS.doors = () => betBox() + stg('🚪 🚪 🚪') + row([['Tür 1', '1', 'bg-cyan-600'], ['Tür 2', '2', 'bg-cyan-600'], ['Tür 3', '3', 'bg-cyan-600']])
+VIEWS.lucky7 = () => betBox() + stg('🎲 🎲') + row([['⬇ Unter 7 · 2,15×', 'under', 'bg-cyan-600'], ['7 · 5,2×', 'seven', 'bg-yellow-600'], ['⬆ Über 7 · 2,15×', 'over', 'bg-pink-600']])
+VIEWS.dragon = () => betBox() + stg('🐉 vs 🐅') + row([['🐉 Dragon 1,95×', 'dragon', 'bg-red-600'], ['Tie 10×', 'tie', 'bg-zinc-700'], ['🐅 Tiger 1,95×', 'tiger', 'bg-orange-600']])
+VIEWS.doors = () => betBox() + stg('🚪 🚪 🚪') + row([['Tür 1 (2,8×)', '1', 'bg-cyan-600'], ['Tür 2 (2,8×)', '2', 'bg-cyan-600'], ['Tür 3 (2,8×)', '3', 'bg-cyan-600']])
 VIEWS.number = () => betBox() + stg('🔟') + '<div class="grid grid-cols-5 gap-2">' + Array.from({ length: 10 }, (_, i) => `<button class="btn play bg-zinc-800" onclick="play('${i + 1}')">${i + 1}</button>`).join('') + '</div>'
 VIEWS.rps = () => betBox() + stg('✊ ✋ ✌️') + row([['✊ Stein', 'rock', 'bg-cyan-600'], ['✋ Papier', 'paper', 'bg-pink-600'], ['✌️ Schere', 'scissors', 'bg-emerald-600']])
-VIEWS.baccarat = () => betBox() + stg('👤 vs 🏦') + row([['👤 Player 2.05×', 'player', 'bg-cyan-600'], ['Tie 9×', 'tie', 'bg-zinc-700'], ['🏦 Banker 2.05×', 'banker', 'bg-red-600']])
-VIEWS.sicbo = () => betBox() + stg('🎲🎲🎲') + row([['⬇ Low ≤10 · 2×', 'low', 'bg-cyan-600'], ['Triple 30×', 'triple', 'bg-yellow-600'], ['⬆ High ≥11 · 2×', 'high', 'bg-pink-600']])
+VIEWS.baccarat = () => betBox() + stg('👤 vs 🏦') + row([['👤 Player 1,95×', 'player', 'bg-cyan-600'], ['Tie 8,5×', 'tie', 'bg-zinc-700'], ['🏦 Banker 1,95×', 'banker', 'bg-red-600']])
+VIEWS.sicbo = () => betBox() + stg('🎲🎲🎲') + row([['⬇ Low ≤10 · 1,95×', 'low', 'bg-cyan-600'], ['Triple 28×', 'triple', 'bg-yellow-600'], ['⬆ High ≥11 · 1,95×', 'high', 'bg-pink-600']])
 
 /* ================= SLOTS MIT EIGENEM JACKPOT PRO MASCHINE ================= */
 let SLOT_POTS = { globalpot: 100000, hot_pot_threshold: 500000000, classic: 15000, fruit: 35000, volcano: 75000, mega: 150000, jackpot: 500000, scratch: 25000, cyber: 45000, pirate: 90000, egypt: 60000, space: 250000, billionaire: 5000000, monopoly: 15000000, emperor: 50000000 }
@@ -1217,15 +1322,15 @@ VIEWS.admin = () => `
     <div id="adm-ampel-alerts" class="text-[11px] text-zinc-300"></div>
   </div>
 
-  <!-- Admin Navigation Tabs (Alle sichtbar dank flex-wrap) -->
-  <div class="flex flex-wrap gap-1.5 p-1.5 glass rounded-2xl mb-4 text-xs sm:text-sm border border-zinc-700/60">
+  <!-- Admin Navigation Tabs -->
+  <div id="adm_tabs" class="flex flex-wrap gap-1.5 p-1.5 glass rounded-2xl mb-4 text-xs sm:text-sm border border-zinc-700/60">
     <button id="atab_games" onclick="switchAdmTab('games')" class="px-3 py-2 rounded-xl font-bold flex items-center gap-1.5 transition ${admTab==='games'?'bg-gradient-to-r from-cyan-600 to-emerald-600 text-white shadow-lg':'hover:bg-zinc-800 text-zinc-300'}">🎮 Games</button>
-    <button id="atab_logs" onclick="switchAdmTab('logs')" class="px-3 py-2 rounded-xl font-bold flex items-center gap-1.5 transition ${admTab==='logs'?'bg-gradient-to-r from-red-600 to-rose-600 text-white shadow-lg':'hover:bg-zinc-800 text-red-300 border border-red-500/30'}">🛡️ Security & Win-Logs</button>
-    <button id="atab_server" onclick="switchAdmTab('server')" class="px-3 py-2 rounded-xl font-bold flex items-center gap-1.5 transition ${admTab==='server'?'bg-gradient-to-r from-cyan-600 to-emerald-600 text-white shadow-lg':'hover:bg-zinc-800 text-zinc-300'}">🌐 Chancen & Quoten</button>
+    <button id="atab_logs" onclick="switchAdmTab('logs')" class="px-3 py-2 rounded-xl font-bold flex items-center gap-1.5 transition ${admTab==='logs'?'bg-gradient-to-r from-red-600 to-rose-600 text-white shadow-lg':'hover:bg-zinc-800 text-red-300 border border-red-500/30'}">🛡️ Security &amp; Logs</button>
+    <button id="atab_server" onclick="switchAdmTab('server')" class="px-3 py-2 rounded-xl font-bold flex items-center gap-1.5 transition ${admTab==='server'?'bg-gradient-to-r from-cyan-600 to-emerald-600 text-white shadow-lg':'hover:bg-zinc-800 text-zinc-300'}">🌐 Live &amp; Quoten</button>
     <button id="atab_players" onclick="switchAdmTab('players')" class="px-3 py-2 rounded-xl font-bold flex items-center gap-1.5 transition ${admTab==='players'?'bg-gradient-to-r from-cyan-600 to-emerald-600 text-white shadow-lg':'hover:bg-zinc-800 text-zinc-300'}">👥 Spieler</button>
-    <button id="atab_troll" onclick="switchAdmTab('troll')" class="px-3 py-2 rounded-xl font-bold flex items-center gap-1.5 transition ${admTab==='troll'?'bg-gradient-to-r from-pink-600 to-rose-600 text-white shadow-lg':'hover:bg-zinc-800 text-pink-300'}">🤡 Troll & Chaos</button>
-    <button id="atab_god" onclick="switchAdmTab('god')" class="px-3 py-2 rounded-xl font-bold flex items-center gap-1.5 transition ${admTab==='god'?'bg-gradient-to-r from-yellow-500 to-amber-600 text-black font-black shadow-lg':'hover:bg-zinc-800 text-yellow-300'}">⚡ Alles Ändern (God)</button>
-    <button id="atab_economy" onclick="switchAdmTab('economy')" class="px-3 py-2 rounded-xl font-bold flex items-center gap-1.5 transition ${admTab==='economy'?'bg-gradient-to-r from-cyan-600 to-emerald-600 text-white shadow-lg':'hover:bg-zinc-800 text-zinc-300'}">💰 Slots & Economy</button>
+    <button id="atab_troll" onclick="switchAdmTab('troll')" class="px-3 py-2 rounded-xl font-bold flex items-center gap-1.5 transition ${admTab==='troll'?'bg-gradient-to-r from-pink-600 to-rose-600 text-white shadow-lg':'hover:bg-zinc-800 text-pink-300'}">🤡 Troll &amp; Chaos</button>
+    <button id="atab_god" onclick="switchAdmTab('god')" class="px-3 py-2 rounded-xl font-bold flex items-center gap-1.5 transition ${admTab==='god'?'bg-gradient-to-r from-yellow-500 to-amber-600 text-black font-black shadow-lg':'hover:bg-zinc-800 text-yellow-300'}">⚡ God-Editor</button>
+    <button id="atab_economy" onclick="switchAdmTab('economy')" class="px-3 py-2 rounded-xl font-bold flex items-center gap-1.5 transition ${admTab==='economy'?'bg-gradient-to-r from-cyan-600 to-emerald-600 text-white shadow-lg':'hover:bg-zinc-800 text-zinc-300'}">💰 Slots &amp; Economy</button>
   </div>
 
   <!-- Dynamic Content Container -->
@@ -1235,13 +1340,13 @@ VIEWS.admin = () => `
 function switchAdmTab(t) {
   sfx.click();
   admTab = t;
-  ['games', 'server', 'players', 'economy', 'logs'].forEach(tab => {
+  ['games', 'logs', 'server', 'players', 'troll', 'god', 'economy'].forEach(tab => {
     const btn = $('atab_' + tab);
     if (!btn) return;
     if (tab === t) {
-      btn.className = 'px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition whitespace-nowrap bg-gradient-to-r from-cyan-600 to-emerald-600 text-white shadow-lg shadow-cyan-900/30';
+      btn.className = 'px-3.5 py-2 rounded-xl font-bold flex items-center gap-1.5 transition whitespace-nowrap bg-gradient-to-r from-cyan-600 to-emerald-600 text-white shadow-lg shadow-cyan-900/30';
     } else {
-      btn.className = 'px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition whitespace-nowrap hover:bg-zinc-800 text-zinc-300';
+      btn.className = 'px-3.5 py-2 rounded-xl font-bold flex items-center gap-1.5 transition whitespace-nowrap hover:bg-zinc-800 text-zinc-300';
     }
   });
   renderAdminContent();
@@ -1880,7 +1985,7 @@ async function admBanDeviceAlts(ids, names) {
   if (!ids || ids.length === 0) return;
   if (!confirm(`Folgende Zweitaccount(s) sofort sperren?\n\n${names}`)) return;
   for (const uid of ids) {
-    await sb.rpc('admin_set_user_god', { target_uid: uid, p_banned: true });
+    await sb.rpc('admin_set_user_god', { target: uid, p_banned: true });
   }
   toast(`🔒 ${ids.length} Zweitaccount(s) gesperrt!`);
   loadAdminFullDashboard();
@@ -2092,8 +2197,9 @@ function renderAdminEconomyTab(c) { setTimeout(() => { admLoadCustomSlots(); adm
     </div>`;
 }
 
-/* ================= TAB 5: SECURITY CENTER & FULL WIN-LOGS ================= */
+/* ================= TAB 5: SECURITY CENTER & FULL GAME-LOGS ================= */
 let logFilter = 'all', logSearch = '', LOGS_CACHE = []
+function setLogFilter(f) { sfx.click(); logFilter = f; drawSecurityLogs() }
 async function renderAdminLogsTab(c) {
   c.innerHTML = `
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
@@ -2130,24 +2236,26 @@ async function renderAdminLogsTab(c) {
     <div class="glass rounded-2xl p-5 border border-zinc-700">
       <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
         <div>
-          <b class="text-white text-base">🛡️ Security Win-Log (Letzte 150 Gewinne mit Uhrzeit &amp; Rollback)</b>
-          <div class="text-xs text-zinc-400">Hohe &amp; extreme Gewinne sind automatisch markiert. Setze verdächtige Gewinne per 1 Klick zurück!</div>
+          <b class="text-white text-base">🛡️ Komplettes Spiel- &amp; Security-Log (Alle Runden: Gewinne &amp; Verluste)</b>
+          <div class="text-xs text-zinc-400">Jeder Einsatz ab 1 FC wird live erfasst. Verdächtige Gewinne kannst du mit 1 Klick zurücksetzen!</div>
         </div>
         <div class="flex flex-wrap gap-1.5 items-center">
-          <input id="log_search" placeholder="Spieler / Spiel..." value="${esc(logSearch)}" oninput="logSearch=this.value.toLowerCase();drawSecurityLogs()" class="inp text-sm w-48">
-          <select id="log_filter" onchange="logFilter=this.value;drawSecurityLogs()" class="inp py-1 px-2 text-xs">
-            <option value="all" ${logFilter==='all'?'selected':''}>Alle (150)</option>
-            <option value="high" ${logFilter==='high'?'selected':''}>⚠️ Hoch + Extrem</option>
-            <option value="extreme" ${logFilter==='extreme'?'selected':''}>🚨 Nur Extrem</option>
-          </select>
-          <button class="btn bg-zinc-800 text-xs px-2.5 py-1" style="width:auto" onclick="renderAdminLogsTab($('adm_tab_content'))">↻ Neu laden</button>
+          <input id="log_search" placeholder="🔍 Spieler / Spiel..." value="${esc(logSearch)}" oninput="logSearch=this.value.toLowerCase();drawSecurityLogs()" class="inp text-xs w-44">
+          <button class="btn bg-cyan-700 hover:bg-cyan-600 text-xs font-bold px-3 py-1.5" style="width:auto" onclick="renderAdminLogsTab($('adm_tab_content'))">↻ Aktualisieren</button>
         </div>
       </div>
-      <div id="adm_wins_feed" class="text-xs text-zinc-300 max-h-[32rem] overflow-y-auto">Lade Security Win-Log...</div>
+      <div id="adm_logs_kpis" class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3 text-xs"></div>
+      <div id="adm_logs_tabs" class="flex flex-wrap gap-1.5 mb-3"></div>
+      <div id="adm_wins_feed" class="text-xs text-zinc-300 max-h-[34rem] overflow-y-auto">Lade Security-Logs...</div>
     </div>`;
 
-  const logs = await call('admin_get_win_logs', { limit_cnt: 150 });
-  LOGS_CACHE = logs || [];
+  const { data: logs, error } = await sb.rpc('admin_get_win_logs', { limit_cnt: 200 });
+  if (error) {
+    const box = $('adm_wins_feed');
+    if (box) box.innerHTML = `<div class="p-4 rounded-xl bg-red-950/40 border border-red-500 text-red-300">❌ Log-Fehler: ${esc(error.message)}</div>`;
+    return;
+  }
+  LOGS_CACHE = Array.isArray(logs) ? logs : [];
   drawSecurityLogs();
 }
 
@@ -2176,43 +2284,71 @@ async function banFromLog(uid, uname) {
 }
 
 function drawSecurityLogs() {
-  const box = $('adm_wins_feed'); if (!box) return;
+  const box = $('adm_wins_feed'), tBox = $('adm_logs_tabs'), kBox = $('adm_logs_kpis');
+  if (!box) return;
+  const totBet = LOGS_CACHE.reduce((a, x) => a + Number(x.bet || 0), 0);
+  const totPay = LOGS_CACHE.reduce((a, x) => a + Number(x.payout || 0), 0);
+  const houseNet = totBet - totPay;
+  if (kBox) {
+    kBox.innerHTML = `
+      <div class="p-2.5 rounded-xl bg-zinc-900/80 border border-zinc-800"><div class="text-zinc-400">Geladene Runden</div><b class="text-white text-sm">${LOGS_CACHE.length}</b></div>
+      <div class="p-2.5 rounded-xl bg-zinc-900/80 border border-zinc-800"><div class="text-zinc-400">Einsatz Summe</div><b class="text-cyan-300 text-sm font-mono">${totBet.toLocaleString('de-DE')} FC</b></div>
+      <div class="p-2.5 rounded-xl bg-zinc-900/80 border border-zinc-800"><div class="text-zinc-400">Auszahlung Summe</div><b class="text-amber-300 text-sm font-mono">${totPay.toLocaleString('de-DE')} FC</b></div>
+      <div class="p-2.5 rounded-xl bg-zinc-900/80 border border-zinc-800"><div class="text-zinc-400">Haus-Bilanz</div><b class="${houseNet >= 0 ? 'text-emerald-400' : 'text-red-400'} text-sm font-mono">${houseNet >= 0 ? '+' : ''}${houseNet.toLocaleString('de-DE')} FC</b></div>`;
+  }
+  if (tBox) {
+    const filters = [
+      ['all', `📋 Alle (${LOGS_CACHE.length})`],
+      ['wins', `🏆 Gewinne (${LOGS_CACHE.filter(x => Number(x.payout) > Number(x.bet)).length})`],
+      ['high', `⚠️ Hoch ≥10× (${LOGS_CACHE.filter(x => x.severity === 'high' || x.severity === 'extreme').length})`],
+      ['extreme', `🚨 Extrem ≥25× (${LOGS_CACHE.filter(x => x.severity === 'extreme').length})`],
+      ['losses', `📉 Verluste (${LOGS_CACHE.filter(x => Number(x.payout) <= Number(x.bet)).length})`]
+    ];
+    tBox.innerHTML = filters.map(([id, lbl]) => `<button onclick="setLogFilter('${id}')" class="px-3 py-1.5 rounded-xl text-xs font-bold border transition ${logFilter === id ? 'bg-cyan-600 text-white border-cyan-400' : 'bg-zinc-900 text-zinc-400 border-zinc-700 hover:bg-zinc-800'}">${lbl}</button>`).join('');
+  }
   const rows = LOGS_CACHE.filter(x => {
-    const okF = logFilter === 'all' || (logFilter === 'high' && x.severity !== 'normal') || (logFilter === 'extreme' && x.severity === 'extreme');
+    const isWin = Number(x.payout) > Number(x.bet);
+    const okF = logFilter === 'all'
+      || (logFilter === 'wins' && isWin)
+      || (logFilter === 'losses' && !isWin)
+      || (logFilter === 'high' && (x.severity === 'high' || x.severity === 'extreme'))
+      || (logFilter === 'extreme' && x.severity === 'extreme');
     const okS = !logSearch || (x.username || '').toLowerCase().includes(logSearch) || (x.game || '').toLowerCase().includes(logSearch);
     return okF && okS;
   });
   if (!rows.length) {
-    box.innerHTML = '<div class="text-zinc-500 text-center py-6">Keine Einträge für diesen Filter.</div>';
+    box.innerHTML = '<div class="text-zinc-500 text-center py-8">Noch keine Spielrunden für diesen Filter vorhanden. Sobald jemand spielt, erscheint jede Runde sofort hier!</div>';
     return;
   }
   box.innerHTML = `<div class="overflow-x-auto"><table class="w-full text-left border-collapse text-xs">
     <thead><tr class="border-b border-zinc-700 text-zinc-400 uppercase text-[10px]">
-      <th class="py-2 px-2">Status</th><th class="py-2 px-2">Uhrzeit</th><th class="py-2 px-2">Spieler</th><th class="py-2 px-2">Spiel</th><th class="py-2 px-2">Einsatz → Gewinn</th><th class="py-2 px-2 text-right">Aktionen</th>
+      <th class="py-2 px-2">Status</th><th class="py-2 px-2">Uhrzeit</th><th class="py-2 px-2">Spieler</th><th class="py-2 px-2">Spiel</th><th class="py-2 px-2">Einsatz → Ergebnis</th><th class="py-2 px-2 text-right">Aktionen</th>
     </tr></thead>
     <tbody class="divide-y divide-zinc-800/80">
       ${rows.map(w => {
         const dt = new Date(w.created_at).toLocaleString('de-DE', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit' });
+        const net = Number(w.payout || 0) - Number(w.bet || 0);
         const rowCls = w.rolled_back ? 'opacity-50 bg-zinc-900/30'
                      : w.severity === 'extreme' ? 'bg-red-950/40'
                      : w.severity === 'high' ? 'bg-amber-950/25' : '';
         const badge = w.rolled_back ? '<span class="px-1.5 py-0.5 rounded bg-zinc-700 text-zinc-300 text-[10px] font-bold">↩️ RESET</span>'
                     : w.severity === 'extreme' ? '<span class="px-1.5 py-0.5 rounded bg-red-600 text-white text-[10px] font-black">🚨 EXTREM</span>'
                     : w.severity === 'high' ? '<span class="px-1.5 py-0.5 rounded bg-amber-500 text-black text-[10px] font-black">⚠️ HOCH</span>'
-                    : '<span class="px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 text-[10px]">OK</span>';
+                    : net > 0 ? '<span class="px-1.5 py-0.5 rounded bg-emerald-900/70 text-emerald-300 text-[10px] font-bold">WIN</span>'
+                    : '<span class="px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 text-[10px]">LOSE</span>';
         return `<tr class="${rowCls} hover:bg-zinc-800/40">
           <td class="py-2 px-2 whitespace-nowrap">${badge}</td>
           <td class="py-2 px-2 font-mono text-[11px] text-zinc-400 whitespace-nowrap">${dt}</td>
-          <td class="py-2 px-2 font-bold text-white whitespace-nowrap">${esc(w.username)}</td>
+          <td class="py-2 px-2 font-bold text-white whitespace-nowrap">${esc(w.username)} ${w.is_hidden_test ? '<span class="text-[10px] text-cyan-300">🧪</span>' : ''}</td>
           <td class="py-2 px-2 text-zinc-300 whitespace-nowrap">${esc(w.game)}</td>
           <td class="py-2 px-2 font-mono whitespace-nowrap">
             <span class="text-zinc-400">${Number(w.bet).toLocaleString('de-DE')}</span> →
-            <b class="text-emerald-400">+${Number(w.payout).toLocaleString('de-DE')} FC</b>
+            <b class="${net > 0 ? 'text-emerald-400' : net === 0 ? 'text-zinc-300' : 'text-red-400'}">${Number(w.payout).toLocaleString('de-DE')} FC (${net >= 0 ? '+' : ''}${net.toLocaleString('de-DE')})</b>
             <span class="text-yellow-400">(${w.mult}×)</span>
             ${w.balance_before !== null ? `<span class="text-zinc-500 ml-1">[Vorher: ${Number(w.balance_before).toLocaleString('de-DE')}]</span>` : ''}
           </td>
           <td class="py-2 px-2 text-right whitespace-nowrap">
-            ${!w.rolled_back ? `<button onclick="rollbackWin(${w.id},'${esc(w.username)}')" class="px-2 py-1 rounded bg-amber-600 hover:bg-amber-500 text-black font-black text-[10px] mr-1 cursor-pointer">⏪ Rollback</button>` : ''}
+            ${!w.rolled_back && net > 0 ? `<button onclick="rollbackWin(${w.id},'${esc(w.username)}')" class="px-2 py-1 rounded bg-amber-600 hover:bg-amber-500 text-black font-black text-[10px] mr-1 cursor-pointer">⏪ Rollback</button>` : ''}
             <button onclick="admShadowBan('${w.user_id}',true,'${esc(w.username)}')" class="px-2 py-1 rounded bg-purple-700 hover:bg-purple-600 text-white font-bold text-[10px] mr-1 cursor-pointer" title="Shadow-Ban">👻</button>
             <button onclick="admFreezeUser('${w.user_id}',true,'${esc(w.username)}')" class="px-2 py-1 rounded bg-sky-700 hover:bg-sky-600 text-white font-bold text-[10px] mr-1 cursor-pointer" title="Konto einfrieren">❄️</button>
             <button onclick="banFromLog('${w.user_id}','${esc(w.username)}')" class="px-2 py-1 rounded bg-red-800 hover:bg-red-700 text-white font-bold text-[10px] cursor-pointer" title="Sofort Bannen">🔨</button>
@@ -2464,8 +2600,8 @@ async function admWipeSinglePlayer(id, uname) {
 
 async function admAltBanZero(id, uname) {
   if (!confirm(`🚫 Alt-Account "${uname}" sofort sperren UND Guthaben auf 0 FC setzen?`)) return;
-  await sb.rpc('admin_set_user_god', { target_uid: id, p_banned: true });
-  await sb.rpc('admin_set_balance', { target_uid: id, new_bal: 0 });
+  await sb.rpc('admin_set_user_god', { target: id, p_banned: true });
+  await sb.rpc('admin_set_balance', { target: id, amount: 0 });
   toast(`🚫 Alt-Account "${uname}" gesperrt & auf 0 FC gesetzt!`);
   loadAdminFullDashboard();
 }
@@ -2659,19 +2795,51 @@ function setBtns(dis) { document.querySelectorAll('.play').forEach(b => b.disabl
 function setMode(m) { diceMode = m; sfx.click(); diceInfo() }
 function diceInfo() {
   const over = diceMode === 'over', ch = over ? 100 - diceTarget : diceTarget - 1
-  $('dice-info').innerHTML = `Würfel ${over ? 'über' : 'unter'} <b class="text-white">${diceTarget}</b> • Chance <b class="text-white">${ch}%</b> • Gewinn <b class="text-emerald-400">${(98 / ch).toFixed(2)}×</b>`
+  $('dice-info').innerHTML = `Würfel ${over ? 'über' : 'unter'} <b class="text-white">${diceTarget}</b> • Chance <b class="text-white">${ch}%</b> • Gewinn <b class="text-emerald-400">${(95 / ch).toFixed(2)}×</b>`
   $('m-over').classList.toggle('sel', over); $('m-under').classList.toggle('sel', !over)
 }
 
+const GAME_GUIDES = {
+  slots: 'Wähle aus 14 Automaten! Jeder Automat besitzt einen eigenen progressiven Jackpot. Im Slot „🏆 Global Pot Jagd“ spielst du um den echten Server-Pot (Ticket-Multiplikator steigt bei höheren Einsätzen).',
+  cases: 'Öffne 11 verschiedene Mystery-Kisten (500 FC bis 1 Mio. FC). Graue Items geben 0,1× Trostpreis, Goldene Relikte (0,3 % Chance) schütten bis zu 35× aus!',
+  crypto: 'Wähle einen Coin, Richtung (Long/Short) und Hebel (2×–25×). Der Kurs bewegt sich alle 1,5s live auf dem Server – drücke rechtzeitig auf „Position schließen“, bevor der Kurs auf 0× liquidiert wird!',
+  crash: 'Setze vor dem Start und drücke auf „Cashout“, bevor die Rakete explodiert! Je länger du wartest, desto höher steigt der Multiplikator (bis 1.000×).',
+  mines: 'Auf dem 5×5-Feld verstecken sich 1–20 Minen. Jeder aufgedeckte Diamant erhöht deinen Multiplikator – cashe jederzeit aus, bevor du eine Mine triffst!',
+  towers: 'Klettere bis zu 8 Stufen nach oben. Wähle pro Ebene ein sicheres Feld ohne Bombe – du kannst nach jeder geschafften Ebene auscashen!',
+  plinko: 'Lass Kugeln durch das Pyramiden-Brett fallen. Niedriges Risiko zahlt stabil, hohes Risiko zahlt an den äußeren Rändern bis zu 26×!',
+  limbo: 'Gib deinen Wunsch-Multiplikator ein (1,05× bis 10.000×). Liegt der gezogene Flugwert darüber, gewinnst du sofort Einsatz × Ziel!',
+  deal: 'Wähle deinen Glückskoffer aus 12 Koffern (0,01× bis 2,5×) und öffne die anderen. Nach jedem Koffer macht dir der Banker ein Sofort-Angebot!',
+  blackjack: 'Komme näher an 21 als der Dealer, ohne dich zu überkaufen (>21). Natürlicher Blackjack zahlt 2,5×, Sieg 2×, Gleichstand gibt den Einsatz zurück.',
+  penalty: 'Schieße in eine von 5 Ecken. Hält der Torwart nicht (50 % Trefferquote), erhältst du 1,85× Auszahlung!',
+  vault: 'Schütze deine Coins im VIP-Tresor (optional 12h Auszahlungssperre gegen Tilt) und kassiere täglich +1 % Zinsen (bis 50.000 FC/Tag)!'
+}
+let guideOpen = false
+function renderGameGuide(g) {
+  const wrap = $('gameGuideWrap'); if (!wrap) return
+  if (g === 'lobby' || g === 'admin' || !GAMES[g]) { wrap.innerHTML = ''; return }
+  const txt = GAME_GUIDES[g] || `${GAMES[g].desc} · VIP (+4 % auf Reingewinn) & Legend (+8 % auf Reingewinn) aktiv. Verluste füllen anteilig den Global Pot.`
+  wrap.innerHTML = `
+    <div class="glass rounded-xl px-3.5 py-2 border border-zinc-800 text-xs">
+      <button onclick="guideOpen=!guideOpen;renderGameGuide('${g}')" class="w-full flex items-center justify-between text-left font-bold text-cyan-300">
+        <span>📖 Spielanleitung &amp; Fairness-Info zu ${esc(GAMES[g].name)}</span>
+        <span class="text-zinc-400">${guideOpen ? '▴ Einklappen' : '▾ Anzeigen'}</span>
+      </button>
+      ${guideOpen ? `<div class="mt-2 pt-2 border-t border-zinc-800 text-zinc-300 leading-relaxed">${esc(txt)}</div>` : ''}
+    </div>`
+}
+
 function show(g) {
+  if (!VIEWS[g]) { toast('Ansicht wird geladen...'); g = 'lobby' }
   current = g; busy = false
   $('title').textContent = GAMES[g].icon + ' ' + GAMES[g].name
   $('desc').textContent = GAMES[g].desc
+  renderGameGuide(g)
+  if (typeof stopCryptoLoop === 'function') stopCryptoLoop()
   wheelRot = 0; $('view').innerHTML = VIEWS[g](); msg(''); renderHist(); clearInterval(chatTimer); clearInterval(dTimer); clearInterval(pvpTimer); stopSnake(); stopTetris(); cg_ = null; if (cr) { clearInterval(cr.timer); cr = null }; if (PAGEINIT[g]) PAGEINIT[g]()
   if (g === 'dice') diceInfo()
   if (g === 'limbo') updateLimboWinChance()
   { const gr = NAVGROUPS.find(x => x[2].includes(g)); if (gr) delete navOpen[gr[1]] }
-  if (!GAMES[g].page && g !== 'lobby') sb.rpc('hint_game', { g })
+  if (g !== 'lobby' && g !== 'admin') sb.rpc('hint_game', { g })
   renderNav()
   $('sidebar').classList.add('-translate-x-full')
 }
@@ -2875,7 +3043,7 @@ async function loadClanHq() {
   </div>`
 }
 async function clanAct(fn, arg) { sfx.click(); const d = await call(fn, arg); if (d) { sfx.claim(); if (d.balance !== undefined) setBalance(d.balance); toast('🏰 Aktion erfolgreich!'); loadClanHq() } }
-async function clanDonate() { const amt = Number(prompt('Wie viele FC in die Clan-Kasse einzahlen?', '1000')); if (amt >= 1) clanAct('clan_donate', { amt }) }
+async function clanDonate() { const amt = Number(prompt('Wie viele FC in die Clan-Kasse einzahlen?', '1000')); if (amt >= 1) clanAct('clan_donate', { amount: amt }) }
 async function loadClanRaids() {
   const box = $('clan-raids'); if (!box) return
   const d = await call('clan_raid_targets', {})
@@ -3024,11 +3192,347 @@ function triviaStart() { sfx.click(); tv = { q: [...QS], i: 0, s: 0 }; triviaSho
 function triviaShow() { const [q, o] = tv.q[tv.i]; $('tvbox').innerHTML = `<div class="text-xs text-zinc-400 mb-2">Frage ${tv.i + 1}/${tv.q.length} · ${tv.s} Punkte</div><div class="text-lg font-bold mb-4">${q}</div>` + o.map((t, k) => `<button class="btn bg-zinc-800 mb-2" onclick="triviaAnswer(${k})">${t}</button>`).join('') }
 function triviaAnswer(k) { const [, o, c] = tv.q[tv.i]; if (k === c) { tv.s++; sfx.win() } else sfx.lose(); tv.i++; if (tv.i < tv.q.length) return triviaShow(); const sc = tv.s; tv = null; $('tvbox').innerHTML = `<div class="text-4xl font-black mb-3">${sc} Punkte 🎉</div><button class="btn bg-emerald-600" onclick="triviaStart()">Nochmal</button>`; submitScore('trivia', sc) }
 
-VIEWS.tetris = () => `<div id="cbar"></div><canvas id="ttc" width="200" height="400" class="mx-auto rounded-xl bg-zinc-900 border border-zinc-700 block"></canvas><div class="text-center my-2"><b>Punkte: <span id="ttscore">0</span></b></div><button class="btn bg-emerald-600" onclick="tetrisStart()">Start</button><div id="lbox" class="mt-4"></div>`
-PAGEINIT.tetris = () => FG('tetris')
-let tt = null
-function stopTetris() { if (tt) { clearInterval(tt.timer); document.removeEventListener('keydown', tt.key); tt = null } }
-function tetrisStart() { sfx.click(); stopTetris(); tt = { score: 0 }; $('ttscore').textContent = 0; toast('Tetris läuft! Pfeiltasten zum Steuern.') }
+/* ================= VERSUS, TETRIS, CASES, CRYPTO & LUXURY ================= */
+let vsRun = null, vsMid = null, R = Math.random, tt = null
+function mkRng(seed) { let a = seed >>> 0; return () => { a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296 } }
+function finishScore(game, sc) { if (vsRun && vsRun.game === game) vsSubmit(sc); else submitScore(game, sc) }
+const VSG = [['snake', '🐍 Snake'], ['typing', '⌨️ Typing Race'], ['trivia', '🧠 Trivia Battle'], ['tetris', '🧱 Tetris']]
+const VSN = Object.fromEntries(VSG)
+VIEWS.versus = () => '<div id="vsbox" class="text-zinc-400">Lade Versus-Arena...</div>'
+PAGEINIT.versus = () => vsLobby()
+async function vsLobby() {
+  clearInterval(pvpTimer); vsRun = null; R = Math.random
+  const d = await call('vs_lobby', {}); if (!d || !$('vsbox')) return
+  if (d.mine) return vsWait(d.mine)
+  $('vsbox').innerHTML = `<div class="glass rounded-xl p-4 mb-3"><b>🎮 1v1 Mini-Game Match erstellen</b><div class="flex gap-2 mt-2"><select id="vsg" class="inp py-2 flex-1">${VSG.map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select><button class="btn bg-emerald-600" style="width:auto" onclick="vsCreate()">Erstellen</button></div>
+    <div class="text-xs text-zinc-500 mt-1">Beide Spieler spielen dieselbe Runde (gleicher Seed). Die höhere Punktzahl gewinnt!</div></div><div class="font-bold mb-2">Offene Matches</div>` +
+    ((d.open || []).length ? d.open.map(m => `<div class="glass rounded-lg px-3 py-2 mb-1 flex justify-between items-center text-sm"><span>${nm(m)} · ${VSN[m.game] || m.game}</span><button class="btn bg-cyan-700" style="width:auto;padding:.25rem .8rem" onclick="vsJoin(${m.id})">Annehmen</button></div>`).join('') : '<div class="text-zinc-500 text-sm">Keine offenen Matches.</div>') +
+    '<div class="font-bold mt-4 mb-2">Letzte Matches</div>' + ((d.recent || []).map(r => `<div class="text-sm text-zinc-400 py-0.5">${VSN[r.game] || r.game}: <b class="text-white">${esc(r.a)}</b> ${r.s1} : ${r.s2} <b class="text-white">${esc(r.b)}</b></div>`).join('') || '<div class="text-zinc-500 text-xs">Noch keine gespielten Matches.</div>')
+  pvpTimer = setInterval(vsLobby, 5000)
+}
+async function vsCreate() { const d = await call('vs_create', { vgame: $('vsg').value }); if (d) vsWait(d.id) }
+async function vsJoin(id) { const d = await call('vs_join', { mid: id }); if (d) vsWait(id) }
+async function vsCancel() { await call('vs_cancel', { mid: vsMid }); vsLobby() }
+function vsWait(id) {
+  clearInterval(pvpTimer); vsMid = id
+  const tick = async () => {
+    const s = await call('vs_state', { mid: id }); if (!s || !$('vsbox')) return
+    if (s.status === 'open') $('vsbox').innerHTML = `<div class="glass rounded-xl p-4 text-center">⏳ Warte auf einen Gegner (${VSN[s.game] || s.game})...<br><button class="btn bg-zinc-800 mt-3" onclick="vsCancel()">Abbrechen</button></div>`
+    else if (s.status === 'active' && !s.my_done) { clearInterval(pvpTimer); vsRun = { id, game: s.game, seed: s.seed, opp: s.opp }; R = mkRng(s.seed); toast('⚔️ Match startet gegen ' + s.opp); show(s.game) }
+    else if (s.status === 'active') $('vsbox').innerHTML = `<div class="glass rounded-xl p-4 text-center">Dein Ergebnis: <b>${s.mine}</b> – warte auf ${esc(s.opp)}...</div>`
+    else { clearInterval(pvpTimer); vsResult(s) }
+  }
+  tick(); pvpTimer = setInterval(tick, 2000)
+}
+function vsResult(s) {
+  const t = { me: '🏆 Du gewinnst!', opp: '💀 Du verlierst.', draw: '🤝 Unentschieden' }[s.winner] || 'Beendet'
+  $('vsbox').innerHTML = `<div class="glass rounded-xl p-5 text-center"><div class="text-2xl font-black mb-2">${t}</div><div class="mb-3">Du: <b>${s.mine ?? '–'}</b> · ${esc(s.opp)}: <b>${s.theirs ?? '–'}</b></div><button class="btn bg-emerald-600" onclick="vsLobby()">Zurück zur Versus-Lobby</button></div>`
+}
+async function vsSubmit(sc) { const id = vsRun.id; vsRun = null; R = Math.random; await call('vs_submit', { mid: id, sc }); show('versus') }
+function vsAuto(game) {
+  if (!vsRun || vsRun.game !== game) return
+  setTimeout(() => { if (vsRun && vsRun.game === game) ({ snake: snakeStart, typing: typingStart, trivia: triviaStart, tetris: tetrisStart })[game]() }, 1500)
+}
+
+const TP = [[[1, 1, 1, 1]], [[1, 1], [1, 1]], [[0, 1, 0], [1, 1, 1]], [[1, 0, 0], [1, 1, 1]], [[0, 0, 1], [1, 1, 1]], [[0, 1, 1], [1, 1, 0]], [[1, 1, 0], [0, 1, 1]]]
+const TC = ['#22d3ee', '#facc15', '#a78bfa', '#3b82f6', '#fb923c', '#34d399', '#f43f5e']
+VIEWS.tetris = () => `<div id="cbar"></div><canvas id="ttc" width="200" height="400" class="mx-auto rounded-xl bg-zinc-900 border border-zinc-700 block"></canvas>
+  <div class="text-center my-2"><b>Punkte: <span id="ttscore">0</span></b> · Zeit <span id="tttime">–</span></div>
+  <div class="grid grid-cols-5 gap-2 mb-2 max-w-xs mx-auto"><button class="btn bg-zinc-800" onclick="tetrisKey('l')">◀</button><button class="btn bg-zinc-800" onclick="tetrisKey('rot')">⟳</button><button class="btn bg-zinc-800" onclick="tetrisKey('r')">▶</button><button class="btn bg-zinc-800" onclick="tetrisKey('d')">▼</button><button class="btn bg-zinc-800" onclick="tetrisKey('drop')">⏬</button></div>
+  <button class="btn bg-emerald-600" onclick="tetrisStart()">Start</button><div class="text-xs text-zinc-500 mt-2 text-center">Pfeiltasten / Leertaste oder Touch-Buttons. Runde: 2 Minuten.</div><div id="lbox" class="mt-4"></div>`
+PAGEINIT.tetris = () => { FG('tetris'); vsAuto('tetris') }
+function stopTetris() { if (tt) { clearInterval(tt.timer); clearInterval(tt.clock); document.removeEventListener('keydown', tt.key); tt = null } }
+function tetrisKey(k) { if (tt) tt.act(k) }
+function tetrisStart() {
+  sfx.click(); stopTetris(); tt = { b: Array.from({ length: 20 }, () => Array(10).fill(0)), score: 0, left: 120 }
+  const hit = (m, x, y) => m.some((r, j) => r.some((v, i) => v && (x + i < 0 || x + i >= 10 || y + j >= 20 || (y + j >= 0 && tt.b[y + j][x + i]))))
+  const draw = () => {
+    const cEl = $('ttc'); if (!cEl) return; const x = cEl.getContext('2d'); x.fillStyle = '#18181b'; x.fillRect(0, 0, 200, 400)
+    tt.b.forEach((r, j) => r.forEach((v, i) => { if (v) { x.fillStyle = TC[v - 1]; x.fillRect(i * 20 + 1, j * 20 + 1, 18, 18) } }))
+    x.fillStyle = TC[tt.p.c - 1]; tt.p.m.forEach((r, j) => r.forEach((v, i) => { if (v) x.fillRect((tt.p.x + i) * 20 + 1, (tt.p.y + j) * 20 + 1, 18, 18) }))
+  }
+  const over = () => { const sc = tt.score; stopTetris(); toast('🧱 Ende: ' + sc + ' Punkte'); finishScore('tetris', sc) }
+  const spawn = () => { const i = Math.floor(R() * 7); tt.p = { m: TP[i].map(r => [...r]), c: i + 1, x: 3, y: 0 }; if (hit(tt.p.m, 3, 0)) { over(); return false } return true }
+  const move = (dx, dy) => { if (hit(tt.p.m, tt.p.x + dx, tt.p.y + dy)) return false; tt.p.x += dx; tt.p.y += dy; return true }
+  const lock = () => {
+    tt.p.m.forEach((r, j) => r.forEach((v, i) => { if (v) tt.b[tt.p.y + j][tt.p.x + i] = tt.p.c }))
+    let n = 0; tt.b = tt.b.filter(r => { if (r.every(v => v)) { n++; return false } return true }); while (tt.b.length < 20) tt.b.unshift(Array(10).fill(0))
+    tt.score += [0, 100, 300, 500, 800][n]; if ($('ttscore')) $('ttscore').textContent = tt.score; return spawn()
+  }
+  tt.act = k => {
+    if (!tt) return; let alive = true
+    if (k === 'l') move(-1, 0); else if (k === 'r') move(1, 0)
+    else if (k === 'd') { if (!move(0, 1)) alive = lock() }
+    else if (k === 'rot') { const m = tt.p.m[0].map((_, i) => tt.p.m.map(r => r[i]).reverse()); if (!hit(m, tt.p.x, tt.p.y)) tt.p.m = m }
+    else if (k === 'drop') { while (move(0, 1)); alive = lock() }
+    if (alive && tt) draw()
+  }
+  tt.key = e => { const m = { ArrowLeft: 'l', ArrowRight: 'r', ArrowDown: 'd', ArrowUp: 'rot', ' ': 'drop' }[e.key]; if (m) { e.preventDefault(); tt.act(m) } }
+  document.addEventListener('keydown', tt.key)
+  tt.timer = setInterval(() => tt && tt.act('d'), 500)
+  tt.clock = setInterval(() => { if (!tt) return; tt.left--; if ($('tttime')) $('tttime').textContent = tt.left + 's'; if (tt.left <= 0) over() }, 1000)
+  if ($('ttscore')) $('ttscore').textContent = 0; if (spawn()) draw()
+}
+
+const LUXURY_ITEMS = [
+  { id: 'rolex', icon: '⌚', name: 'Rolex Daytona Gold', price: 25000, desc: 'Edler Status-Chronograph fürs Handgelenk.' },
+  { id: 'porsche', icon: '🏎️', name: 'Porsche 911 GT3 RS', price: 120000, desc: 'Rennstrecken-Biest mit brutalem Sound.' },
+  { id: 'lambo', icon: '🐂', name: 'Lamborghini Revuelto', price: 350000, desc: 'V12-Supersportwagen in Neon-Grün.' },
+  { id: 'bugatti', icon: '🚀', name: 'Bugatti Tourbillon', price: 1500000, desc: '1.800 PS Hypercar für echte High-Roller.' },
+  { id: 'villa', icon: '🏡', name: 'Strand-Villa Malibu', price: 2500000, desc: 'Infinity-Pool & direkter Meerblick.' },
+  { id: 'penthouse', icon: '🏙️', name: 'Sky-Penthouse Dubai', price: 5000000, desc: '360°-Blick über der Skyline inkl. Helipad.' },
+  { id: 'jet', icon: '✈️', name: 'Gulfstream G700 Privatjet', price: 15000000, desc: 'Fliege VIP rund um den Globus.' },
+  { id: 'island', icon: '🏝️', name: 'Eigene Privatinsel', price: 50000000, desc: 'Das ultimative Milliardärs-Statussymbol!' }
+]
+function renderProfileTrophies(owned) {
+  const my = (owned || []).filter(x => x.startsWith('lux:')).map(x => LUXURY_ITEMS.find(i => 'lux:' + i.id === x)).filter(Boolean)
+  if (!my.length) return '<div class="text-xs text-zinc-500 mb-4">Noch keine VIP Luxus-Trophäen im Besitz.</div>'
+  return `<div class="glass rounded-xl p-3 mb-4"><div class="text-xs text-yellow-400 font-black mb-2">🏎️ VIP Trophäen-Garage (${my.length}/${LUXURY_ITEMS.length})</div><div class="flex flex-wrap justify-center gap-2">${my.map(i => `<span class="px-2.5 py-1 rounded-lg bg-yellow-950/30 border border-yellow-500/40 text-xs font-bold">${i.icon} ${esc(i.name)}</span>`).join('')}</div></div>`
+}
+
+VIEWS.luxury = () => '<div id="luxbox" class="text-zinc-400">Lade VIP Showroom...</div>'
+PAGEINIT.luxury = () => renderLuxuryShop()
+function renderLuxuryShop() {
+  const box = $('luxbox'); if (!box) return
+  const owned = (ME && ME.owned) || []
+  box.innerHTML = `
+    <div class="glass rounded-2xl p-4 mb-4 border border-yellow-500/40 bg-yellow-950/15 flex flex-wrap items-center justify-between gap-2">
+      <div>
+        <div class="font-black text-lg text-yellow-300">🏎️ VIP Luxus-Showroom &amp; Statussymbole</div>
+        <div class="text-xs text-zinc-300">Gekaufte Güter zählen voll zu deinem <b>Forbes Top 10 Gesamtvermögen</b> und können im <b>Pfandhaus</b> beliehen werden!</div>
+      </div>
+      <button onclick="show('forbes')" class="btn bg-yellow-500 text-black text-xs font-black px-3 py-2" style="width:auto">📜 Zu Forbes Top 10 →</button>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      ${LUXURY_ITEMS.map(it => {
+        const has = owned.includes('lux:' + it.id)
+        return `<div class="glass rounded-2xl p-4 border ${has ? 'border-emerald-500/60 bg-emerald-950/15' : 'border-zinc-800'} flex flex-col justify-between">
+          <div>
+            <div class="text-4xl mb-2">${it.icon}</div>
+            <div class="font-black text-white text-sm">${esc(it.name)}</div>
+            <div class="text-xs text-zinc-400 mt-1">${esc(it.desc)}</div>
+            <div class="text-base font-mono font-black text-yellow-300 mt-3">${it.price.toLocaleString('de-DE')} FC</div>
+          </div>
+          <div class="mt-3">
+            ${has ? '<div class="text-center py-2 rounded-xl bg-emerald-900/40 text-emerald-300 text-xs font-black">✔ Im Besitz</div>' : `<button onclick="buyLuxuryItem('${it.id}')" class="btn bg-gradient-to-r from-yellow-500 to-amber-600 text-black text-xs font-black">💎 Kaufen</button>`}
+          </div>
+        </div>`
+      }).join('')}
+    </div>`
+}
+async function buyLuxuryItem(id) {
+  sfx.click()
+  const d = await call('luxury_buy', { item_id: id })
+  if (!d) return
+  sfx.jackpot()
+  setBalance(d.balance)
+  if (ME) ME.owned = d.owned || [...(ME.owned || []), 'lux:' + id]
+  toast('🏎️ Glückwunsch zum neuen Luxusgut!')
+  renderLuxuryShop()
+}
+
+const CASE_LIST = [
+  { id: 'starter', name: 'Starter-Kiste', icon: '📦', cost: 500, maxM: 16, col: '#94a3b8' },
+  { id: 'bronze', name: 'Bronze-Tresor', icon: '🥉', cost: 1000, maxM: 16, col: '#d97706' },
+  { id: 'neon', name: 'Neon-Cyberbox', icon: '⚡', cost: 2500, maxM: 16, col: '#22d3ee' },
+  { id: 'ruby', name: 'Rubin-Schatulle', icon: '♦️', cost: 5000, maxM: 16, col: '#f43f5e' },
+  { id: 'highroller', name: 'High-Roller Koffer', icon: '💼', cost: 10000, maxM: 16, col: '#a855f7' },
+  { id: 'emerald', name: 'Smaragd-Truhe', icon: '💚', cost: 25000, maxM: 16, col: '#10b981' },
+  { id: 'diamond', name: 'Diamant-Tresor', icon: '💎', cost: 50000, maxM: 16, col: '#38bdf8' },
+  { id: 'god', name: 'Götter-Relikt', icon: '🔱', cost: 100000, maxM: 22, col: '#eab308' },
+  { id: 'galaxy', name: 'Galaxie-Kapsel', icon: '🌌', cost: 250000, maxM: 26, col: '#8b5cf6' },
+  { id: 'titan', name: 'Titan-Tresor', icon: '🛡️', cost: 500000, maxM: 30, col: '#f97316' },
+  { id: 'omega', name: 'OMEGA 1-MIO KISTE', icon: '👑', cost: 1000000, maxM: 35, col: '#facc15' }
+]
+let selCase = 'starter'
+VIEWS.cases = () => `
+  <div class="space-y-4">
+    <div id="case_stage" class="glass rounded-2xl p-5 border-2 border-cyan-500/40 text-center">
+      <div class="text-xs text-zinc-400 uppercase font-bold mb-2">Ausgewählte Mystery-Kiste</div>
+      <div id="case_roller" class="h-28 flex items-center justify-center gap-3 overflow-hidden my-2">
+        <div class="text-6xl">📦</div>
+      </div>
+      <div id="case_res_txt" class="text-sm font-bold text-zinc-300 min-h-[1.5rem]">Wähle unten eine Kiste und öffne sie!</div>
+      <div class="mt-3 flex flex-wrap justify-center gap-2 text-[11px]">
+        <span class="px-2 py-0.5 rounded bg-zinc-800 text-zinc-400">🧦 Grau 0,1× (30%)</span>
+        <span class="px-2 py-0.5 rounded bg-sky-950 text-sky-300">🪙 Blau 0,4× (32%)</span>
+        <span class="px-2 py-0.5 rounded bg-purple-950 text-purple-300">🔮 Lila 1,1× (26%)</span>
+        <span class="px-2 py-0.5 rounded bg-pink-950 text-pink-300">⚡ Pink 2,1× (9,5%)</span>
+        <span class="px-2 py-0.5 rounded bg-red-950 text-red-300">💎 Rot 4,8× (2,2%)</span>
+        <span class="px-2 py-0.5 rounded bg-yellow-950 text-yellow-300 font-black">👑 Gold bis 35× (0,3%)</span>
+      </div>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      ${CASE_LIST.map(c => `
+        <div class="glass rounded-2xl p-4 border border-zinc-800 hover:border-cyan-400 transition flex flex-col justify-between">
+          <div class="flex items-center justify-between">
+            <span class="text-3xl">${c.icon}</span>
+            <span class="text-[10px] px-2 py-0.5 rounded-full font-black border" style="color:${c.col};border-color:${c.col}66;background:${c.col}18">Max ${c.maxM}×</span>
+          </div>
+          <div class="font-black text-white text-sm mt-2">${c.name}</div>
+          <div class="text-sm font-mono font-bold text-emerald-400 mb-3">${c.cost.toLocaleString('de-DE')} FC</div>
+          <button onclick="openMysteryCase('${c.id}')" class="btn play bg-gradient-to-r from-cyan-600 to-emerald-600 text-xs font-black">🔓 Öffnen (${c.cost.toLocaleString('de-DE')} FC)</button>
+        </div>`).join('')}
+    </div>
+  </div>`
+
+async function openMysteryCase(cid) {
+  if (busy) return
+  const cObj = CASE_LIST.find(x => x.id === cid); if (!cObj) return
+  if (balance < cObj.cost) return toast('Nicht genug Coins!')
+  busy = true; setBtns(true); sfx.bet()
+  const roller = $('case_roller'), rtxt = $('case_res_txt')
+  const icons = ['🧦', '🪙', '🔮', '⚡', '💎', '👑']
+  const iv = setInterval(() => {
+    if (roller) roller.innerHTML = Array.from({ length: 5 }, (_, i) => `<div class="w-16 h-16 rounded-xl flex items-center justify-center text-3xl ${i === 2 ? 'scale-125 border-2 border-yellow-400 bg-zinc-800' : 'opacity-50 bg-zinc-900'}">${icons[Math.floor(Math.random() * icons.length)]}</div>`).join('')
+    sfx.spin()
+  }, 85)
+  const d = await call('case_open', { case_type: cid })
+  await sleep(900)
+  clearInterval(iv)
+  busy = false; setBtns(false)
+  if (!d) return
+  setBalance(d.balance)
+  const rCols = { gray: '#a1a1aa', blue: '#38bdf8', purple: '#c084fc', pink: '#f472b6', red: '#f87171', gold: '#facc15' }
+  const col = rCols[d.rarity] || '#fff'
+  if (roller) roller.innerHTML = `<div class="px-6 py-3 rounded-2xl border-2 text-5xl animate-bounce" style="border-color:${col};background:${col}22">${d.icon}</div>`
+  const net = d.payout - d.cost
+  if (rtxt) rtxt.innerHTML = `<span style="color:${col}">${esc(d.name)} (${d.mult}×)</span> → <b class="${net >= 0 ? 'text-emerald-400' : 'text-red-400'}">${Number(d.payout).toLocaleString('de-DE')} FC (${net >= 0 ? '+' : ''}${net.toLocaleString('de-DE')})</b>`
+  if (d.rarity === 'gold') { sfx.jackpot(); bigWin(`👑 GOLDENES RELIKT!<br>+${Number(d.payout).toLocaleString('de-DE')} FC`, true) }
+  else if (net > 0) sfx.win()
+  else sfx.lose()
+}
+
+let crPos = null, crLoop = null, crHist = [1.0]
+function stopCryptoLoop() { if (crLoop) { clearInterval(crLoop); crLoop = null } }
+VIEWS.crypto = () => `
+  <div class="space-y-4">
+    <div class="glass rounded-2xl p-4 border border-cyan-500/40 bg-zinc-900/80">
+      <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+        <div>
+          <span class="text-xs text-zinc-400 uppercase font-bold">Live Server-Kurs &amp; PnL-Multiplikator</span>
+          <div id="cr_mult_disp" class="text-3xl font-black font-mono text-cyan-300">1,00×</div>
+        </div>
+        <div id="cr_status_badge" class="px-3 py-1 rounded-full bg-zinc-800 text-zinc-400 text-xs font-bold">Keine offene Position</div>
+      </div>
+      <canvas id="cr_canvas" width="600" height="170" class="w-full h-40 rounded-xl bg-zinc-950 border border-zinc-800"></canvas>
+    </div>
+
+    <div id="cr_open_controls" class="glass rounded-2xl p-4 border border-zinc-800 space-y-3">
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div>
+          <label class="text-xs text-zinc-400 block mb-1">Coin</label>
+          <select id="cr_coin" class="inp w-full text-xs"><option value="FTC">🪙 FutureCoin (FTC)</option><option value="BTC">₿ Bitcoin (BTC)</option><option value="ETH">Ξ Ethereum (ETH)</option><option value="SOL">◎ Solana (SOL)</option></select>
+        </div>
+        <div>
+          <label class="text-xs text-zinc-400 block mb-1">Hebel (2× – 25×)</label>
+          <select id="cr_lev" class="inp w-full text-xs"><option value="2">2× Sicher</option><option value="5">5× Moderat</option><option value="10" selected>10× Turbo</option><option value="20">20× High-Risk</option><option value="25">25× Degen</option></select>
+        </div>
+        <div>
+          <label class="text-xs text-zinc-400 block mb-1">Einsatz (FC, Min 10)</label>
+          <input id="cr_bet" type="number" min="10" value="${Math.max(10, lastBet)}" class="inp w-full text-xs font-mono">
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <button onclick="openCryptoPos('long')" class="btn bg-emerald-600 hover:bg-emerald-500 font-black text-sm">📈 LONG kaufen</button>
+        <button onclick="openCryptoPos('short')" class="btn bg-rose-600 hover:bg-rose-500 font-black text-sm">📉 SHORT verkaufen</button>
+      </div>
+    </div>
+
+    <div id="cr_close_controls" class="hidden glass rounded-2xl p-4 border-2 border-emerald-500/60 bg-emerald-950/15 text-center space-y-2">
+      <div id="cr_live_pnl" class="text-lg font-black text-white">Aktueller Auszahlwert: – FC</div>
+      <button onclick="closeCryptoPos()" class="btn bg-gradient-to-r from-yellow-500 to-amber-500 text-black font-black text-sm">💰 Position jetzt zum Server-Kurs schließen</button>
+    </div>
+  </div>`
+PAGEINIT.crypto = () => { crHist = [1.0]; drawCryptoChart() }
+
+function drawCryptoChart() {
+  const c = $('cr_canvas'); if (!c || !c.getContext) return
+  const ctx = c.getContext('2d'), w = c.width, h = c.height
+  ctx.fillStyle = '#09090b'; ctx.fillRect(0, 0, w, h)
+  ctx.strokeStyle = '#27272a'; ctx.lineWidth = 1
+  const midY = h * 0.55
+  ctx.beginPath(); ctx.moveTo(0, midY); ctx.lineTo(w, midY); ctx.stroke()
+  if (crHist.length < 2) return
+  const minV = Math.min(0.2, ...crHist), maxV = Math.max(1.8, ...crHist)
+  const last = crHist[crHist.length - 1]
+  ctx.strokeStyle = last >= 1.0 ? '#34d399' : '#f87171'
+  ctx.lineWidth = 3; ctx.beginPath()
+  crHist.forEach((v, i) => {
+    const x = (i / Math.max(1, crHist.length - 1)) * (w - 20) + 10
+    const y = h - 15 - ((v - minV) / Math.max(0.1, maxV - minV)) * (h - 30)
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y)
+  })
+  ctx.stroke()
+}
+
+async function openCryptoPos(side) {
+  const bet = Math.floor(Number(($('cr_bet') || {}).value) || 0)
+  const coin = ($('cr_coin') || {}).value || 'FTC'
+  const lev = Number(($('cr_lev') || {}).value) || 10
+  if (bet < 10) return toast('Mindesteinsatz 10 FC!')
+  sfx.bet()
+  const d = await call('crypto_trade_open', { bet_amount: bet, coin_name: coin, trade_side: side, lev })
+  if (!d) return
+  setBalance(d.balance)
+  crPos = { id: d.pos_id, bet: d.bet, coin, side, lev, mult: d.cur_mult || 0.98 }
+  crHist = [1.0, crPos.mult]
+  if ($('cr_open_controls')) $('cr_open_controls').classList.add('hidden')
+  if ($('cr_close_controls')) $('cr_close_controls').classList.remove('hidden')
+  if ($('cr_status_badge')) $('cr_status_badge').textContent = `${side.toUpperCase()} ${coin} · ${lev}× Hebel`
+  updateCryptoUi()
+  stopCryptoLoop()
+  crLoop = setInterval(tickCryptoPos, 1500)
+}
+
+function updateCryptoUi() {
+  if (!crPos) return
+  const est = Math.floor(crPos.bet * crPos.mult)
+  if ($('cr_mult_disp')) {
+    $('cr_mult_disp').textContent = crPos.mult.toFixed(2).replace('.', ',') + '×'
+    $('cr_mult_disp').className = 'text-3xl font-black font-mono ' + (crPos.mult >= 1 ? 'text-emerald-400' : 'text-red-400')
+  }
+  if ($('cr_live_pnl')) $('cr_live_pnl').textContent = `Auszahlwert: ${est.toLocaleString('de-DE')} FC (${est - crPos.bet >= 0 ? '+' : ''}${(est - crPos.bet).toLocaleString('de-DE')} FC)`
+  drawCryptoChart()
+}
+
+async function tickCryptoPos() {
+  if (!crPos || current !== 'crypto') return
+  const d = await call('crypto_trade_tick', { pos_id: crPos.id })
+  if (!d) { stopCryptoLoop(); return }
+  if (d.status === 'liquidated') {
+    stopCryptoLoop()
+    crHist.push(0); drawCryptoChart()
+    sfx.lose()
+    toast('💥 LIQUIDIERT! Kurs hat die Liquidationsschwelle erreicht (0 FC).')
+    setBalance(d.balance)
+    crPos = null
+    if ($('cr_open_controls')) $('cr_open_controls').classList.remove('hidden')
+    if ($('cr_close_controls')) $('cr_close_controls').classList.add('hidden')
+    if ($('cr_status_badge')) $('cr_status_badge').textContent = '💥 Liquidiert'
+    return
+  }
+  crPos.mult = Number(d.cur_mult || 1)
+  crHist.push(crPos.mult)
+  if (crHist.length > 40) crHist.shift()
+  updateCryptoUi()
+}
+
+async function closeCryptoPos() {
+  if (!crPos) return
+  stopCryptoLoop()
+  sfx.click()
+  const d = await call('crypto_trade_close', { pos_id: crPos.id, payout_amount: 0 })
+  if (!d) return
+  setBalance(d.balance)
+  const net = d.payout - crPos.bet
+  if (net > 0) { sfx.win(); toast(`📈 Trade geschlossen: +${net.toLocaleString('de-DE')} FC Gewinn!`) }
+  else { sfx.lose(); toast(`📉 Trade geschlossen: ${d.payout.toLocaleString('de-DE')} FC ausgezahlt.`) }
+  crPos = null
+  if ($('cr_open_controls')) $('cr_open_controls').classList.remove('hidden')
+  if ($('cr_close_controls')) $('cr_close_controls').classList.add('hidden')
+  if ($('cr_status_badge')) $('cr_status_badge').textContent = 'Position geschlossen'
+}
 
 async function submitScore(game, sc) { const d = await call('submit_score', { sgame: game, sc }); if (d && d.reward) { sfx.claim(); setBalance(d.balance); toast('🎯 +' + d.reward + ' FC') } }
 async function loadScores(g) { const d = await call('scores_top', { sgame: g }), b = $('lbox'); if (d && b) b.innerHTML = '<div class="font-bold mb-2">🏆 Bestenliste</div>' + d.map((x, i) => `<div class="flex justify-between glass rounded-lg px-3 py-2 mb-1 text-sm"><span>${i + 1}. ${nm(x)}</span><b>${x.best}</b></div>`).join('') }
