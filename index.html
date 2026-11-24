@@ -17,11 +17,18 @@
   body{font-family:system-ui,-apple-system,sans-serif;overflow-x:hidden;background:radial-gradient(1200px 600px at 80% -10%,rgba(34,211,238,.12),transparent),#09090b;color:#fff;margin:0}
   .glass{background:rgba(24,24,27,.85);border:1px solid #3f3f46;backdrop-filter:blur(8px)}
   .grad{background:linear-gradient(135deg,#22d3ee,#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-  .btn{padding:.75rem 1rem;border-radius:.75rem;font-weight:600;transition:.15s;width:100%;cursor:pointer;user-select:none;display:inline-flex;align-items:center;justify-content:center}
+  .btn{padding:.75rem 1rem;border-radius:.75rem;font-weight:600;transition:.15s;width:100%;cursor:pointer;user-select:none;display:inline-flex;align-items:center;justify-content:center;touch-action:manipulation}
   .btn:hover{filter:brightness(1.15)} .btn:active{transform:scale(.97)} .btn:disabled{opacity:.5;cursor:not-allowed}
-  .nav{display:flex;align-items:center;gap:.75rem;width:100%;padding:.45rem .75rem;border-radius:.75rem;color:#a1a1aa;text-align:left;transition:.15s;border:1px solid transparent;font-size:.9rem}
+  .nav{display:flex;align-items:center;gap:.75rem;width:100%;padding:.45rem .75rem;border-radius:.75rem;color:#a1a1aa;text-align:left;transition:.15s;border:1px solid transparent;font-size:.9rem;touch-action:manipulation}
   .nav:hover{background:#27272a;color:#fff} .nav.on{background:linear-gradient(135deg,rgba(34,211,238,.2),rgba(52,211,153,.2));color:#fff;border-color:#0e7490}
-  .inp{background:#18181b;border:1px solid #3f3f46;border-radius:.75rem;padding:.65rem .9rem;outline:none;color:#fff;min-width:0}
+  .inp{background:#18181b;border:1px solid #3f3f46;border-radius:.75rem;padding:.65rem .9rem;outline:none;color:#fff;min-width:0;touch-action:manipulation}
+  @media (max-width: 1024px){
+    .btn{min-height:2.75rem;padding:.7rem .95rem}
+    .inp, select.inp{font-size:16px !important;min-height:2.75rem}
+    #adm_tabs{flex-wrap:nowrap !important;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:.25rem}
+    #adm_tabs button{flex:0 0 auto;white-space:nowrap}
+    .reel{width:3.6rem;height:4.5rem;font-size:2.1rem}
+  }
   .inp:focus{border-color:#22d3ee}
   #adm_tab_content .inp{padding:.6rem .85rem !important;font-size:.9rem !important;min-height:2.5rem !important;line-height:1.3 !important}
   #adm_tab_content select.inp{padding-right:1.75rem !important}
@@ -915,7 +922,7 @@ VIEWS.sicbo = () => betBox() + stg('🎲🎲🎲') + row([['⬇ Low ≤10 · 2×
 
 /* ================= SLOTS MIT EIGENEM JACKPOT PRO MASCHINE ================= */
 let SLOT_POTS = { globalpot: 100000, hot_pot_threshold: 500000000, classic: 15000, fruit: 35000, volcano: 75000, mega: 150000, jackpot: 500000, scratch: 25000, cyber: 45000, pirate: 90000, egypt: 60000, space: 250000, billionaire: 5000000, monopoly: 15000000, emperor: 50000000 }
-function getGlobalPotMinBet() { return Math.max(1000, Math.floor((Number(SLOT_POTS.globalpot) || 100000) / 5000)) }
+function getGlobalPotMinBet() { return Math.max(1000, Math.floor((Number(SLOT_POTS.globalpot) || 100000) / 25000)) }
 function isHotPotActive() {
   const th = Number(SLOT_POTS.hot_pot_threshold ?? 500000000)
   return th > 0 && Number(SLOT_POTS.globalpot || 0) >= th
@@ -997,7 +1004,7 @@ function openSlot(k) {
       </div>
       <div class="text-[11px] text-zinc-400">Triff ${m.n}× ${m.sym[m.sym.length - 1]} um diesen Pot komplett zu knacken!</div>
       ${k === 'globalpot' ? `
-      <div class="mt-1.5 text-xs text-amber-300 font-bold">⚖️ Dynamischer Mindesteinsatz: <b id="globalpot_min_info">${dynMin.toLocaleString('de-DE')} FC</b> (Pot ÷ 5.000)</div>
+      <div class="mt-1.5 text-xs text-amber-300 font-bold">⚖️ Dynamischer Mindesteinsatz: <b id="globalpot_min_info">${dynMin.toLocaleString('de-DE')} FC</b> (Pot ÷ 25.000)</div>
       ${isHotPotActive() ? '<div id="globalpot_hot_banner" class="mt-1.5 inline-block px-3 py-1 rounded-full bg-orange-600/30 border border-orange-400 text-xs font-black text-orange-300 animate-pulse mr-1">🔥 HOT POT AKTIV — 2× TICKET-POWER!</div>' : ''}
       <div id="globalpot_ticket_badge" class="mt-1.5 inline-block px-3 py-1 rounded-full bg-yellow-500/20 border border-yellow-400/50 text-xs font-black text-yellow-200">🎟️ Ticket-Multiplikator: 1,0× · Chance: 0,02 % (1 : 5.000)</div>
     ` : ''}
@@ -1194,7 +1201,7 @@ PAGEINIT.admin = () => {
     loadAdminFullDashboard()
     refreshAuditAmpel()
     if (ampelTimer) clearInterval(ampelTimer)
-    ampelTimer = setInterval(() => { if (current === 'admin') { refreshAuditAmpel(); admLoadOnlineLive(); } else clearInterval(ampelTimer) }, 5000)
+    ampelTimer = setInterval(() => { if (current === 'admin') { refreshAuditAmpel(); admLoadOnlineLive(); admLoadLiveSpectate(); } else clearInterval(ampelTimer) }, 5000)
   };
 
 async function loadAdminFullDashboard() {
@@ -1604,8 +1611,26 @@ async function admLoadOnlineLive() {
     </div>`).join('');
 }
 
+async function admLoadLiveSpectate() {
+  const box = $('adm_spectate_log');
+  if (!box) return;
+  const rows = await call('admin_get_live_spectate', {});
+  if (!rows || rows.length === 0) {
+    box.innerHTML = '<div class="text-zinc-500">Noch keine Einsätze im Live-Log.</div>';
+    return;
+  }
+  box.innerHTML = rows.map(r => {
+    const dt = r.created_at ? new Date(r.created_at).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '';
+    const net = Number(r.payout || 0) - Number(r.bet || 0);
+    return `<div class="flex flex-wrap items-center justify-between gap-2 py-1 px-2.5 rounded-lg bg-zinc-900/70 border border-zinc-800/80">
+      <span><span class="text-zinc-500 font-mono">[${dt}]</span> <b class="text-white">${esc(r.username)}</b> ${r.is_hidden_test ? '<span class="text-[10px] text-cyan-300">🧪</span>' : ''}· <span class="text-amber-300">${esc(r.game)}</span></span>
+      <span class="font-mono">Einsatz: <b>${Number(r.bet || 0).toLocaleString('de-DE')} FC</b> · <b class="${net >= 0 ? 'text-emerald-400' : 'text-red-400'}">${net >= 0 ? '+' : ''}${net.toLocaleString('de-DE')} FC</b></span>
+    </div>`;
+  }).join('');
+}
+
 function renderAdminServerTab(c) {
-  setTimeout(admLoadOnlineLive, 0);
+  setTimeout(() => { admLoadOnlineLive(); admLoadLiveSpectate(); }, 0);
   const d = ADM_DATA;
   c.innerHTML = `
     <!-- KPI Header Cards -->
@@ -1635,6 +1660,15 @@ function renderAdminServerTab(c) {
         <button class="btn bg-zinc-800 hover:bg-zinc-700 text-xs px-2.5 py-1" style="width:auto" onclick="admLoadOnlineLive()">↻ Jetzt</button>
       </div>
       <div id="adm_online_live" class="space-y-1.5 text-xs text-zinc-400">Lade Live-Spieler...</div>
+    </div>
+
+    <!-- ADMIN-LIVE-SPECTATE-LOG -->
+    <div class="glass rounded-2xl p-5 border border-amber-500/40 mb-4 bg-amber-950/10">
+      <div class="flex items-center justify-between mb-2">
+        <div class="font-black text-base text-amber-300">👁️ Admin-Live-Spectate-Log (Letzte 10 Einsätze)</div>
+        <button class="btn bg-zinc-800 hover:bg-zinc-700 text-xs px-2.5 py-1" style="width:auto" onclick="admLoadLiveSpectate()">↻ Jetzt</button>
+      </div>
+      <div id="adm_spectate_log" class="space-y-1 text-xs text-zinc-400">Lade Live-Ticker...</div>
     </div>
 
     <!-- GEWINNCHANCEN & RTP CONTROL (NEU!) -->
@@ -1894,7 +1928,7 @@ function renderAdminUsers(data) {
 function renderAdminEconomyTab(c) { setTimeout(() => { admLoadCustomSlots(); admLoadAllSlotConfigs(); }, 0);
   const d = ADM_DATA;
   const gpot = Number(d.jackpot || 100000);
-  const gMin = Math.max(1000, Math.floor(gpot / 5000));
+  const gMin = Math.max(1000, Math.floor(gpot / 25000));
 
   c.innerHTML = `
     <!-- ECHTER GLOBAL POT VERWALTEN (ÄNDERN & RESETTEN) -->
