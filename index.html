@@ -163,6 +163,7 @@
     </div>
     <nav id="nav" class="flex-1 space-y-1 overflow-y-auto mb-3"></nav>
     <div class="grid grid-cols-2 gap-2">
+      <button id="testRefillBtn" onclick="testRefill(100000)" class="hidden btn bg-cyan-700 hover:bg-cyan-600 text-white font-bold col-span-2 text-xs" style="padding:.45rem">🧪 +100.000 Test-Coins</button>
       <button onclick="claimDaily()" class="btn bg-yellow-500 text-black col-span-2" style="padding:.5rem">🎁 Daily abholen</button>
       <button onclick="logout()" class="btn bg-zinc-800" style="padding:.4rem;font-size:.8rem">Logout</button>
       <button onclick="delMe()" class="btn bg-zinc-900 text-zinc-500 hover:text-red-400" style="padding:.4rem;font-size:.7rem">Konto löschen</button>
@@ -496,7 +497,8 @@ async function loadProfile() {
   const { data, error } = await sb.rpc('get_me')
   if (error) { console.error(error); if (/gesperrt/.test(error.message)) { alert(error.message); logout() } else toast('Profil-Fehler: ' + error.message); return }
   ROLE = data.role
-  ME = data; $('welcome').innerHTML = nm(data) + (data.role === 'admin' ? ' <span class="text-purple-400 font-bold text-[10px] bg-purple-900/50 px-1.5 py-0.5 rounded border border-purple-500/40">ADMIN</span>' : data.role === 'vip' ? ' <span class="text-yellow-400 font-bold text-[10px] bg-yellow-900/50 px-1.5 py-0.5 rounded border border-yellow-500/40">VIP</span>' : '')
+  ME = data; $('welcome').innerHTML = nm(data) + (data.role === 'admin' ? ' <span class="text-purple-400 font-bold text-[10px] bg-purple-900/50 px-1.5 py-0.5 rounded border border-purple-500/40">ADMIN</span>' : data.role === 'vip' ? ' <span class="text-yellow-400 font-bold text-[10px] bg-yellow-900/50 px-1.5 py-0.5 rounded border border-yellow-500/40">VIP</span>' : '') + (data.is_hidden_test ? ' <span class="text-cyan-300 font-bold text-[10px] bg-cyan-900/50 px-1.5 py-0.5 rounded border border-cyan-500/40">🧪 TEST</span>' : '')
+  if ($('testRefillBtn')) $('testRefillBtn').classList.toggle('hidden', !(data.is_hidden_test || data.role === 'admin'))
   if (!hb) {
     sb.rpc('poll_troll').then(({ data }) => { if (data && data.troll) triggerClientTroll(data.troll) })
     hb = setInterval(async () => {
@@ -515,6 +517,14 @@ async function loadProfile() {
   setBalance(data.balance); renderNav()
   checkAnnouncement()
   loadSeasonBadges()
+}
+
+async function testRefill(amt = 100000) {
+  sfx.claim()
+  const { data, error } = await sb.rpc('test_account_refill', { amount: amt })
+  if (error) return toast('❌ ' + error.message)
+  setBalance(data.balance)
+  toast(`🧪 +${Number(data.added || amt).toLocaleString('de-DE')} Test-Coins gutgeschrieben!`)
 }
 
 async function checkAnnouncement() {
@@ -1184,7 +1194,7 @@ PAGEINIT.admin = () => {
     loadAdminFullDashboard()
     refreshAuditAmpel()
     if (ampelTimer) clearInterval(ampelTimer)
-    ampelTimer = setInterval(() => { if (current === 'admin') refreshAuditAmpel(); else clearInterval(ampelTimer) }, 5000)
+    ampelTimer = setInterval(() => { if (current === 'admin') { refreshAuditAmpel(); admLoadOnlineLive(); } else clearInterval(ampelTimer) }, 5000)
   };
 
 async function loadAdminFullDashboard() {
@@ -1571,7 +1581,31 @@ function renderAdminGamesTab(c) {
 }
 
 /* ================= TAB 2: SERVER, QUOTEN & CHANCEN ================= */
+async function admLoadOnlineLive() {
+  const box = $('adm_online_live');
+  if (!box) return;
+  const rows = await call('admin_get_online_live', {});
+  if (!rows || rows.length === 0) {
+    box.innerHTML = '<div class="text-zinc-500">Aktuell ist kein anderer Spieler online (letzte 90s).</div>';
+    return;
+  }
+  box.innerHTML = rows.map(u => `
+    <div class="flex flex-wrap items-center justify-between gap-2 py-1.5 px-2.5 rounded-xl bg-zinc-900/70 border border-zinc-800">
+      <div class="flex items-center gap-2">
+        <span>🟢 ${esc(u.avatar || '🙂')} <b class="text-white">${esc(u.username)}</b></span>
+        ${u.is_hidden_test ? '<span class="text-[10px] bg-cyan-900/80 text-cyan-200 px-1.5 py-0.5 rounded font-bold">🧪 TEST</span>' : ''}
+        <span class="text-amber-300 font-bold">🎮 ${esc(u.last_game || 'lobby')}</span>
+      </div>
+      <div class="flex items-center gap-3 font-mono text-[11px]">
+        <span class="text-emerald-400">${Number(u.balance || 0).toLocaleString('de-DE')} FC</span>
+        <span class="text-zinc-400">Letzter Einsatz: <b class="text-white">${u.last_bet_amount ? Number(u.last_bet_amount).toLocaleString('de-DE') + ' FC' : '–'}</b></span>
+        <span class="text-zinc-400">Auszahlung: <b class="text-yellow-300">${Number(u.last_payout || 0).toLocaleString('de-DE')} FC</b></span>
+      </div>
+    </div>`).join('');
+}
+
 function renderAdminServerTab(c) {
+  setTimeout(admLoadOnlineLive, 0);
   const d = ADM_DATA;
   c.innerHTML = `
     <!-- KPI Header Cards -->
@@ -1592,6 +1626,15 @@ function renderAdminServerTab(c) {
         <div class="text-xs text-zinc-400">Total Wagered (Gesetzt)</div>
         <div class="text-2xl font-black text-purple-400 mt-1">${d.stats ? Number(d.stats.total_wagered).toLocaleString('de-DE') + ' FC' : '–'}</div>
       </div>
+    </div>
+
+    <!-- ECHTZEIT-ONLINE-TRACKER -->
+    <div class="glass rounded-2xl p-5 border border-emerald-500/40 mb-4 bg-emerald-950/10">
+      <div class="flex items-center justify-between mb-2">
+        <div class="font-black text-base text-emerald-400">🟢 Echtzeit-Online-Tracker (Live alle 5s)</div>
+        <button class="btn bg-zinc-800 hover:bg-zinc-700 text-xs px-2.5 py-1" style="width:auto" onclick="admLoadOnlineLive()">↻ Jetzt</button>
+      </div>
+      <div id="adm_online_live" class="space-y-1.5 text-xs text-zinc-400">Lade Live-Spieler...</div>
     </div>
 
     <!-- GEWINNCHANCEN & RTP CONTROL (NEU!) -->
