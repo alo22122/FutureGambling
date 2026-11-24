@@ -514,6 +514,7 @@ async function loadProfile() {
   }
   setBalance(data.balance); renderNav()
   checkAnnouncement()
+  loadSeasonBadges()
 }
 
 async function checkAnnouncement() {
@@ -925,19 +926,19 @@ async function refreshAllSlotPots() {
 
 const SLOTS = {
   globalpot: { name: 'Global Pot Jagd', icon: '🏆', n: 5, tag: 'ECHTER GLOBAL POT', col: '#facc15', sym: ['🪙', '💎', '⚡', '🔥', '👑', '🏆'], desc: 'Gewinne den ECHTEN Global Pot! Mindesteinsatz steigt mit der Pot-Höhe. Extrem seltene 0,02% (1:5.000) Chance auf 5× 🏆!', pay: '2: 0,25× · 3: 2× · 4: 15× · 5: 120× · 🏆×5 = GLOBAL POT!' },
-  classic: { name: 'Classic 777', icon: '🍒', n: 3, tag: '3 Walzen', col: '#22d3ee', sym: ['🍒', '🍋', '🔔', '⭐', '💎', '🍀'], desc: 'Klassiker mit eigenem Jackpot! 3× 🍀 gewinnt den vollen Classic-Pot.', pay: 'Paar 0,72× · Drilling 22× · 🍀🍀🍀 = EIGENER JACKPOT' },
-  fruit:   { name: 'Fruit Party', icon: '🍇', n: 5, tag: 'Party', col: '#34d399', sym: ['🍒', '🍋', '🍇', '🍉', '🍓'], desc: 'Bunt & dynamisch. 5× 🍓 schüttet den Fruit-Party-Jackpot aus!', pay: '2: 0,3× · 3: 1,5× · 4: 8× · 🍓×5 = EIGENER JACKPOT' },
-  volcano: { name: 'Volcano', icon: '🌋', n: 5, tag: 'High Volatility', col: '#fb923c', sym: ['🌋', '🔥', '💎', '🪙', '🦖', '🥚', '⚡'], desc: 'Glühende Gewinne. 5× ⚡ löst den explosiven Volcano-Jackpot aus!', pay: '3: 2,8× · 4: 28× · 5: 350× · ⚡×5 = EIGENER JACKPOT' },
-  mega:    { name: 'Mega Titan', icon: '👑', n: 5, tag: 'Titan Multi', col: '#f43f5e', sym: ['💎', '👑', '🔔', '⭐', '🍀', '🍒', '🍋', '🍇', '🎰'], desc: 'Epische Gewinne. 5× 🎰 schüttet den gigantischen Titan-Jackpot aus!', pay: '3: 4,5× · 4: 54× · 5: 1.075× · 🎰×5 = EIGENER JACKPOT' },
+  classic: { name: 'Classic 777', icon: '🍒', n: 3, tag: '3 Walzen', col: '#22d3ee', sym: ['🍒', '🍋', '🔔', '⭐', '💎', '🍀'], desc: 'Klassiker mit eigenem Jackpot! 3× 🍀 gewinnt den vollen Classic-Pot.', pay: 'Paar 0,40× · Drilling 14× · 🍀🍀🍀 = EIGENER JACKPOT' },
+  fruit:   { name: 'Fruit Party', icon: '🍇', n: 5, tag: 'Party', col: '#34d399', sym: ['🍒', '🍋', '🍇', '🍉', '🍓'], desc: 'Bunt & dynamisch. 5× 🍓 schüttet den Fruit-Party-Jackpot aus!', pay: '2: 0,20× · 3: 1,20× · 4: 6× · 5: 25× · 🍓×5 = EIGENER JACKPOT' },
+  volcano: { name: 'Volcano', icon: '🌋', n: 5, tag: 'High Volatility', col: '#fb923c', sym: ['🌋', '🔥', '💎', '🪙', '🦖', '🥚', '⚡'], desc: 'Glühende Gewinne. 5× ⚡ löst den explosiven Volcano-Jackpot aus!', pay: '3: 2,00× · 4: 18× · 5: 150× · ⚡×5 = EIGENER JACKPOT' },
+  mega:    { name: 'Mega Titan', icon: '👑', n: 5, tag: 'Titan Multi', col: '#f43f5e', sym: ['💎', '👑', '🔔', '⭐', '🍀', '🍒', '🍋', '🍇', '🎰'], desc: 'Epische Gewinne. 5× 🎰 schüttet den gigantischen Titan-Jackpot aus!', pay: '3: 3,00× · 4: 35× · 5: 400× · 🎰×5 = EIGENER JACKPOT' },
   jackpot: { name: 'Mega Tresor 777', icon: '🔐', n: 3, tag: 'Tresor Pot', col: '#fbbf24', sym: ['🍒', '🍋', '🔔', '⭐', '🍀', '💰'], desc: 'Der Tresor-Automat! 3× 💰 knacken den Mega-Tresor-Jackpot!', pay: 'Paar 0,45× · Drilling 12× · 💰💰💰 = TRESOR JACKPOT' },
-  scratch: { name: 'Rubbellos', icon: '🎟️', n: 6, tag: 'Sofortlos', col: '#a78bfa', sym: ['🍒', '🍋', '⭐', '💎', '🍀', '🎁'], desc: 'Rubbel 6 Felder frei. 6× 🎁 knackt den Los-Jackpot!', pay: '3: 1,35× · 4: 6,8× · 5: 34× · 🎁×6 = EIGENER JACKPOT' },
-  cyber:   { name: 'Cyber Neon 2099', icon: '🤖', n: 4, tag: '4 Walzen', col: '#06b6d4', sym: ['🤖', '⚡', '🛸', '💾', '🔋', '👑'], desc: 'Futuristischer 4-Walzen-Slot! 4× 👑 gewinnt den Cyber-Pot.', pay: 'Paar 0,5× · Drilling 4× · 👑×4 = EIGENER JACKPOT' },
-  pirate:  { name: 'Piraten-Schatz', icon: '🏴‍☠️', n: 5, tag: '5 Walzen', col: '#f59e0b', sym: ['🏴‍☠️', '⚓', '🦜', '🗺️', '🪙', '💎'], desc: 'Plündere die Karibik! 5× 💎 holt den Piraten-Jackpot.', pay: '2: 0,4× · 3: 2× · 4: 12× · 💎×5 = EIGENER JACKPOT' },
-  egypt:   { name: 'Pharao Gold', icon: '🏺', n: 3, tag: '3 Walzen', col: '#eab308', sym: ['🏺', '🐪', '👁️', '☀️', '🐍', '👑'], desc: 'Gold der Pharaonen! 3× 👑 knackt den Pyramiden-Pot.', pay: 'Paar 0,75× · 3: 25× · 👑×3 = EIGENER JACKPOT' },
-  space:       { name: 'Galaxie-Jackpot', icon: '🌌', n: 5, tag: 'Cosmic', col: '#8b5cf6', sym: ['🚀', '🪐', '☄️', '👽', '🌟', '🌌'], desc: 'Kosmische Multiplikatoren bis 500× + Galaxie-Jackpot!', pay: '2: 0,5× · 3: 3× · 4: 30× · 🌌×5 = EIGENER JACKPOT' },
-  billionaire: { name: 'Milliardär-Club', icon: '💎', n: 3, tag: '5 MIO POT', col: '#38bdf8', sym: ['💎', '🏎️', '⌚', '✈️', '🍾', '👑'], desc: 'VIP High-Roller Automat! 3× 👑 holt den 5.000.000 FC Pot!', pay: 'Paar 0,85× · 3: 30× · 👑×3 = 5.000.000+ FC JACKPOT' },
-  monopoly:    { name: 'Wall Street Empire', icon: '🏦', n: 5, tag: '15 MIO POT', col: '#10b981', sym: ['💵', '📈', '🏦', '💎', '👑', '🏆'], desc: 'Für echte Börsen-Haie! 5× 🏆 räumt 15.000.000 FC ab!', pay: '2: 0,5× · 3: 4× · 4: 45× · 5: 800× · 🏆×5 = 15 MIO POT' },
-  emperor:     { name: 'Imperator 50M', icon: '👑', n: 5, tag: '50 MIO POT', col: '#facc15', sym: ['👑', '🔱', '💎', '🐉', '🌟', '💰'], desc: 'DER REICHEN-SLOT! Bis zu 1.500× + 50.000.000 FC Mega-Jackpot!', pay: '2: 0,6× · 3: 5× · 4: 60× · 5: 1.500× · 💰×5 = 50 MIO POT' }
+  scratch: { name: 'Rubbellos', icon: '🎟️', n: 6, tag: 'Sofortlos', col: '#a78bfa', sym: ['🍒', '🍋', '⭐', '💎', '🍀', '🎁'], desc: 'Rubbel 6 Felder frei. 6× 🎁 knackt den Los-Jackpot!', pay: '3: 1,10× · 4: 5× · 5: 22× · 6: 150× · 🎁×6 = EIGENER JACKPOT' },
+  cyber:   { name: 'Cyber Neon 2099', icon: '🤖', n: 4, tag: '4 Walzen', col: '#06b6d4', sym: ['🤖', '⚡', '🛸', '💾', '🔋', '👑'], desc: 'Futuristischer 4-Walzen-Slot! 4× 👑 gewinnt den Cyber-Pot.', pay: 'Paar 0,35× · Drilling 3× · 4: 20× · 👑×4 = EIGENER JACKPOT' },
+  pirate:  { name: 'Piraten-Schatz', icon: '🏴‍☠️', n: 5, tag: '5 Walzen', col: '#f59e0b', sym: ['🏴‍☠️', '⚓', '🦜', '🗺️', '🪙', '💎'], desc: 'Plündere die Karibik! 5× 💎 holt den Piraten-Jackpot.', pay: '2: 0,25× · 3: 1,50× · 4: 9× · 5: 60× · 💎×5 = EIGENER JACKPOT' },
+  egypt:   { name: 'Pharao Gold', icon: '🏺', n: 3, tag: '3 Walzen', col: '#eab308', sym: ['🏺', '🐪', '👁️', '☀️', '🐍', '👑'], desc: 'Gold der Pharaonen! 3× 👑 knackt den Pyramiden-Pot.', pay: 'Paar 0,45× · Drilling 16× · 👑×3 = EIGENER JACKPOT' },
+  space:       { name: 'Galaxie-Jackpot', icon: '🌌', n: 5, tag: 'Cosmic', col: '#8b5cf6', sym: ['🚀', '🪐', '☄️', '👽', '🌟', '🌌'], desc: 'Kosmische Multiplikatoren bis 200× + Galaxie-Jackpot!', pay: '2: 0,30× · 3: 2,20× · 4: 18× · 5: 200× · 🌌×5 = EIGENER JACKPOT' },
+  billionaire: { name: 'Milliardär-Club', icon: '💎', n: 3, tag: '5 MIO POT', col: '#38bdf8', sym: ['💎', '🏎️', '⌚', '✈️', '🍾', '👑'], desc: 'VIP High-Roller Automat! 3× 👑 holt den 5.000.000 FC Pot!', pay: 'Paar 0,45× · Drilling 18× · 👑×3 = 5.000.000+ FC JACKPOT' },
+  monopoly:    { name: 'Wall Street Empire', icon: '🏦', n: 5, tag: '15 MIO POT', col: '#10b981', sym: ['💵', '📈', '🏦', '💎', '👑', '🏆'], desc: 'Für echte Börsen-Haie! 5× 🏆 räumt 15.000.000 FC ab!', pay: '2: 0,30× · 3: 2,50× · 4: 25× · 5: 300× · 🏆×5 = 15 MIO POT' },
+  emperor:     { name: 'Imperator 50M', icon: '👑', n: 5, tag: '50 MIO POT', col: '#facc15', sym: ['👑', '🔱', '💎', '🐉', '🌟', '💰'], desc: 'DER REICHEN-SLOT! Bis zu 500× + 50.000.000 FC Mega-Jackpot!', pay: '2: 0,35× · 3: 3,00× · 4: 35× · 5: 500× · 💰×5 = 50 MIO POT' }
 }
 
 VIEWS.slots = () => {
@@ -1810,25 +1811,30 @@ function renderAdminUsers(data) {
 /* ================= TAB 4: SLOT-JACKPOTS & ECONOMY ================= */
 function renderAdminEconomyTab(c) { setTimeout(() => { admLoadCustomSlots(); admLoadAllSlotConfigs(); }, 0);
   const d = ADM_DATA;
-  const pots = d.slot_pots || { classic: 15000, fruit: 35000, volcano: 75000, mega: 150000, jackpot: 500000, scratch: 25000 };
-
-  const slotRow = (key, name, icon) => `
-    <div class="glass rounded-xl p-3.5 border border-zinc-700 flex flex-wrap items-center justify-between gap-3">
-      <div class="flex items-center gap-2">
-        <span class="text-2xl">${icon}</span>
-        <div>
-          <b class="text-white text-sm">${name} Pot</b>
-          <div class="text-xs text-yellow-400 font-mono font-bold">${Number(pots[key] || 0).toLocaleString('de-DE')} FC</div>
-        </div>
-      </div>
-      <div class="flex gap-1.5 items-center">
-        <input id="in_pot_${key}" type="number" placeholder="Neuer Betrag" value="${pots[key] || 0}" class="inp py-1 px-2 text-xs w-32 font-mono">
-        <button class="btn bg-cyan-700 hover:bg-cyan-600 text-xs px-3 py-1 font-bold" style="width:auto" onclick="admSetSlotPot('${key}', $('in_pot_${key}').value)">Setzen</button>
-        <button class="btn bg-yellow-500 hover:bg-yellow-400 text-black text-xs px-2.5 py-1 font-extrabold" style="width:auto" onclick="forceGame('slots', 'jackpot'); toast('💰 ${name} Jackpot für nächsten Dreh forciert!')">⚡ Auslösen</button>
-      </div>
-    </div>`;
+  const gpot = Number(d.jackpot || 100000);
+  const gMin = Math.max(1000, Math.floor(gpot / 5000));
 
   c.innerHTML = `
+    <!-- ECHTER GLOBAL POT VERWALTEN (ÄNDERN & RESETTEN) -->
+    <div class="glass jackpot-card rounded-2xl p-5 border-2 border-yellow-400/70 mb-4">
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+        <div>
+          <div class="font-black text-lg text-yellow-300">🏆 Global Pot Verwalten (Ändern &amp; Resetten)</div>
+          <div class="text-xs text-zinc-300">Steuert den echten Global Pot (Sidebar &amp; „Global Pot Jagd“-Slot). Aktueller dynamischer Mindesteinsatz: <b class="text-amber-300">${gMin.toLocaleString('de-DE')} FC</b></div>
+        </div>
+        <div class="text-right">
+          <div class="text-[10px] uppercase text-zinc-400 font-bold">Aktueller Global Pot</div>
+          <div class="text-2xl font-black font-mono text-yellow-300">${gpot.toLocaleString('de-DE')} FC</div>
+        </div>
+      </div>
+      <div class="flex flex-wrap gap-2 items-center">
+        <input id="adm_gpot_val" type="number" min="0" value="${gpot}" class="inp py-2 px-3 text-xs font-mono flex-1 min-w-[10rem]" placeholder="Neuer Global Pot (FC)">
+        <button class="btn bg-yellow-500 hover:bg-yellow-400 text-black text-xs font-black px-4 py-2" style="width:auto" onclick="admSetGlobalPotFromEco()">💾 Global Pot setzen</button>
+        <button class="btn bg-rose-700 hover:bg-rose-600 text-white text-xs font-black px-4 py-2" style="width:auto" onclick="admResetGlobalPot()">🔄 Reset (100.000 FC)</button>
+        <button class="btn bg-amber-600 hover:bg-amber-500 text-black text-xs font-black px-3 py-2" style="width:auto" onclick="forceGame('slots', 'jackpot'); toast('⚡ Nächster Slot-Dreh gewinnt den Jackpot!')">⚡ Auslösen</button>
+      </div>
+    </div>
+
     <!-- ADMIN SLOT-ADDER (VOLLBREITE) -->
     <div class="glass rounded-2xl p-5 border-2 border-cyan-500/50 bg-cyan-950/15 mb-4">
       <div class="font-black text-lg text-cyan-400 mb-1">🎰 Eigene Slots erstellen (Admin Slot-Adder)</div>
@@ -1850,30 +1856,12 @@ function renderAdminEconomyTab(c) { setTimeout(() => { admLoadCustomSlots(); adm
 
     <!-- ALLE 13 SLOTS: POT, CHANCE & MINDESTEINSATZ (VOLLBREITE) -->
     <div class="glass rounded-2xl p-5 border-2 border-yellow-500/40 bg-yellow-950/10 mb-4">
-      <div class="font-black text-lg text-yellow-400 mb-1">🎛️ Alle 13 Slots: Pot, Chance (%) &amp; Mindesteinsatz kontrollieren</div>
-      <div class="text-xs text-zinc-400 mb-4">Steuere für jeden einzelnen Automaten die genaue Gewinnchance (0–100%), den Mindesteinsatz (FC) und den Jackpot-Pot!</div>
-      <div id="adm_all_slots_ctrl" class="grid grid-cols-1 xl:grid-cols-2 gap-4 text-sm">Lade Slot-Kontrollen...</div>
-    </div>
-
-    <!-- EIGENE SLOT JACKPOTS SEKTION -->
-    <div class="glass jackpot-card rounded-2xl p-5 border border-yellow-500/50 mb-4">
-      <div class="flex items-center justify-between mb-3">
-        <div class="flex items-center gap-2">
-          <span class="text-2xl">🎰</span>
-          <h3 class="text-lg font-black text-yellow-400">Individuelle Slot-Jackpots verwalten</h3>
-        </div>
+      <div class="flex items-center justify-between mb-1">
+        <div class="font-black text-lg text-yellow-400">🎛️ Alle 13 Einzel-Slots: Pot, Chance (%) &amp; Mindesteinsatz</div>
         <button class="btn bg-zinc-800 hover:bg-zinc-700 text-xs px-3 py-1" style="width:auto" onclick="loadAdminFullDashboard()">↻ Aktualisieren</button>
       </div>
-      <p class="text-xs text-zinc-400 mb-4">Jeder einzelne Slot hat nun seinen eigenen Pot. Hier kannst du jeden Pot unabhängig setzen oder sofort zum Auszahlen bringen:</p>
-
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-        ${slotRow('classic', 'Classic 777', '🍒')}
-        ${slotRow('fruit', 'Fruit Party', '🍇')}
-        ${slotRow('volcano', 'Volcano', '🌋')}
-        ${slotRow('mega', 'Mega Titan', '👑')}
-        ${slotRow('jackpot', 'Mega Tresor 777 Pot', '🔐')}
-        ${slotRow('scratch', 'Rubbellos', '🎟️')}
-      </div>
+      <div class="text-xs text-zinc-400 mb-4">Steuere für jeden einzelnen Automaten die genaue Gewinnchance (0–100%), den Mindesteinsatz (FC) und den eigenen Jackpot-Pot!</div>
+      <div id="adm_all_slots_ctrl" class="grid grid-cols-1 xl:grid-cols-2 gap-4 text-sm">Lade Slot-Kontrollen...</div>
     </div>
 
     <!-- Allgemeine Ökonomie -->
@@ -2520,7 +2508,21 @@ async function sendChat() {
 }
 async function chatDel(id) { await sb.rpc('chat_delete', { msg_id: id }); loadChat() }
 
-const nm = u => `<span class="cursor-pointer" data-u="${esc(u.username)}" onclick="showProfile(this.dataset.u)" style="color:${/^#[0-9a-f]{6}$/i.test(u.color) ? u.color : '#fff'}">${esc(u.avatar || '')} ${esc(u.username)}</span>${BADGE[u.role] || ''}${u.title ? ` <i class="text-xs text-zinc-400">${esc(u.title)}</i>` : ''}`
+let SEASON_BADGES = {}
+async function loadSeasonBadges() {
+  const d = await call('hall_of_fame', {})
+  if (!d || !d.season_champions) return
+  const map = {}
+  d.season_champions.forEach(c => {
+    if (!map[c.username]) {
+      const m = c.rank === 1 ? '👑' : c.rank === 2 ? '🥈' : '🥉'
+      map[c.username] = `${m} S${c.season_number}`
+    }
+  })
+  SEASON_BADGES = map
+}
+
+const nm = u => `<span class="cursor-pointer" data-u="${esc(u.username)}" onclick="showProfile(this.dataset.u)" style="color:${/^#[0-9a-f]{6}$/i.test(u.color) ? u.color : '#fff'}">${esc(u.avatar || '')} ${esc(u.username)}</span>${BADGE[u.role] || ''}${SEASON_BADGES[u.username] ? ` <span class="text-[10px] px-1.5 py-0.5 rounded bg-yellow-500/20 border border-yellow-400/50 text-yellow-300 font-black">${SEASON_BADGES[u.username]}</span>` : ''}${u.title ? ` <i class="text-xs text-zinc-400">${esc(u.title)}</i>` : ''}`
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
 const BADGE = { admin: '🛡️', mod: '🔧', vip: '⭐', legend: '🔥' }
 
@@ -3729,6 +3731,7 @@ async function renderAdminGodTab(c) {
             <div class="flex gap-2">
               <input id="god_gjp" type="number" value="${ADM_DATA ? ADM_DATA.jackpot : 10000}" class="inp flex-1 text-xs">
               <button onclick="godSetGlobalJp()" class="btn bg-yellow-500 text-black font-black text-xs" style="width:auto">Setzen</button>
+              <button onclick="admResetGlobalPot()" class="btn bg-rose-700 hover:bg-rose-600 text-white font-black text-xs" style="width:auto">🔄 Reset</button>
             </div>
           </div>
           <button onclick="godResetCooldowns()" class="btn bg-cyan-700 hover:bg-cyan-600 text-xs font-black">⏱️ ALLE Cooldowns für ALLE Spieler resetten (Daily/Hourly/Spin)</button>
@@ -3785,7 +3788,24 @@ async function godSetGlobalJp() {
   const val = Number($('god_gjp').value)
   sfx.click()
   const d = await call('admin_set_global_jackpot', { new_pool: val })
-  if (d) { sfx.claim(); toast('🏆 Globaler Jackpot auf ' + Number(d.pool).toLocaleString('de-DE') + ' FC gesetzt!'); refreshGlobalJpTicker() }
+  if (d) { sfx.claim(); toast('🏆 Globaler Jackpot auf ' + Number(d.pool).toLocaleString('de-DE') + ' FC gesetzt!'); refreshGlobalJpTicker(); refreshAllSlotPots(); loadAdminFullDashboard() }
+}
+
+async function admSetGlobalPotFromEco() {
+  const val = Number(($('adm_gpot_val') || {}).value)
+  if (isNaN(val) || val < 0) return toast('Ungültiger Betrag')
+  sfx.click()
+  const d = await call('admin_set_global_jackpot', { new_pool: val })
+  if (d) { sfx.claim(); toast('🏆 Global Pot auf ' + Number(d.pool).toLocaleString('de-DE') + ' FC gesetzt!'); refreshGlobalJpTicker(); refreshAllSlotPots(); loadAdminFullDashboard() }
+}
+
+async function admResetGlobalPot() {
+  const seedStr = prompt('🔄 Global Pot auf Startwert zurücksetzen (Standard: 100000 FC):', '100000')
+  if (seedStr === null) return
+  const seed = Math.max(0, Math.floor(Number(seedStr) || 100000))
+  sfx.click()
+  const d = await call('admin_reset_global_jackpot', { seed_amount: seed })
+  if (d) { sfx.claim(); toast('🔄 Global Pot auf ' + Number(d.pool).toLocaleString('de-DE') + ' FC resettet!'); refreshGlobalJpTicker(); refreshAllSlotPots(); loadAdminFullDashboard() }
 }
 
 async function godResetCooldowns() {
