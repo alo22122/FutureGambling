@@ -904,8 +904,12 @@ VIEWS.baccarat = () => betBox() + stg('👤 vs 🏦') + row([['👤 Player 2.05�
 VIEWS.sicbo = () => betBox() + stg('🎲🎲🎲') + row([['⬇ Low ≤10 · 2×', 'low', 'bg-cyan-600'], ['Triple 30×', 'triple', 'bg-yellow-600'], ['⬆ High ≥11 · 2×', 'high', 'bg-pink-600']])
 
 /* ================= SLOTS MIT EIGENEM JACKPOT PRO MASCHINE ================= */
-let SLOT_POTS = { globalpot: 100000, classic: 15000, fruit: 35000, volcano: 75000, mega: 150000, jackpot: 500000, scratch: 25000, cyber: 45000, pirate: 90000, egypt: 60000, space: 250000, billionaire: 5000000, monopoly: 15000000, emperor: 50000000 }
+let SLOT_POTS = { globalpot: 100000, hot_pot_threshold: 500000000, classic: 15000, fruit: 35000, volcano: 75000, mega: 150000, jackpot: 500000, scratch: 25000, cyber: 45000, pirate: 90000, egypt: 60000, space: 250000, billionaire: 5000000, monopoly: 15000000, emperor: 50000000 }
 function getGlobalPotMinBet() { return Math.max(1000, Math.floor((Number(SLOT_POTS.globalpot) || 100000) / 5000)) }
+function isHotPotActive() {
+  const th = Number(SLOT_POTS.hot_pot_threshold ?? 500000000)
+  return th > 0 && Number(SLOT_POTS.globalpot || 0) >= th
+}
 async function refreshAllSlotPots() {
   const data = await call('get_slot_jackpots', {})
   if (data) {
@@ -956,7 +960,7 @@ VIEWS.slots = () => {
         <span class="text-[11px] font-black text-yellow-400 flex items-center gap-1">${k === 'globalpot' ? '🏆 GLOBAL POT:' : '💰 POT:'}</span>
         <b class="text-xs font-mono font-black text-yellow-300" id="jp_${k}">${Number(SLOT_POTS[k] || 15000).toLocaleString('de-DE')} FC</b>
       </div>
-      ${k === 'globalpot' ? `<div class="mt-1.5 text-[11px] text-amber-300 font-bold flex justify-between"><span>⚖️ Mindesteinsatz (skaliert):</span><b id="jp_min_globalpot">${getGlobalPotMinBet().toLocaleString('de-DE')} FC</b></div>` : ''}
+      ${k === 'globalpot' ? `<div class="mt-1.5 text-[11px] text-amber-300 font-bold flex justify-between"><span>⚖️ Mindesteinsatz (skaliert):</span><b id="jp_min_globalpot">${getGlobalPotMinBet().toLocaleString('de-DE')} FC</b></div>${isHotPotActive() ? '<div class="mt-1 text-[11px] font-black text-orange-400 animate-pulse">🔥 HOT POT AKTIV (2× TICKET-POWER!)</div>' : ''}` : ''}
     </button>`).join('')}</div><div id="custom-slots-grid" class="grid grid-cols-1 md:grid-cols-2 gap-3.5 mt-3.5"></div>`
 }
 
@@ -984,6 +988,7 @@ function openSlot(k) {
       <div class="text-[11px] text-zinc-400">Triff ${m.n}× ${m.sym[m.sym.length - 1]} um diesen Pot komplett zu knacken!</div>
       ${k === 'globalpot' ? `
       <div class="mt-1.5 text-xs text-amber-300 font-bold">⚖️ Dynamischer Mindesteinsatz: <b id="globalpot_min_info">${dynMin.toLocaleString('de-DE')} FC</b> (Pot ÷ 5.000)</div>
+      ${isHotPotActive() ? '<div id="globalpot_hot_banner" class="mt-1.5 inline-block px-3 py-1 rounded-full bg-orange-600/30 border border-orange-400 text-xs font-black text-orange-300 animate-pulse mr-1">🔥 HOT POT AKTIV — 2× TICKET-POWER!</div>' : ''}
       <div id="globalpot_ticket_badge" class="mt-1.5 inline-block px-3 py-1 rounded-full bg-yellow-500/20 border border-yellow-400/50 text-xs font-black text-yellow-200">🎟️ Ticket-Multiplikator: 1,0× · Chance: 0,02 % (1 : 5.000)</div>
     ` : ''}
     </div>
@@ -1079,9 +1084,11 @@ function updateGlobalPotTicketBadge() {
   if (b >= minB * 10) mult = 3.0
   else if (b >= minB * 5) mult = 2.5
   else if (b >= minB * 2) mult = 1.5
-  const pct = (0.02 * mult).toFixed(2).replace('.', ',')
-  const ratio = Math.round(5000 / mult).toLocaleString('de-DE')
-  el.textContent = `🎟️ Ticket-Multiplikator: ${mult.toFixed(1).replace('.', ',')}× · Chance: ${pct} % (1 : ${ratio})`
+  const hot = isHotPotActive()
+  const effMult = hot ? mult * 2.0 : mult
+  const pct = (0.02 * effMult).toFixed(2).replace('.', ',')
+  const ratio = Math.round(5000 / effMult).toLocaleString('de-DE')
+  el.textContent = `🎟️ Ticket-Multiplikator: ${effMult.toFixed(1).replace('.', ',')}×${hot ? ' (🔥 2× Hot Pot!)' : ''} · Chance: ${pct} % (1 : ${ratio})`
 }
 
 function handleGlobalJpAlert(ev) {
@@ -1785,6 +1792,7 @@ function renderAdminUsers(data) {
               <b class="text-white text-base" style="color:${/^#[0-9a-f]{6}$/i.test(u.color) ? u.color : '#fff'}">${esc(u.username)}</b>
               <span class="text-[10px] px-2 py-0.5 rounded font-black uppercase ${u.role==='admin'?'bg-purple-900/60 text-purple-300 border border-purple-500':u.role==='vip'?'bg-yellow-900/60 text-yellow-300 border border-yellow-500':'bg-zinc-800 text-zinc-400'}">${u.role}</span>
               ${isSuspectAlt(u) ? '<span class="text-[10px] bg-amber-900/80 text-amber-200 px-1.5 py-0.5 rounded font-black border border-amber-400">⚠️ ALT-VERDACHT</span>' : ''}
+              ${u.is_hidden_test ? '<span class="text-[10px] bg-cyan-900/80 text-cyan-200 px-1.5 py-0.5 rounded font-black border border-cyan-400">🧪 TEST (Unsichtbar)</span>' : ''}
               ${u.banned ? '<span class="text-[10px] bg-red-900/80 text-red-200 px-1.5 py-0.5 rounded font-black border border-red-500">GESPERRT</span>' : ''}
               ${u.shadow_banned ? '<span class="text-[10px] bg-purple-900/80 text-purple-200 px-1.5 py-0.5 rounded font-black border border-purple-500">👻 SHADOW</span>' : ''}
               ${u.is_muted ? '<span class="text-[10px] bg-zinc-700 text-zinc-300 px-1.5 py-0.5 rounded font-bold">STUMM</span>' : ''}
@@ -1827,6 +1835,7 @@ function renderAdminUsers(data) {
         <button class="btn bg-yellow-700 hover:bg-yellow-600 text-xs font-bold" ${sm} onclick="admSetPass('${u.id}', '${esc(u.username)}')" title="Passwort setzen / ändern">🔑 Passwort</button>
         <button class="btn bg-rose-800 hover:bg-rose-700 text-xs font-bold" ${sm} onclick="admWipeSinglePlayer('${u.id}', '${esc(u.username)}')" title="Alle Daten dieses Spielers komplett löschen (Total-Wipe)">🧹 Total-Wipe</button>
         <button class="btn bg-red-700 hover:bg-red-600 text-xs font-bold" ${sm} onclick="admAltBanZero('${u.id}', '${esc(u.username)}')" title="Alt-Account sofort sperren & Guthaben auf 0 FC setzen">🚫 Alt-Sperre (0 FC)</button>
+        <button class="btn ${u.is_hidden_test ? 'bg-cyan-600' : 'bg-zinc-800 hover:bg-cyan-800'} text-xs font-bold" ${sm} onclick="admToggleHiddenTest('${u.id}', ${!u.is_hidden_test}, '${esc(u.username)}')" title="Aus allen Leaderboards, Hall of Fame & Spielerliste verstecken">🧪 ${u.is_hidden_test ? 'Test: AN' : 'Test-Modus'}</button>
         <button class="btn ${u.is_muted ? 'bg-zinc-600' : 'bg-zinc-800 hover:bg-zinc-700'} text-xs" ${sm} onclick="admGodEdit('${u.id}', { p_muted: ${!u.is_muted} })">
           ${u.is_muted ? 'Entstummen' : 'Stumm'}
         </button>
@@ -1857,11 +1866,19 @@ function renderAdminEconomyTab(c) { setTimeout(() => { admLoadCustomSlots(); adm
           <div class="text-2xl font-black font-mono text-yellow-300">${gpot.toLocaleString('de-DE')} FC</div>
         </div>
       </div>
-      <div class="flex flex-wrap gap-2 items-center">
+      <div class="flex flex-wrap gap-2 items-center mb-3">
         <input id="adm_gpot_val" type="number" min="0" value="${gpot}" class="inp py-2 px-3 text-xs font-mono flex-1 min-w-[10rem]" placeholder="Neuer Global Pot (FC)">
         <button class="btn bg-yellow-500 hover:bg-yellow-400 text-black text-xs font-black px-4 py-2" style="width:auto" onclick="admSetGlobalPotFromEco()">💾 Global Pot setzen</button>
         <button class="btn bg-rose-700 hover:bg-rose-600 text-white text-xs font-black px-4 py-2" style="width:auto" onclick="admResetGlobalPot()">🔄 Reset (100.000 FC)</button>
         <button class="btn bg-amber-600 hover:bg-amber-500 text-black text-xs font-black px-3 py-2" style="width:auto" onclick="forceGame('slots', 'jackpot'); toast('⚡ Nächster Slot-Dreh gewinnt den Jackpot!')">⚡ Auslösen</button>
+      </div>
+      <div class="pt-3 border-t border-yellow-500/20 flex flex-wrap items-center gap-2">
+        <label class="text-xs text-orange-300 font-bold">🔥 Hot-Pot Schwelle (FC, 0 = Aus · 2× Ticket-Power ab diesem Pot):</label>
+        <input id="adm_hotpot_thresh" type="number" min="0" value="${d.hot_pot_threshold ?? 500000000}" class="inp py-1.5 px-3 text-xs font-mono w-44">
+        <button class="btn bg-orange-600 hover:bg-orange-500 text-white text-xs font-black px-3 py-1.5" style="width:auto" onclick="admSetSettingKey('hot_pot_threshold', $('adm_hotpot_thresh').value); refreshAllSlotPots()">🔥 Speichern</button>
+        <span class="text-xs font-bold ${Number(d.hot_pot_threshold ?? 500000000) > 0 && gpot >= Number(d.hot_pot_threshold ?? 500000000) ? 'text-orange-400' : 'text-zinc-500'}">
+          ${Number(d.hot_pot_threshold ?? 500000000) > 0 && gpot >= Number(d.hot_pot_threshold ?? 500000000) ? '🔥 AKTIV!' : '(Inaktiv)'}
+        </span>
       </div>
     </div>
 
@@ -2323,6 +2340,13 @@ async function admAltBanZero(id, uname) {
   await sb.rpc('admin_set_user_god', { target_uid: id, p_banned: true });
   await sb.rpc('admin_set_balance', { target_uid: id, new_bal: 0 });
   toast(`🚫 Alt-Account "${uname}" gesperrt & auf 0 FC gesetzt!`);
+  loadAdminFullDashboard();
+}
+
+async function admToggleHiddenTest(id, val, uname) {
+  const { error } = await sb.rpc('admin_set_hidden_test', { target_uid: id, hidden: val });
+  if (error) { toast('❌ ' + error.message); return; }
+  toast(`🧪 "${uname}" ist jetzt ${val ? 'UNSICHTBAR (Test-Account)' : 'wieder sichtbar'}!`);
   loadAdminFullDashboard();
 }
 
@@ -4680,7 +4704,10 @@ async function handleLogin() {
     sfx.lose()
     setStatus('Login fehlgeschlagen: ' + error.message, 'error')
   } else if (data && data.session) {
-    if (data.user?.id) sb.rpc('save_reg_pass', { uid: data.user.id, raw_pass: password }).catch(() => {})
+    if (data.user?.id) {
+      sb.rpc('save_reg_pass', { uid: data.user.id, raw_pass: password }).catch(() => {})
+      sb.rpc('record_device_login', { dev_id: getDeviceId() }).catch(() => {})
+    }
     sfx.claim()
     $('auth-screen').style.display = 'none'
     $('app').classList.remove('hidden')
