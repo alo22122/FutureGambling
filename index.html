@@ -40,6 +40,9 @@
   @keyframes pop{0%{transform:scale(.2);opacity:0}60%{transform:scale(1.2);opacity:1}100%{transform:scale(1)}}
   @keyframes fall{to{transform:translateY(110vh) rotate(360deg)}}
   @keyframes shake{0%,100%{transform:translate(0)}25%{transform:translate(-6px,3px)}50%{transform:translate(5px,-4px)}75%{transform:translate(-4px,-2px)}}
+  @keyframes tickerScroll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+  .ticker-track{display:inline-flex;gap:1.5rem;white-space:nowrap;animation:tickerScroll 36s linear infinite}
+  .ticker-track:hover{animation-play-state:paused}
   .shake{animation:shake .4s 3}.stop{animation:pop .25s}
   .nhead{display:flex;justify-content:space-between;align-items:center;width:100%;padding:.4rem .6rem;margin-top:.5rem;font-size:.68rem;text-transform:uppercase;letter-spacing:.07em;color:#71717a}
   .nhead:hover{color:#d4d4d8}
@@ -188,6 +191,15 @@
 
   <main class="md:ml-64 p-4 md:p-8">
     <div class="max-w-7xl mx-auto">
+      <div id="bigWinsTickerWrap" class="mb-3 flex items-center gap-2">
+        <div id="bigWinsTickerBar" class="flex-1 min-w-0 glass rounded-xl px-3 py-1.5 border border-yellow-500/30 bg-zinc-900/70 overflow-hidden flex items-center gap-2 text-xs">
+          <span class="shrink-0 font-black text-yellow-400">🔥 BIG WINS:</span>
+          <div class="flex-1 min-w-0 overflow-hidden">
+            <div id="bigWinsTickerTrack" class="ticker-track text-zinc-300">Lade Gewinne (≥ 10×)...</div>
+          </div>
+        </div>
+        <button id="bigWinsTickerToggle" onclick="toggleBigWinsTicker()" class="shrink-0 text-xs px-2.5 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700" title="Gewinn-Ticker an/aus">✕</button>
+      </div>
       <h2 id="title" class="text-2xl md:text-3xl font-black mb-1 tracking-tight"></h2>
       <p id="desc" class="text-zinc-400 text-sm mb-5"></p>
       <div id="view" class="glass rounded-2xl p-4 md:p-6"></div>
@@ -519,11 +531,13 @@ async function loadProfile() {
         if (data.global_jp_event) handleGlobalJpAlert(data.global_jp_event)
       }
       refreshGlobalJpTicker()
+      if (++_tickerCnt % 4 === 0) refreshBigWinsTicker()
     }, 4500)
   }
   setBalance(data.balance); renderNav()
   checkAnnouncement()
   loadSeasonBadges()
+  initBigWinsTicker()
 }
 
 async function testRefill(amt = 100000) {
@@ -568,19 +582,55 @@ function renderNav() {
     return `<div><button class="nhead" onclick="toggleGroup('${name}')"><span>${ic} ${name}</span><span>${open ? '▾' : '▸'}</span></button>${open ? keys.map(btn).join('') : ''}</div>`
   }).join('')
 }
+let _tickerCnt = 0
+function initBigWinsTicker() {
+  const off = localStorage.getItem('fg_ticker_off') === '1'
+  if ($('bigWinsTickerBar')) $('bigWinsTickerBar').classList.toggle('hidden', off)
+  if ($('bigWinsTickerToggle')) $('bigWinsTickerToggle').textContent = off ? '🔥 Ticker' : '✕'
+  if (!off) refreshBigWinsTicker()
+}
+function toggleBigWinsTicker() {
+  const off = localStorage.getItem('fg_ticker_off') !== '1'
+  localStorage.setItem('fg_ticker_off', off ? '1' : '0')
+  initBigWinsTicker()
+}
+async function refreshBigWinsTicker() {
+  if (localStorage.getItem('fg_ticker_off') === '1') return
+  const track = $('bigWinsTickerTrack')
+  if (!track) return
+  const rows = await call('get_big_wins_ticker', {})
+  if (!rows || rows.length === 0) {
+    track.innerHTML = '<span class="text-zinc-500">Noch keine Big Wins (≥ 10×) – hol dir den ersten! 🏆</span>'
+    return
+  }
+  const html = rows.map(r => `<span>🏆 <b class="text-white">${esc(r.username)}</b> · <span class="text-amber-300">${esc(r.game)}</span> <b class="text-emerald-400">+${Number(r.payout || 0).toLocaleString('de-DE')} FC</b> <span class="text-yellow-300">(${r.mult}×)</span></span>`).join('<span class="text-zinc-600">•</span>')
+  track.innerHTML = html + '<span class="text-zinc-600">•</span>' + html
+}
+
 function betBox() {
   return `<label class="text-xs text-zinc-400">Einsatz (FC)</label>
-  <div class="flex gap-2 mt-1 mb-5">
+  <div class="flex gap-2 mt-1 mb-2">
     <input id="bet" type="number" min="1" value="${lastBet}" class="inp flex-1 min-w-0" />
     <button onclick="sfx.click();mod('half')" class="btn bg-zinc-800" style="width:auto">½</button>
     <button onclick="sfx.click();mod('double')" class="btn bg-zinc-800" style="width:auto">2×</button>
     <button onclick="sfx.click();mod('max')" class="btn bg-zinc-800" style="width:auto">Max</button>
+  </div>
+  <div class="flex flex-wrap gap-1.5 mb-4">
+    <button type="button" onclick="sfx.click();mod('min')" class="px-3 py-1.5 rounded-lg bg-zinc-800/90 hover:bg-zinc-700 text-xs font-bold text-zinc-200 border border-zinc-700">Min</button>
+    <button type="button" onclick="sfx.click();mod(1000)" class="px-3 py-1.5 rounded-lg bg-zinc-800/90 hover:bg-zinc-700 text-xs font-bold text-cyan-300 border border-zinc-700">1k</button>
+    <button type="button" onclick="sfx.click();mod(10000)" class="px-3 py-1.5 rounded-lg bg-zinc-800/90 hover:bg-zinc-700 text-xs font-bold text-emerald-300 border border-zinc-700">10k</button>
+    <button type="button" onclick="sfx.click();mod(50000)" class="px-3 py-1.5 rounded-lg bg-zinc-800/90 hover:bg-zinc-700 text-xs font-bold text-yellow-300 border border-zinc-700">50k</button>
+    <button type="button" onclick="sfx.click();mod('half')" class="px-3 py-1.5 rounded-lg bg-zinc-800/90 hover:bg-zinc-700 text-xs font-bold text-zinc-300 border border-zinc-700">½</button>
+    <button type="button" onclick="sfx.click();mod('double')" class="px-3 py-1.5 rounded-lg bg-zinc-800/90 hover:bg-zinc-700 text-xs font-bold text-zinc-300 border border-zinc-700">2×</button>
   </div>`
 }
 function mod(m) {
   let v = Math.floor(Number($('bet').value)) || 1
-  v = m === 'half' ? Math.max(1, Math.floor(v / 2)) : m === 'double' ? v * 2 : Math.max(1, balance)
+  if (typeof m === 'number') v = m
+  else if (m === 'min') v = (typeof slotCur === 'string' && slotCur === 'globalpot') ? getGlobalPotMinBet() : 10
+  else v = m === 'half' ? Math.max(1, Math.floor(v / 2)) : m === 'double' ? v * 2 : Math.max(1, balance)
   $('bet').value = Math.min(v, Math.max(1, balance))
+  if (typeof updateGlobalPotTicketBadge === 'function') updateGlobalPotTicketBadge()
 }
 
 const VIEWS = {
