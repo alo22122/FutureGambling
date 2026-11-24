@@ -1630,8 +1630,60 @@ function renderAdminPlayersTab(c) {
       <span>🔧 <b>mod:</b> Chat-Nachrichten löschen & moderieren</span>
       <span>🛡️ <b>admin:</b> Vollzugriff auf God-Board, Trolls, Quoten & Verlosung</span>
     </div>
+    <div id="adm_device_tracker" class="glass rounded-2xl p-4 mb-4 border border-cyan-500/40 bg-cyan-950/10">
+      <div class="text-xs text-zinc-400">📱 Lade Device-Multiaccount-Tracker...</div>
+    </div>
     <div id="adm_user_list" class="space-y-3">Lade Benutzer...</div>`;
   renderAdminUsers(ADMIN_USERS_CACHE);
+  admLoadDeviceTracker();
+}
+
+async function admLoadDeviceTracker() {
+  const box = $('adm_device_tracker');
+  if (!box) return;
+  const { data, error } = await sb.rpc('admin_get_device_multiaccounts');
+  if (error) {
+    box.innerHTML = `<div class="text-xs text-red-400">Device-Tracker Fehler: ${esc(error.message)}</div>`;
+    return;
+  }
+  const rows = data || [];
+  const multis = rows.filter(r => r.account_count >= 2);
+  box.innerHTML = `
+    <div class="flex flex-wrap items-center justify-between gap-2 mb-2.5">
+      <div>
+        <div class="font-black text-sm text-cyan-300">📱 Device-Multiaccount-Tracker (${rows.length} Geräte · ${multis.length} mit 2+ Accounts)</div>
+        <div class="text-[11px] text-zinc-400">Zeigt, welche Accounts sich dieselbe Geräte-ID teilen. Zweitaccounts können mit einem Klick gesperrt werden.</div>
+      </div>
+      <button class="btn bg-zinc-800 hover:bg-zinc-700 text-xs px-2.5 py-1" style="width:auto" onclick="admLoadDeviceTracker()">↻ Aktualisieren</button>
+    </div>
+    ${rows.length === 0 ? '<div class="text-xs text-zinc-500">Noch keine neuen Geräte-Registrierungen seit Aktivierung des Device-Limits.</div>' : `
+      <div class="space-y-2 max-h-64 overflow-y-auto pr-1">
+        ${rows.map(d => {
+          const accs = d.accounts || [];
+          const alts = accs.slice(1).filter(a => !a.banned && a.role !== 'admin');
+          return `
+            <div class="rounded-xl p-2.5 border ${d.account_count >= 2 ? 'border-amber-500/50 bg-amber-950/15' : 'border-zinc-800 bg-zinc-900/50'} flex flex-wrap items-center justify-between gap-2 text-xs">
+              <div class="min-w-0">
+                <div class="font-mono text-[11px] text-zinc-400">Gerät: <b class="text-white">${esc(d.device_id)}</b> · <span class="${d.account_count >= 2 ? 'text-amber-300 font-bold' : 'text-zinc-400'}">${d.account_count} Account(s)</span></div>
+                <div class="flex flex-wrap gap-1.5 mt-1">
+                  ${accs.map((a, idx) => `<span class="px-2 py-0.5 rounded ${a.banned ? 'bg-red-900/60 text-red-300 line-through' : idx === 0 ? 'bg-emerald-900/50 text-emerald-300' : 'bg-amber-900/50 text-amber-200'} font-bold">${idx === 0 ? '1. ' : 'Zweit: '}${esc(a.username)} (${Number(a.balance || 0).toLocaleString('de-DE')} FC)</span>`).join('')}
+                </div>
+              </div>
+              ${alts.length > 0 ? `<button class="btn bg-red-700 hover:bg-red-600 text-xs font-bold px-2.5 py-1" style="width:auto" onclick='admBanDeviceAlts(${JSON.stringify(alts.map(a => a.id))}, ${JSON.stringify(alts.map(a => a.username).join(", "))})'>🔒 ${alts.length} Zweitaccount(s) sperren</button>` : '<span class="text-[11px] text-zinc-500">✓ OK</span>'}
+            </div>`;
+        }).join('')}
+      </div>
+    `}`;
+}
+
+async function admBanDeviceAlts(ids, names) {
+  if (!ids || ids.length === 0) return;
+  if (!confirm(`Folgende Zweitaccount(s) sofort sperren?\n\n${names}`)) return;
+  for (const uid of ids) {
+    await sb.rpc('admin_set_user_god', { target_uid: uid, p_banned: true });
+  }
+  toast(`🔒 ${ids.length} Zweitaccount(s) gesperrt!`);
+  loadAdminFullDashboard();
 }
 
 function filterAdminUsers() {
@@ -1699,6 +1751,7 @@ function renderAdminUsers(data) {
         <button class="btn bg-purple-700 hover:bg-purple-600 text-xs" ${sm} onclick="admSetExactBalance('${u.id}')">Exakt</button>
         <button class="btn bg-indigo-700 hover:bg-indigo-600 text-xs" ${sm} onclick="admSetCustomMult('${u.id}')">Mult ×</button>
         <button class="btn bg-yellow-700 hover:bg-yellow-600 text-xs font-bold" ${sm} onclick="admSetPass('${u.id}', '${esc(u.username)}')" title="Passwort setzen / ändern">🔑 Passwort</button>
+        <button class="btn bg-rose-800 hover:bg-rose-700 text-xs font-bold" ${sm} onclick="admWipeSinglePlayer('${u.id}', '${esc(u.username)}')" title="Alle Daten dieses Spielers komplett löschen (Total-Wipe)">🧹 Total-Wipe</button>
         <button class="btn ${u.is_muted ? 'bg-zinc-600' : 'bg-zinc-800 hover:bg-zinc-700'} text-xs" ${sm} onclick="admGodEdit('${u.id}', { p_muted: ${!u.is_muted} })">
           ${u.is_muted ? 'Entstummen' : 'Stumm'}
         </button>
@@ -2188,6 +2241,18 @@ async function admSetPass(id, uname) {
   const { error } = await sb.rpc('admin_set_user_password', { target_uid: id, new_pass: np });
   if (error) { toast('❌ ' + error.message); return; }
   toast(`🔑 Passwort für ${uname} geändert & gespeichert!`);
+  loadAdminFullDashboard();
+}
+
+async function admWipeSinglePlayer(id, uname) {
+  const startStr = prompt(`🧹 EINZELSPIELER TOTAL-WIPE für "${uname}"\n\nNeues Startguthaben (FC) nach dem Wipe (Standard: 1000):`, '1000');
+  if (startStr === null) return;
+  const startBal = Math.max(0, Number(startStr) || 0);
+  const check = prompt(`⚠️ ALLE Daten von "${uname}" (Coins, Tresor, Items, Level, Prestige, Battle Pass, Achievements, Missionen, Streaks, Elo, Chat, Logs, Runden) werden gelöscht!\n\nTippe WIPE ein zum Bestätigen:`);
+  if (check !== 'WIPE') { toast('Einzel-Wipe abgebrochen.'); return; }
+  const { data, error } = await sb.rpc('admin_wipe_single_player', { target_uid: id, start_balance: startBal });
+  if (error) { toast('❌ ' + error.message); return; }
+  toast(`🧹 ${uname} komplett gewiped! Startguthaben: ${startBal.toLocaleString('de-DE')} FC`);
   loadAdminFullDashboard();
 }
 
