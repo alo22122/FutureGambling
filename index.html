@@ -507,6 +507,7 @@ async function loadProfile() {
         updateLiveQuizBanner(data.quiz)
         updateLockdownState(data.lockdown, data.lockdown_reason)
         updateHappyHourBanner(data.happy_hour)
+        if (data.global_jp_event) handleGlobalJpAlert(data.global_jp_event)
       }
       refreshGlobalJpTicker()
     }, 4500)
@@ -980,7 +981,10 @@ function openSlot(k) {
         ${Number(SLOT_POTS[k] || 15000).toLocaleString('de-DE')} FC
       </div>
       <div class="text-[11px] text-zinc-400">Triff ${m.n}× ${m.sym[m.sym.length - 1]} um diesen Pot komplett zu knacken!</div>
-      ${k === 'globalpot' ? `<div class="mt-1.5 text-xs text-amber-300 font-bold">⚖️ Dynamischer Mindesteinsatz: <b id="globalpot_min_info">${dynMin.toLocaleString('de-DE')} FC</b> (Pot ÷ 5.000) · 🎯 Chance: <b>0,02 % (1 : 5.000)</b></div>` : ''}
+      ${k === 'globalpot' ? `
+      <div class="mt-1.5 text-xs text-amber-300 font-bold">⚖️ Dynamischer Mindesteinsatz: <b id="globalpot_min_info">${dynMin.toLocaleString('de-DE')} FC</b> (Pot ÷ 5.000)</div>
+      <div id="globalpot_ticket_badge" class="mt-1.5 inline-block px-3 py-1 rounded-full bg-yellow-500/20 border border-yellow-400/50 text-xs font-black text-yellow-200">🎟️ Ticket-Multiplikator: 1,0× · Chance: 0,02 % (1 : 5.000)</div>
+    ` : ''}
     </div>
 
     ${betBox()}
@@ -994,6 +998,11 @@ function openSlot(k) {
       ${k === 'scratch' ? '<button class="btn bg-zinc-700 hover:bg-zinc-600" onclick="scratchAll()">Alles aufdecken</button>' : ''}
     </div>
     <div class="text-xs text-zinc-500 mt-3 text-center">${m.pay}<br>Gleiche Symbole zählen, egal auf welcher Walze.</div>`
+  if (k === 'globalpot' && $('bet')) {
+    if (Number($('bet').value) < dynMin) $('bet').value = dynMin
+    $('bet').addEventListener('input', updateGlobalPotTicketBadge)
+    updateGlobalPotTicketBadge()
+  }
   refreshAllSlotPots()
   sb.rpc('hint_game', { g: 'slot:' + k })
 }
@@ -1036,6 +1045,31 @@ function slotDone(d) {
   else if (net > 0) sfx.win()
   else if (net < 0) sfx.lose()
   refreshAllSlotPots()
+  if (typeof loadJackpot === 'function') loadJackpot()
+}
+
+function updateGlobalPotTicketBadge() {
+  const el = $('globalpot_ticket_badge')
+  if (!el || !$('bet')) return
+  const minB = getGlobalPotMinBet()
+  const b = Number($('bet').value) || 0
+  let mult = 1.0
+  if (b >= minB * 10) mult = 3.0
+  else if (b >= minB * 5) mult = 2.5
+  else if (b >= minB * 2) mult = 1.5
+  const pct = (0.02 * mult).toFixed(2).replace('.', ',')
+  const ratio = Math.round(5000 / mult).toLocaleString('de-DE')
+  el.textContent = `🎟️ Ticket-Multiplikator: ${mult.toFixed(1).replace('.', ',')}× · Chance: ${pct} % (1 : ${ratio})`
+}
+
+function handleGlobalJpAlert(ev) {
+  if (!ev || !ev.id) return
+  const seen = localStorage.getItem('fg_last_gjp_id')
+  if (String(seen) === String(ev.id)) return
+  localStorage.setItem('fg_last_gjp_id', String(ev.id))
+  sfx.jackpot()
+  bigWin(`🏆 GLOBAL POT GEKNACKT!<br>${esc(ev.winner)} gewinnt<br>${Number(ev.amount || 0).toLocaleString('de-DE')} FC!`, true)
+  toast(`🏆 ALARM! ${ev.winner} hat den Global Pot (${Number(ev.amount || 0).toLocaleString('de-DE')} FC) abgeräumt!`)
   if (typeof loadJackpot === 'function') loadJackpot()
 }
 
