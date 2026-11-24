@@ -2802,7 +2802,10 @@ async function fireSelectedTroll(type) {
   if (type === 'custom_msg' && !msg.trim()) return toast('Bitte zuerst eine Nachricht eingeben!')
   sfx.click()
   const d = await call('admin_troll_player', { target_id: uid, troll_type: type, custom_msg: msg || null, no_prank: trollNoPrank })
-  if (d) toast('🤡 Troll "' + type + '" abgeschickt!')
+  if (d) {
+    toast('🤡 Troll "' + type + '" abgeschickt!')
+    if (uid === ME.id) triggerClientTroll(type, msg || null, trollNoPrank)
+  }
 }
 
 async function fireAllTroll(type) {
@@ -2838,46 +2841,52 @@ function triggerClientTroll(type, customMsg, noPrank = false) {
   if (type === 'shake') {
     sfx.lose()
     toast('😵 ERDBEBEN IM CASINO!')
-    appEl.classList.add('shake')
-    setTimeout(() => appEl.classList.remove('shake'), 3000)
+    appEl.style.animation = 'shake 0.35s 8'
+    setTimeout(() => { appEl.style.animation = '' }, 3000)
   } else if (type === 'earthquake') {
     sfx.jackpot()
     toast('🌋 MEGA-ERDBEBEN!')
-    appEl.classList.add('mega-quake')
-    setTimeout(() => appEl.classList.remove('mega-quake'), 5000)
+    appEl.style.animation = 'megaQuake 0.16s infinite'
+    setTimeout(() => { appEl.style.animation = '' }, 5000)
   } else if (type === 'upside_down') {
     sfx.whistle()
     toast('🙃 Alles steht Kopf!')
-    appEl.classList.add('upside-down')
-    setTimeout(() => appEl.classList.remove('upside-down'), 10000)
+    appEl.style.transition = 'transform 0.6s ease'
+    appEl.style.transform = 'rotate(180deg)'
+    setTimeout(() => { appEl.style.transform = '' }, 10000)
   } else if (type === 'mirror') {
     sfx.whistle(); toast('🪞 Spiegelverkehrte Welt (10s)!')
-    appEl.classList.add('mirror-mode')
-    setTimeout(() => appEl.classList.remove('mirror-mode'), 10000)
+    appEl.style.transition = 'transform 0.4s ease'
+    appEl.style.transform = 'scaleX(-1)'
+    setTimeout(() => { appEl.style.transform = '' }, 10000)
   } else if (type === 'glitch_disco') {
     sfx.jackpot(); toast('🌈 MATRIX DISCO MODUS!')
-    root.classList.add('disco-glitch')
-    setTimeout(() => root.classList.remove('disco-glitch'), 8000)
+    appEl.style.animation = 'discoHue 0.35s infinite linear'
+    setTimeout(() => { appEl.style.animation = '' }, 8000)
   } else if (type === 'blur') {
     sfx.whistle(); toast('😵 Wo ist meine Brille?!')
-    appEl.classList.add('blur-blind')
-    setTimeout(() => appEl.classList.remove('blur-blind'), 10000)
+    appEl.style.transition = 'filter 0.4s ease'
+    appEl.style.filter = 'blur(7px)'
+    setTimeout(() => { appEl.style.filter = '' }, 10000)
   } else if (type === 'invert') {
     sfx.whistle(); toast('🌗 Negativ-Dimension!')
-    root.classList.add('invert-mode')
-    setTimeout(() => root.classList.remove('invert-mode'), 10000)
+    appEl.style.transition = 'filter 0.3s ease'
+    appEl.style.filter = 'invert(1)'
+    setTimeout(() => { appEl.style.filter = '' }, 10000)
   } else if (type === 'comic') {
     sfx.click(); toast('🔠 COMIC SANS MODUS AKTIVIERT!')
     document.body.classList.add('comic-mode')
     setTimeout(() => document.body.classList.remove('comic-mode'), 12000)
   } else if (type === 'spin') {
     sfx.whistle(); toast('🌀 SCHWINDEL-ANFALL!')
-    appEl.classList.add('spin-dizzy')
-    setTimeout(() => appEl.classList.remove('spin-dizzy'), 4500)
+    appEl.style.animation = 'dizzySpin 2s linear infinite'
+    setTimeout(() => { appEl.style.animation = '' }, 4500)
   } else if (type === 'tiny') {
     sfx.whistle(); toast('🐭 Geschrumpft!')
-    appEl.classList.add('tiny-mode')
-    setTimeout(() => appEl.classList.remove('tiny-mode'), 10000)
+    appEl.style.transition = 'transform 0.5s ease'
+    appEl.style.transformOrigin = 'top center'
+    appEl.style.transform = 'scale(0.58)'
+    setTimeout(() => { appEl.style.transform = '' }, 10000)
   } else if (type === 'siren') {
     sfx.jackpot(); toast('🚨 CASINO ALARM! ACHTUNG!')
     const ov = document.createElement('div')
@@ -3736,7 +3745,10 @@ PAGEINIT.raffle = () => {
 }
 
 async function loadRaffleState() {
-  const d = await call('raffle_state', {}), box = $('rfbox'); if (!box) return
+  const box = $('rfbox'); if (!box) return
+  if (box.contains(document.activeElement) && ['INPUT','SELECT'].includes(document.activeElement.tagName)) return
+  const saved = { t: ($('rf_title')||{}).value, p: ($('rf_prize')||{}).value, pr: ($('rf_price')||{}).value, f: ($('rf_force_sel')||{}).value }
+  const d = await call('raffle_state', {}); if (!d && d !== null) return
   let h = ''
   if (!d) {
     h = '<div class="glass rounded-2xl p-6 text-center text-zinc-400 mb-4">Aktuell läuft keine Admin-Verlosung.</div>'
@@ -3789,6 +3801,10 @@ async function loadRaffleState() {
     </div>`
   }
   box.innerHTML = h
+  if (saved.t && $('rf_title')) $('rf_title').value = saved.t
+  if (saved.p && $('rf_prize')) $('rf_prize').value = saved.p
+  if (saved.pr && $('rf_price')) $('rf_price').value = saved.pr
+  if (saved.f && $('rf_force_sel')) $('rf_force_sel').value = saved.f
 }
 
 async function buyRaffle(rid, cnt) { sfx.bet(); const d = await call('raffle_buy', { rid, cnt }); if (d) { sfx.claim(); setBalance(d.balance); toast('🎟️ ' + d.bought + ' Lose gekauft!'); loadRaffleState() } }
@@ -4069,7 +4085,10 @@ PAGEINIT.prophet = () => {
   prTimer = setInterval(() => { if (current === 'prophet') loadProphetState(); else clearInterval(prTimer) }, 3500)
 }
 async function loadProphetState() {
-  const d = await call('prophet_state', {}), box = $('prbox'); if (!box) return
+  const box = $('prbox'); if (!box) return
+  if (box.contains(document.activeElement) && ['INPUT','SELECT'].includes(document.activeElement.tagName)) return
+  const saved = { b: ($('pr-bet')||{}).value, q: ($('adm_pr_q')||{}).value }
+  const d = await call('prophet_state', {})
   let h = ''
   if (!d) {
     h = '<div class="glass rounded-2xl p-6 text-center text-zinc-400 mb-4">Aktuell läuft keine Admin-Prophet Wette.</div>'
@@ -4098,6 +4117,8 @@ async function loadProphetState() {
     </div>`
   }
   box.innerHTML = h
+  if (saved.b && $('pr-bet')) $('pr-bet').value = saved.b
+  if (saved.q && $('adm_pr_q')) $('adm_pr_q').value = saved.q
 }
 async function betProphet(eid, bside) { sfx.bet(); const d = await call('prophet_bet', { eid, bside, bet_amount: +($('pr-bet')||{}).value }); if (d) { setBalance(d.balance); toast('🧠 Wette platziert!'); loadProphetState() } }
 async function admProphetStart() { const q = ($('adm_pr_q')||{}).value.trim(); if (!q) return; sfx.click(); const d = await call('admin_prophet_start', { q }); if (d) { toast('🧠 Event gestartet!'); loadProphetState() } }
