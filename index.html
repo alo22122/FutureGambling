@@ -96,7 +96,7 @@
     <h2 id="troll-jp-title" class="text-3xl font-black gold-shimmer mb-2">MEGA JACKPOT!</h2>
     <div id="troll-jp-amount" class="text-4xl font-black text-emerald-400 mb-3">+1.000.000 FC</div>
     <p id="troll-jp-sub" class="text-zinc-300 text-sm mb-4">Wird deinem Konto gutgeschrieben...</p>
-    <button id="troll-jp-close" onclick="$('troll-jp-modal').classList.add('hidden')" class="hidden btn bg-red-600 font-bold">Schließen 😂</button>
+    <button id="troll-jp-close" onclick="$('troll-jp-modal').classList.add('hidden')" class="hidden btn bg-red-600 font-bold">Schließen</button>
   </div>
 </div>
 
@@ -3294,9 +3294,24 @@ async function loadFeed() { const d = await call('activity_feed', {}), b = $('fb
 
 VIEWS.stats = () => '<div id="st" class="text-zinc-400">Lade...</div>'
 PAGEINIT.stats = async () => {
-  const d = await call('stats_me', {}); if (!d || !$('st')) return
+  const [d, pnl] = await Promise.all([call('stats_me', {}), call('my_game_pnl', {})])
+  if (!d || !$('st')) return
   const f = n => Number(n).toLocaleString('de-DE'), t = d.total, rtp = t.wagered > 0 ? (t.won / t.wagered * 100).toFixed(1) + ' %' : '–'
-  $('st').innerHTML = `<div class="grid grid-cols-2 gap-2 mb-4">${[['🎲 Runden', f(t.plays)], ['💸 Gesetzt', f(t.wagered)], ['💰 Ausgezahlt', f(t.won)], ['📈 Rückzahlung', rtp], ['🏅 Beste Auszahlung', f(t.best)]].map(([a, b]) => `<div class="glass rounded-xl p-3"><div class="text-xs text-zinc-400">${a}</div><div class="text-xl font-black text-white">${b}</div></div>`).join('')}</div>`
+  const pnlRows = Array.isArray(pnl) ? pnl : []
+  const pnlHtml = `
+    <div class="glass rounded-2xl p-4 border border-zinc-800 mt-4">
+      <div class="font-black text-base text-white mb-1">📊 Persönliches Gewinn-/Verlust-Verhältnis pro Spiel</div>
+      <div class="text-xs text-zinc-400 mb-3">Hier siehst du genau, bei welchem Spiel du am meisten Plus oder Minus gemacht hast.</div>
+      ${pnlRows.length ? `<div class="space-y-1.5 text-xs">${pnlRows.map(g => {
+        const net = Number(g.net_pnl || 0), tb = Number(g.total_bet || 0), tp = Number(g.total_payout || 0)
+        const gRtp = tb > 0 ? (tp / tb * 100).toFixed(1) + ' %' : '–'
+        return `<div class="flex flex-wrap justify-between items-center py-2 px-3 rounded-xl bg-zinc-900/70 border border-zinc-800 gap-2">
+          <div><b class="text-white text-sm">${esc(g.game)}</b> <span class="text-zinc-500">(${g.rounds} Runden · RTP ${gRtp})</span></div>
+          <div class="font-mono"><span class="text-zinc-400">${f(tb)} → ${f(tp)} FC</span> · <b class="${net >= 0 ? 'text-emerald-400' : 'text-red-400'}">${net >= 0 ? '+' : ''}${f(net)} FC</b></div>
+        </div>`
+      }).join('')}</div>` : '<div class="text-xs text-zinc-500">Noch keine Runden gespielt.</div>'}
+    </div>`
+  $('st').innerHTML = `<div class="grid grid-cols-2 gap-2 mb-4">${[['🎲 Runden', f(t.plays)], ['💸 Gesetzt', f(t.wagered)], ['💰 Ausgezahlt', f(t.won)], ['📈 Rückzahlung', rtp], ['🏅 Beste Auszahlung', f(t.best)]].map(([a, b]) => `<div class="glass rounded-xl p-3"><div class="text-xs text-zinc-400">${a}</div><div class="text-xl font-black text-white">${b}</div></div>`).join('')}</div>` + pnlHtml
 }
 
 VIEWS.history = () => '<div id="histbook" class="text-zinc-400">Lade Spiel-Historien-Buch...</div>'
@@ -4104,6 +4119,7 @@ function triggerClientTroll(type, customMsg, noPrank = false) {
     $('troll-jp-title').textContent = 'ADMIN-NACHRICHT'
     $('troll-jp-amount').textContent = ''
     $('troll-jp-sub').textContent = customMsg || 'Der Admin schaut dir zu!'
+    $('troll-jp-close').textContent = 'Verstanden'
     $('troll-jp-close').classList.remove('hidden')
     m.classList.remove('hidden')
     sfx.whistle()
