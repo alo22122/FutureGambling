@@ -472,7 +472,7 @@ const GAMES = {
   raffle:    { icon: '🎟️', name: 'Admin-Verlosung', desc: 'Kaufe Lose für den Mega-Jackpot! Der Admin lost den Sieger live aus.', page: true },
   royale:    { icon: '⚡', name: 'Last Man Standing', desc: 'Squid-Game Battle-Royale! 1.000 FC Einsatz, 30% fliegen pro Runde raus.', page: true },
   prophet:   { icon: '🧠', name: 'Admin-Prophet', desc: 'Wette mit JA oder NEIN auf Live-Events des Admins!', page: true },
-  deal:      { icon: '💼', name: 'Deal or No Deal', desc: '12 Koffer bis 2,5×! Nimmst du das Banker-Angebot an?', page: true },
+  deal:      { icon: '💼', name: 'Deal or No Deal', desc: '12 Koffer bis 2,25×! Nimmst du das Banker-Angebot an?', page: true },
   votes:     { icon: '🗳️', name: 'Abstimmungen & Ideen', desc: 'Schlage neue Features vor und stimme für die besten Ideen ab!', page: true },
   forbes:    { icon: '📜', name: 'Forbes Top 10', desc: 'Reichen- & Luxus-Pranger: Gesamtwert aus Coins + Autos + Villen + Jets!', page: true },
   hof:       { icon: '🏛️', name: 'Hall of Fame', desc: 'Casino-Weltrekorde! Höchste Einzelsiege, Crash-Rekorde & längste Streaks.', page: true },
@@ -536,7 +536,12 @@ async function loadProfile() {
     let wasOffline = false
     const setOffline = off => {
       if ($('offlineBanner')) $('offlineBanner').classList.toggle('hidden', !off)
-      if (wasOffline && !off) toast('✅ Verbindung wiederhergestellt!')
+      if (wasOffline && !off) {
+        toast('✅ Verbindung wiederhergestellt! Kontostand wird synchronisiert...')
+        sb.rpc('get_me').then(({ data: meData }) => {
+          if (meData) { ROLE = meData.role; ME = meData; setBalance(meData.balance); renderNav() }
+        }).catch(() => {})
+      }
       wasOffline = off
     }
     window.addEventListener('offline', () => setOffline(true))
@@ -2885,7 +2890,7 @@ const GAME_GUIDES = {
   towers: 'Klettere bis zu 8 Stufen nach oben. Wähle pro Ebene ein sicheres Feld ohne Bombe – du kannst nach jeder geschafften Ebene auscashen!',
   plinko: 'Lass Kugeln durch das Pyramiden-Brett fallen. Niedriges Risiko zahlt stabil, hohes Risiko zahlt an den äußeren Rändern bis zu 26×!',
   limbo: 'Gib deinen Wunsch-Multiplikator ein (1,05× bis 10.000×). Liegt der gezogene Flugwert darüber, gewinnst du sofort Einsatz × Ziel!',
-  deal: 'Wähle deinen Glückskoffer aus 12 Koffern (0,01× bis 2,5×) und öffne die anderen. Nach jedem Koffer macht dir der Banker ein Sofort-Angebot!',
+  deal: 'Wähle deinen Glückskoffer aus 12 Koffern (0,01× bis 2,25×) und öffne die anderen. Nach jedem Koffer macht dir der Banker ein Sofort-Angebot!',
   blackjack: 'Komme näher an 21 als der Dealer, ohne dich zu überkaufen (>21). Natürlicher Blackjack zahlt 2,5×, Sieg 2×, Gleichstand gibt den Einsatz zurück.',
   penalty: 'Schieße in eine von 5 Ecken. Hält der Torwart nicht (50 % Trefferquote), erhältst du 1,85× Auszahlung!',
   vault: 'Schütze deine Coins im VIP-Tresor (optional 12h Auszahlungssperre gegen Tilt) und kassiere täglich +1 % Zinsen (bis 50.000 FC/Tag)!'
@@ -3592,7 +3597,20 @@ VIEWS.crypto = () => `
       <button onclick="closeCryptoPos()" class="btn bg-gradient-to-r from-yellow-500 to-amber-500 text-black font-black text-sm">💰 Position jetzt zum Server-Kurs schließen</button>
     </div>
   </div>`
-PAGEINIT.crypto = () => { crHist = [1.0]; drawCryptoChart() }
+PAGEINIT.crypto = async () => {
+  crHist = [1.0]; drawCryptoChart()
+  const cur = await call('crypto_trade_current', {})
+  if (cur && cur.pos_id) {
+    crPos = { id: cur.pos_id, bet: Number(cur.bet), coin: cur.coin, side: cur.side, lev: Number(cur.leverage), mult: Number(cur.cur_mult || 1.0) }
+    crHist = [1.0, crPos.mult]
+    if ($('cr_open_controls')) $('cr_open_controls').classList.add('hidden')
+    if ($('cr_close_controls')) $('cr_close_controls').classList.remove('hidden')
+    if ($('cr_status_badge')) $('cr_status_badge').textContent = `${crPos.side.toUpperCase()} ${crPos.coin} · ${crPos.lev}× Hebel (Fortgesetzt)`
+    updateCryptoUi()
+    stopCryptoLoop()
+    crLoop = setInterval(tickCryptoPos, 1500)
+  }
+}
 
 function drawCryptoChart() {
   const c = $('cr_canvas'); if (!c || !c.getContext) return
@@ -4743,21 +4761,44 @@ REVEAL.darts = async d => {
 }
 
 let chosenHorse = 1
+const HORSES_META = [[1,'🐎','Blitzpfeil','1,9×'],[2,'🦄','Sternenstaub','2,8×'],[3,'🦓','Schattenläufer','4,0×'],[4,'🐉','Goldhengst','7,5×']]
 VIEWS.horses = () => betBox() + `
-  <div class="glass rounded-2xl p-4 mb-3 space-y-2 border border-zinc-800">
-    ${[[1,'🐎 Blitzpfeil','1,9×'],[2,'🦄 Sternenstaub','2,8×'],[3,'🦓 Schattenläufer','4,0×'],[4,'🐉 Goldhengst','7,5×']].map(([id,nm,od])=>`
-      <div onclick="chosenHorse=${id};document.querySelectorAll('.hrow').forEach(x=>x.classList.remove('border-yellow-400'));this.classList.add('border-yellow-400')" class="hrow cursor-pointer rounded-xl p-2 bg-zinc-900 border-2 ${chosenHorse===id?'border-yellow-400':'border-zinc-800'}">
-        <div class="flex justify-between text-xs font-bold mb-1"><span>${nm}</span><span class="text-yellow-400">${od}</span></div>
-        <div class="h-2 rounded bg-zinc-800 overflow-hidden"><div id="hbar_${id}" class="h-full bg-emerald-500 transition-all duration-150" style="width:5%"></div></div>
+  <div class="glass rounded-2xl p-4 mb-3 space-y-2.5 border border-zinc-800">
+    <div id="horse_winner" class="hidden text-center text-sm font-black text-yellow-300 py-1.5 rounded-xl bg-yellow-950/30 border border-yellow-500/40"></div>
+    ${HORSES_META.map(([id,ico,nm,od])=>`
+      <div onclick="chosenHorse=${id};document.querySelectorAll('.hrow').forEach(x=>x.classList.remove('border-yellow-400'));this.classList.add('border-yellow-400')" class="hrow cursor-pointer rounded-xl p-2.5 bg-zinc-900 border-2 ${chosenHorse===id?'border-yellow-400':'border-zinc-800'} transition">
+        <div class="flex justify-between text-xs font-bold mb-2"><span>${ico} ${nm}</span><span class="text-yellow-400">${od}</span></div>
+        <div class="relative h-5 rounded-full bg-zinc-800 overflow-hidden flex items-center px-1">
+          <div id="hbar_${id}" class="h-full rounded-full bg-gradient-to-r from-emerald-600 to-cyan-400 transition-all duration-150" style="width:6%"></div>
+          <span id="hicon_${id}" class="absolute text-base transition-all duration-150 select-none" style="left:4%;transform:scaleX(-1)">${ico}</span>
+          <span class="absolute right-1.5 text-xs select-none">🏁</span>
+        </div>
       </div>
     `).join('')}
   </div>
   <button onclick="play(String(chosenHorse))" class="btn play bg-amber-600 hover:bg-amber-500 text-black font-black">🏇 Rennen starten!</button>`
 REVEAL.horses = async d => {
   const w = Number(d.result)
+  if ($('horse_winner')) $('horse_winner').classList.add('hidden')
+  ;[1,2,3,4].forEach(i => {
+    const b = $('hbar_'+i), ic = $('hicon_'+i)
+    if (b) b.style.width = '6%'
+    if (ic) ic.style.left = '4%'
+  })
+  await sleep(60)
   for (let s = 1; s <= 7; s++) {
-    [1,2,3,4].forEach(i => { const b = $('hbar_'+i); if (b) b.style.width = (s === 7 ? (i === w ? 100 : 55 + Math.random()*30) : Math.min(90, s*12 + Math.random()*15)) + '%' })
-    sfx.spin(); await sleep(160)
+    [1,2,3,4].forEach(i => {
+      const pct = s === 7 ? (i === w ? 94 : Math.round(52 + Math.random()*32)) : Math.min(86, Math.round(s*11 + Math.random()*14))
+      const b = $('hbar_'+i), ic = $('hicon_'+i)
+      if (b) b.style.width = pct + '%'
+      if (ic) ic.style.left = Math.max(4, pct - 5) + '%'
+    })
+    sfx.spin(); await sleep(170)
+  }
+  const winMeta = HORSES_META.find(h => h[0] === w)
+  if ($('horse_winner') && winMeta) {
+    $('horse_winner').textContent = `🥇 Sieger: ${winMeta[1]} ${winMeta[2]} (${winMeta[3]})!`
+    $('horse_winner').classList.remove('hidden')
   }
 }
 
