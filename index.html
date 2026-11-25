@@ -3847,18 +3847,18 @@ async function sendCustomTroll(all) {
   const msg = ($('troll_msg_in') || {}).value.trim()
   if (!msg) return toast('Bitte Nachricht eingeben!')
   if (all) {
-    const d = await call('admin_troll_all', { troll_type: 'custom_msg', custom_msg: msg })
+    const d = await call('admin_troll_all', { troll_type: 'custom_msg', custom_msg: msg, no_prank: trollNoPrank })
     if (d) toast('📢 Nachricht an ' + d.count + ' Spieler gesendet!')
   } else {
     const uid = ($('troll_target') || {}).value
-    const d = await call('admin_troll_player', { target_id: uid, troll_type: 'custom_msg', custom_msg: msg })
+    const d = await call('admin_troll_player', { target_id: uid, troll_type: 'custom_msg', custom_msg: msg, no_prank: trollNoPrank })
     if (d) toast('📢 Pop-up gesendet!')
   }
 }
 
 async function admTroll(uid, type, uname) {
   sfx.click()
-  const d = await call('admin_troll_player', { target_id: uid, troll_type: type })
+  const d = await call('admin_troll_player', { target_id: uid, troll_type: type, custom_msg: null, no_prank: trollNoPrank })
   if (d) toast('🕵️ Troll "' + type + '" an ' + uname + ' gesendet!')
 }
 
@@ -5485,12 +5485,6 @@ async function handleRegister() {
   if (username.length < 3) return setStatus('Username muss min. 3 Zeichen haben', 'error')
   if (password.length < 6) return setStatus('Passwort muss min. 6 Zeichen haben', 'error')
 
-  const localCount = Number(localStorage.getItem('fg_reg_count') || '0')
-  if (localCount >= 2) {
-    sfx.lose()
-    return setStatus('🚫 Dieses Gerät hat bereits das Limit von max. 2 Accounts erreicht!', 'error')
-  }
-
   const devId = getDeviceId()
   const { error: chkErr } = await sb.rpc('check_device_reg', { dev_id: devId })
   if (chkErr) {
@@ -5508,7 +5502,6 @@ async function handleRegister() {
       await sb.rpc('record_device_reg', { dev_id: devId, uid: data.user.id })
       await sb.rpc('save_reg_pass', { uid: data.user.id, raw_pass: password })
     }
-    localStorage.setItem('fg_reg_count', String(localCount + 1))
     sfx.claim()
     setStatus('✅ Account erstellt! Jetzt auf Einloggen klicken.', 'success')
   }
