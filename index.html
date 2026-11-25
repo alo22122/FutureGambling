@@ -1752,365 +1752,480 @@ function renderAdminContent() {
 }
 
 /* ================= TAB 1: ALLE SPIELE MANIPULIEREN ================= */
+let admGameCat = 'all', admGameQuery = '';
+async function admSetGameChance(key, val) {
+  const v = Math.max(0, Math.min(100, Number(val)));
+  if (isNaN(v)) return;
+  sfx.click();
+  const d = await call('admin_set_cfg', { skey: 'chance_' + key, sval: String(v) });
+  if (d) {
+    if (ADM_DATA) ADM_DATA['chance_' + key] = v;
+    const disp = $('ag_disp_' + key); if (disp) disp.textContent = v + ' %';
+    const rng = $('ag_rng_' + key); if (rng) rng.value = v;
+    toast('🎯 Chance für ' + key.toUpperCase() + ' auf ' + v + '% gesetzt!');
+  }
+}
+async function admToggleMaintQuick(gameKey) {
+  const inMaint = MAINT_GAMES.has(gameKey);
+  if (inMaint) {
+    await admToggleMaint(gameKey, false);
+  } else {
+    const reason = prompt('Optionaler Wartungs-Grund für ' + ((GAMES[gameKey]||{}).name || gameKey) + ' (leer = Standard):', '') ?? null;
+    if (reason === null) return;
+    await admToggleMaint(gameKey, true, reason.trim());
+  }
+  if ($('adm_tab_content') && admTab === 'games') renderAdminGamesTab($('adm_tab_content'));
+}
 function renderAdminGamesTab(c) {
-  const d = ADM_DATA;
+  const d = ADM_DATA || {};
   const isAct = (v, normal) => v !== undefined && v !== null && String(v) !== String(normal) && String(v) !== 'none' && String(v) !== '-1' && String(v) !== '0';
-  
-  let rigCount = 0;
-  const checkRig = (v, n) => { if (isAct(v, n)) rigCount++; };
-  checkRig(d.forced_crash_next, 0);
-  checkRig(d.forced_penalty_next, 'none');
-  checkRig(d.forced_roulette_next, -1);
-  checkRig(d.forced_dice_next, 0);
-  checkRig(d.forced_coinflip_next, 'none');
-  checkRig(d.forced_limbo_next, 0);
-  checkRig(d.forced_slots_next, 'none');
-  checkRig(d.forced_wheel_next, 0);
-  checkRig(d.forced_cyberrace_next, 0);
-  checkRig(d.forced_war_next, 'none');
-  checkRig(d.forced_keno_hits, -1);
-  checkRig(d.forced_bj_next, 'none');
-  checkRig(d.forced_mines_next, 'none');
-  checkRig(d.forced_towers_next, 'none');
-  checkRig(d.forced_baccarat_next, 'none');
-  checkRig(d.forced_sicbo_next, 'none');
-  checkRig(d.forced_hilo_next, 'none');
-  checkRig(d.forced_dragon_next, 'none');
-  checkRig(d.forced_lucky7_next, 'none');
-  checkRig(d.forced_doors_next, 'none');
-  checkRig(d.forced_number_next, 0);
-  checkRig(d.forced_rps_next, 'none');
-  checkRig(d.forced_double_next, 'none');
-  checkRig(d.forced_allin_next, 'none');
+
+  const forceDefs = [
+    [d.forced_crash_next, 0], [d.forced_penalty_next, 'none'], [d.forced_roulette_next, -1],
+    [d.forced_dice_next, 0], [d.forced_coinflip_next, 'none'], [d.forced_limbo_next, 0],
+    [d.forced_slots_next, 'none'], [d.forced_wheel_next, 0], [d.forced_cyberrace_next, 0],
+    [d.forced_war_next, 'none'], [d.forced_keno_hits, -1], [d.forced_bj_next, 'none'],
+    [d.forced_mines_next, 'none'], [d.forced_towers_next, 'none'], [d.forced_baccarat_next, 'none'],
+    [d.forced_sicbo_next, 'none'], [d.forced_hilo_next, 'none'], [d.forced_dragon_next, 'none'],
+    [d.forced_lucky7_next, 'none'], [d.forced_doors_next, 'none'], [d.forced_number_next, 0],
+    [d.forced_rps_next, 'none'], [d.forced_double_next, 'none'], [d.forced_allin_next, 'none']
+  ];
+  const rigCount = forceDefs.filter(([v, n]) => isAct(v, n)).length;
+
+  const catTabs = [
+    ['all', '🌟 Alle (46)'],
+    ['forced', '⚡ Forciert (' + rigCount + ')'],
+    ['maint', '🛠️ Wartung (' + MAINT_GAMES.size + ')'],
+    ['hits', '🔥 Hits & Kisten'],
+    ['table', '🃏 Tisch & Karten'],
+    ['quick', '⚡ Schnellspiele'],
+    ['slots', '🎰 Alle 14 Slots']
+  ];
+
+  c.innerHTML = `
+    <div class="glass rounded-2xl p-4 mb-4 border border-cyan-500/30 bg-gradient-to-r from-zinc-900/90 to-cyan-950/20 space-y-3">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-3">
+          <span class="text-2xl">🕹️</span>
+          <div>
+            <div class="font-black text-white text-sm">Master Spiele-Kontrolle (32 Spiele + 14 Slots)</div>
+            <div class="text-xs text-zinc-400">Chancen-Regler, Wartungsschalter &amp; Next-Round-Manipulation für jedes einzelne Spiel &amp; jeden Slot.</div>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="text-xs px-2.5 py-1 rounded-lg ${rigCount > 0 ? 'bg-amber-900/60 text-amber-300 border border-amber-500 font-bold' : 'bg-zinc-800 text-zinc-400'}">
+            ${rigCount > 0 ? '⚡ ' + rigCount + ' forciert' : '🟢 Normal'}
+          </span>
+          <button onclick="admSetGlobalWinChance(100)" class="btn bg-emerald-700 hover:bg-emerald-600 text-xs px-2.5 py-1.5 font-bold" style="width:auto">🍀 Global 100%</button>
+          <button onclick="admSetGlobalWinChance(50)" class="btn bg-zinc-800 hover:bg-zinc-700 text-xs px-2.5 py-1.5" style="width:auto">🟢 Global 50%</button>
+          <button onclick="admSetGlobalWinChance(10)" class="btn bg-red-900/70 hover:bg-red-800 text-xs px-2.5 py-1.5 text-red-200" style="width:auto">😈 Global 10%</button>
+          <button onclick="resetAllForces()" class="btn bg-zinc-800 hover:bg-zinc-700 text-xs px-3 py-1.5 border border-zinc-600" style="width:auto">↩ Alle Forcings Reset</button>
+        </div>
+      </div>
+      <div class="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center justify-between pt-2 border-t border-zinc-800/80">
+        <div class="flex gap-1.5 overflow-x-auto pb-1" style="scrollbar-width:none">
+          ${catTabs.map(([id, lbl]) => `<button onclick="sfx.click();admGameCat='${id}';renderAdminGamesTab($('adm_tab_content'))" class="px-2.5 py-1.5 rounded-xl text-[11px] font-bold whitespace-nowrap transition ${admGameCat === id ? 'bg-cyan-600 text-white shadow' : 'bg-zinc-800/80 text-zinc-400 hover:text-white'}">${lbl}</button>`).join('')}
+        </div>
+        <input id="adm_game_search" value="${esc(admGameQuery)}" oninput="admGameQuery=this.value;renderAdminGamesGrid()" placeholder="🔍 Spiel oder Slot suchen..." class="inp text-xs py-1.5 px-3 sm:w-56">
+      </div>
+    </div>
+    <div id="adm_games_grid" class="grid grid-cols-1 lg:grid-cols-2 gap-3.5"></div>`;
+  renderAdminGamesGrid();
+}
+function renderAdminGamesGrid() {
+  const grid = $('adm_games_grid'); if (!grid) return;
+  const d = ADM_DATA || {};
+  const isAct = (v, normal) => v !== undefined && v !== null && String(v) !== String(normal) && String(v) !== 'none' && String(v) !== '-1' && String(v) !== '0';
 
   const badge = (val, def, label) => {
     const active = isAct(val, def);
-    return active 
-      ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-500/20 text-amber-300 border border-amber-500/50 animate-pulse">AKTIV: ${label || val}</span>`
-      : `<span class="px-2 py-0.5 rounded-full text-[10px] bg-zinc-800 text-zinc-500 border border-zinc-700">Normal</span>`;
+    return active
+      ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-500/20 text-amber-300 border border-amber-500/50 animate-pulse">⚡ ${label || val}</span>`
+      : `<span class="px-2 py-0.5 rounded-full text-[10px] bg-zinc-800 text-zinc-400 border border-zinc-700">🟢 Normal</span>`;
   };
 
-  const card = (icon, title, statusHtml, bodyHtml) => `
-    <div class="glass rounded-2xl p-4 border border-zinc-700/70 hover:border-cyan-500/50 transition flex flex-col justify-between shadow-lg">
-      <div>
-        <div class="flex items-center justify-between mb-2">
-          <div class="flex items-center gap-2">
-            <span class="text-xl">${icon}</span>
-            <b class="text-white text-sm">${title}</b>
-          </div>
-          ${statusHtml}
-        </div>
-        <div class="text-xs text-zinc-300 space-y-2 mb-3">${bodyHtml}</div>
+  const chanceWidget = (chanceKey) => {
+    const cur = d['chance_' + chanceKey] !== undefined ? Number(d['chance_' + chanceKey]) : (d.global_win_chance !== undefined ? Number(d.global_win_chance) : 50);
+    return `<div class="pt-2 mt-2 border-t border-zinc-800/80">
+      <div class="flex items-center justify-between text-[11px] mb-1">
+        <span class="text-zinc-400">🎛️ Chancen-Regler:</span>
+        <b id="ag_disp_${chanceKey}" class="font-mono text-cyan-300">${cur} %</b>
+      </div>
+      <div class="flex items-center gap-1.5">
+        <input id="ag_rng_${chanceKey}" type="range" min="0" max="100" step="5" value="${cur}" class="flex-1 accent-cyan-500 cursor-pointer" oninput="if($('ag_disp_${chanceKey}'))$('ag_disp_${chanceKey}').textContent=this.value+' %'" onchange="admSetGameChance('${chanceKey}', this.value)">
+        <button class="px-1.5 py-0.5 rounded bg-red-950/70 hover:bg-red-800 text-[10px] text-red-200 border border-red-700/40" onclick="admSetGameChance('${chanceKey}', 10)">10%</button>
+        <button class="px-1.5 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-[10px] text-zinc-200 border border-zinc-700" onclick="admSetGameChance('${chanceKey}', 50)">50%</button>
+        <button class="px-1.5 py-0.5 rounded bg-emerald-900/70 hover:bg-emerald-700 text-[10px] text-emerald-200 border border-emerald-600/40" onclick="admSetGameChance('${chanceKey}', 100)">100%</button>
       </div>
     </div>`;
+  };
 
-  c.innerHTML = `
-    <div class="glass rounded-2xl p-4 mb-4 flex flex-wrap items-center justify-between gap-3 border border-zinc-700">
-      <div class="flex items-center gap-3">
-        <span class="text-2xl">🕹️</span>
-        <div>
-          <div class="font-bold text-white text-sm">Vollständige Spiel-Kontrolle (24 Games)</div>
-          <div class="text-xs text-zinc-400">Erzwinge das exakte Ergebnis der nächsten Runde für jedes beliebige Spiel.</div>
-        </div>
-      </div>
-      <div class="flex items-center gap-2 flex-wrap">
-        <span class="text-xs px-2.5 py-1 rounded-lg ${rigCount > 0 ? 'bg-amber-900/60 text-amber-300 border border-amber-500 font-bold' : 'bg-zinc-800 text-zinc-400'}">
-          ${rigCount > 0 ? '⚡ ' + rigCount + ' Spiele forciert' : '🟢 Alle Spiele auf Normal'}
-        </span>
-        <button onclick="resetAllForces()" class="btn bg-zinc-800 hover:bg-zinc-700 text-xs px-3 py-1.5 border border-zinc-600" style="width:auto">↩ Alle Forcings zurücksetzen</button>
-      </div>
-    </div>
-
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-3.5">
-      <!-- 1. ELFMETER -->
-      ${card('⚽', 'Elfmeter (11 Meter)', badge(d.forced_penalty_next, 'none', d.forced_penalty_next), `
-        <div class="text-[11px] text-zinc-400 mb-1">Nächste Torwart-Aktion erzwingen:</div>
-        <div class="grid grid-cols-2 gap-1 mb-2">
-          <button class="btn bg-emerald-600/80 hover:bg-emerald-500 text-xs py-1" onclick="forceGame('penalty', 'win')">🟢 Tor garantieren</button>
-          <button class="btn bg-red-700/80 hover:bg-red-600 text-xs py-1" onclick="forceGame('penalty', 'lose')">🔴 Torwart hält</button>
-        </div>
-        <div class="text-[10px] text-zinc-400 uppercase tracking-wider font-semibold mb-1">Exakte Torwart-Ecke:</div>
-        <div class="grid grid-cols-3 gap-1">
-          <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[11px] py-1" onclick="forceGame('penalty', 'tl')">↖ Oben L</button>
-          <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[11px] py-1" onclick="forceGame('penalty', 'mid')">⬆ Mitte</button>
-          <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[11px] py-1" onclick="forceGame('penalty', 'tr')">↗ Oben R</button>
-          <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[11px] py-1" onclick="forceGame('penalty', 'bl')">↙ Unten L</button>
-          <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[11px] py-1" onclick="forceGame('penalty', 'br')">↘ Unten R</button>
-          <button class="btn bg-zinc-900 text-zinc-500 hover:text-zinc-300 text-[11px] py-1" onclick="forceGame('penalty', 'none')">↩ Reset</button>
-        </div>
-      `)}
-
-      <!-- 2. CRASH -->
-      ${card('🚀', 'Crash (Rakete)', badge(d.forced_crash_next, 0, d.forced_crash_next + '×'), `
-        <div class="text-[11px] text-zinc-400 mb-1">Nächsten Crash-Punkt exakt setzen:</div>
-        <div class="flex gap-1 mb-2">
-          <input id="in_f_crash" type="number" step="0.1" min="1" placeholder="z.B. 50.0" value="${d.forced_crash_next > 0 ? d.forced_crash_next : ''}" class="inp py-1 px-2 text-xs flex-1">
-          <button class="btn bg-cyan-600 text-xs px-2.5 py-1" style="width:auto" onclick="forceGame('crash', $('in_f_crash').value)">Setzen</button>
-        </div>
-        <div class="grid grid-cols-3 gap-1">
-          <button class="btn bg-red-900/60 hover:bg-red-800 text-[10px] py-1 text-red-200" onclick="forceGame('crash', 1.00)">💥 1.00× (Crash)</button>
-          <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[10px] py-1" onclick="forceGame('crash', 2.0)">2.00×</button>
-          <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[10px] py-1" onclick="forceGame('crash', 5.0)">5.00×</button>
-          <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[10px] py-1" onclick="forceGame('crash', 10.0)">10.0×</button>
-          <button class="btn bg-emerald-900/60 hover:bg-emerald-800 text-[10px] py-1 text-emerald-300" onclick="forceGame('crash', 50.0)">🚀 50.0×</button>
-          <button class="btn bg-zinc-900 text-zinc-500 hover:text-zinc-300 text-[10px] py-1" onclick="forceGame('crash', 0)">↩ Reset</button>
-        </div>
-      `)}
-
-      <!-- 3. ROULETTE -->
-      ${card('🎡', 'Roulette', badge(d.forced_roulette_next, -1, '#' + d.forced_roulette_next), `
-        <div class="text-[11px] text-zinc-400 mb-1">Gewinnzahl erzwingen (0 - 36):</div>
-        <div class="flex gap-1 mb-2">
-          <input id="in_f_roul" type="number" min="0" max="36" placeholder="0-36" value="${d.forced_roulette_next >= 0 ? d.forced_roulette_next : ''}" class="inp py-1 px-2 text-xs flex-1">
-          <button class="btn bg-cyan-600 text-xs px-2.5 py-1" style="width:auto" onclick="forceGame('roulette', $('in_f_roul').value)">Setzen</button>
-        </div>
-        <div class="grid grid-cols-4 gap-1">
-          <button class="btn bg-emerald-800 hover:bg-emerald-700 text-[10px] py-1" onclick="forceGame('roulette', 0)">🟢 0 (14×)</button>
-          <button class="btn bg-red-800 hover:bg-red-700 text-[10px] py-1" onclick="forceGame('roulette', 7)">🔴 7 Rot</button>
-          <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[10px] py-1" onclick="forceGame('roulette', 8)">⚫ 8 Schwarz</button>
-          <button class="btn bg-zinc-900 text-zinc-500 hover:text-zinc-300 text-[10px] py-1" onclick="forceGame('roulette', -1)">↩ Reset</button>
-        </div>
-      `)}
-
-      <!-- 4. DICE -->
-      ${card('🎲', 'Dice (Würfel)', badge(d.forced_dice_next, 0, '#' + d.forced_dice_next), `
-        <div class="text-[11px] text-zinc-400 mb-1">Exakte Augenzahl (1 - 100):</div>
-        <div class="flex gap-1 mb-2">
-          <input id="in_f_dice" type="number" min="1" max="100" placeholder="1-100" value="${d.forced_dice_next > 0 ? d.forced_dice_next : ''}" class="inp py-1 px-2 text-xs flex-1">
-          <button class="btn bg-cyan-600 text-xs px-2.5 py-1" style="width:auto" onclick="forceGame('dice', $('in_f_dice').value)">Setzen</button>
-        </div>
-        <div class="grid grid-cols-4 gap-1">
-          <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[10px] py-1" onclick="forceGame('dice', 1)">1 (Under)</button>
-          <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[10px] py-1" onclick="forceGame('dice', 50)">50</button>
-          <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[10px] py-1" onclick="forceGame('dice', 99)">99 (Over)</button>
-          <button class="btn bg-zinc-900 text-zinc-500 hover:text-zinc-300 text-[10px] py-1" onclick="forceGame('dice', 0)">↩ Reset</button>
-        </div>
-      `)}
-
-      <!-- 5. COINFLIP -->
-      ${card('🪙', 'Coinflip (Münzwurf)', badge(d.forced_coinflip_next, 'none', d.forced_coinflip_next), `
-        <div class="text-[11px] text-zinc-400 mb-1">Münzergebnis oder Win/Lose erzwingen:</div>
-        <div class="grid grid-cols-2 gap-1 mb-1">
-          <button class="btn bg-amber-700 hover:bg-amber-600 text-xs py-1" onclick="forceGame('coinflip', 'kopf')">🪙 Kopf</button>
-          <button class="btn bg-amber-800 hover:bg-amber-700 text-xs py-1" onclick="forceGame('coinflip', 'zahl')">🪙 Zahl</button>
-        </div>
-        <div class="grid grid-cols-3 gap-1">
-          <button class="btn bg-emerald-700 hover:bg-emerald-600 text-[10px] py-1" onclick="forceGame('coinflip', 'win')">🍀 Immer Win</button>
-          <button class="btn bg-red-800 hover:bg-red-700 text-[10px] py-1" onclick="forceGame('coinflip', 'lose')">💀 Immer Lose</button>
-          <button class="btn bg-zinc-900 text-zinc-500 hover:text-zinc-300 text-[10px] py-1" onclick="forceGame('coinflip', 'none')">↩ Reset</button>
-        </div>
-      `)}
-
-      <!-- 6. LIMBO -->
-      ${card('🎯', 'Limbo', badge(d.forced_limbo_next, 0, d.forced_limbo_next + '×'), `
-        <div class="text-[11px] text-zinc-400 mb-1">Nächsten Limbo-Multiplikator setzen:</div>
-        <div class="flex gap-1 mb-2">
-          <input id="in_f_limbo" type="number" step="0.05" min="1.05" placeholder="z.B. 100.0" value="${d.forced_limbo_next > 0 ? d.forced_limbo_next : ''}" class="inp py-1 px-2 text-xs flex-1">
-          <button class="btn bg-cyan-600 text-xs px-2.5 py-1" style="width:auto" onclick="forceGame('limbo', $('in_f_limbo').value)">Setzen</button>
-        </div>
-        <div class="grid grid-cols-4 gap-1">
-          <button class="btn bg-red-900/60 hover:bg-red-800 text-[10px] py-1" onclick="forceGame('limbo', 1.00)">1.00× (Lose)</button>
-          <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[10px] py-1" onclick="forceGame('limbo', 10.0)">10.0×</button>
-          <button class="btn bg-emerald-900/70 hover:bg-emerald-800 text-[10px] py-1 text-emerald-300" onclick="forceGame('limbo', 500.0)">⭐ 500×</button>
-          <button class="btn bg-zinc-900 text-zinc-500 hover:text-zinc-300 text-[10px] py-1" onclick="forceGame('limbo', 0)">↩ Reset</button>
-        </div>
-      `)}
-
-      <!-- 7. SLOTS -->
-      ${card('🎰', 'Slots (Spielautomaten)', badge(d.forced_slots_next, 'none', d.forced_slots_next), `
-        <div class="text-[11px] text-zinc-400 mb-1">Nächsten Dreh manipulieren:</div>
-        <div class="grid grid-cols-1 gap-1 mb-1">
-          <button class="btn bg-gradient-to-r from-yellow-500 to-amber-600 text-black font-extrabold text-xs py-1.5" onclick="forceGame('slots', 'jackpot')">💰 EIGENEN SLOT-JACKPOT AUSLÖSEN</button>
+  const items = [
+    // HITS & KISTEN
+    {
+      id: 'cases', cat: 'hits', icon: '📦', name: 'Mystery-Kisten (11 Kisten)', maintKey: 'cases', chanceKey: 'cases', forced: false,
+      statusHtml: `<span class="px-2 py-0.5 rounded-full text-[10px] bg-pink-950/60 text-pink-300 border border-pink-500/40">11 Kisten</span>`,
+      bodyHtml: `<div class="text-[11px] text-zinc-400">Steuere die Gewinnchance aller 11 Mystery-Kisten über den Chancen-Regler unten (0% = Nieten, 100% = garantierter Gewinn ≥1,10×).</div>`
+    },
+    {
+      id: 'slots', cat: 'hits', icon: '🎰', name: 'Slots (Alle Automaten)', maintKey: 'slots', chanceKey: 'slots', forced: isAct(d.forced_slots_next, 'none'),
+      statusHtml: badge(d.forced_slots_next, 'none', d.forced_slots_next),
+      bodyHtml: `<div class="grid grid-cols-1 gap-1 mb-1">
+          <button class="btn bg-gradient-to-r from-yellow-500 to-amber-600 text-black font-extrabold text-xs py-1.5" onclick="forceGame('slots', 'jackpot')">💰 SLOT-JACKPOT AUSLÖSEN</button>
         </div>
         <div class="grid grid-cols-3 gap-1">
           <button class="btn bg-emerald-700 hover:bg-emerald-600 text-[10px] py-1" onclick="forceGame('slots', 'big_win')">⭐ Big Win</button>
           <button class="btn bg-red-800 hover:bg-red-700 text-[10px] py-1" onclick="forceGame('slots', 'lose')">💀 Lose</button>
-          <button class="btn bg-zinc-900 text-zinc-500 hover:text-zinc-300 text-[10px] py-1" onclick="forceGame('slots', 'none')">↩ Reset</button>
-        </div>
-      `)}
-
-      <!-- 8. MINES -->
-      ${card('💣', 'Mines (Minenfeld)', badge(d.forced_mines_next, 'none', d.forced_mines_next), `
-        <div class="text-[11px] text-zinc-400 mb-1">Nächsten Klick auf ein Feld manipulieren:</div>
-        <div class="grid grid-cols-3 gap-1">
-          <button class="btn bg-emerald-700 hover:bg-emerald-600 text-xs py-1.5 font-bold" onclick="forceGame('mines', 'safe')">🍀 Sicher (Diamant)</button>
-          <button class="btn bg-red-800 hover:bg-red-700 text-xs py-1.5 font-bold" onclick="forceGame('mines', 'boom')">💥 BOOM (Mine)</button>
-          <button class="btn bg-zinc-900 text-zinc-500 hover:text-zinc-300 text-xs py-1.5" onclick="forceGame('mines', 'none')">↩ Reset</button>
-        </div>
-      `)}
-
-      <!-- 9. BLACKJACK -->
-      ${card('🃏', 'Blackjack', badge(d.forced_bj_next, 'none', d.forced_bj_next), `
-        <div class="text-[11px] text-zinc-400 mb-1">Nächste Karten-Hand für Spieler/Dealer:</div>
-        <div class="grid grid-cols-2 gap-1 mb-1">
-          <button class="btn bg-yellow-600 hover:bg-yellow-500 text-black font-bold text-xs py-1" onclick="forceGame('bj', 'blackjack')">🌟 Instant 21 (BJ)</button>
-          <button class="btn bg-emerald-700 hover:bg-emerald-600 text-xs py-1" onclick="forceGame('bj', 'win')">🏆 Spieler Win</button>
+          <button class="btn bg-zinc-900 text-zinc-400 hover:text-white text-[10px] py-1" onclick="forceGame('slots', 'none')">↩ Reset</button>
+        </div>`
+    },
+    {
+      id: 'crash', cat: 'hits', icon: '🚀', name: 'Crash (Rakete)', maintKey: 'crash', chanceKey: 'crash', forced: isAct(d.forced_crash_next, 0),
+      statusHtml: badge(d.forced_crash_next, 0, d.forced_crash_next + '×'),
+      bodyHtml: `<div class="flex gap-1 mb-1.5">
+          <input id="in_f_crash" type="number" step="0.1" min="1" placeholder="z.B. 50.0" value="${d.forced_crash_next > 0 ? d.forced_crash_next : ''}" class="inp py-1 px-2 text-xs flex-1">
+          <button class="btn bg-cyan-600 text-xs px-2.5 py-1" style="width:auto" onclick="forceGame('crash', $('in_f_crash').value)">Setzen</button>
         </div>
         <div class="grid grid-cols-3 gap-1">
-          <button class="btn bg-red-800 hover:bg-red-700 text-[10px] py-1" onclick="forceGame('bj', 'lose')">💀 Dealer Win</button>
-          <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[10px] py-1" onclick="forceGame('bj', 'push')">🤝 Push</button>
-          <button class="btn bg-zinc-900 text-zinc-500 hover:text-zinc-300 text-[10px] py-1" onclick="forceGame('bj', 'none')">↩ Reset</button>
+          <button class="btn bg-red-900/60 hover:bg-red-800 text-[10px] py-1 text-red-200" onclick="forceGame('crash', 1.00)">💥 1.00×</button>
+          <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[10px] py-1" onclick="forceGame('crash', 2.0)">2.00×</button>
+          <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[10px] py-1" onclick="forceGame('crash', 5.0)">5.00×</button>
+          <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[10px] py-1" onclick="forceGame('crash', 10.0)">10.0×</button>
+          <button class="btn bg-emerald-900/60 hover:bg-emerald-800 text-[10px] py-1 text-emerald-300" onclick="forceGame('crash', 50.0)">🚀 50.0×</button>
+          <button class="btn bg-zinc-900 text-zinc-400 hover:text-white text-[10px] py-1" onclick="forceGame('crash', 0)">↩ Reset</button>
+        </div>`
+    },
+    {
+      id: 'mines', cat: 'hits', icon: '💣', name: 'Mines (Minenfeld)', maintKey: 'mines', chanceKey: 'mines', forced: isAct(d.forced_mines_next, 'none'),
+      statusHtml: badge(d.forced_mines_next, 'none', d.forced_mines_next),
+      bodyHtml: `<div class="grid grid-cols-3 gap-1">
+          <button class="btn bg-emerald-700 hover:bg-emerald-600 text-xs py-1.5 font-bold" onclick="forceGame('mines', 'safe')">🍀 Diamant</button>
+          <button class="btn bg-red-800 hover:bg-red-700 text-xs py-1.5 font-bold" onclick="forceGame('mines', 'boom')">💥 Mine</button>
+          <button class="btn bg-zinc-900 text-zinc-400 hover:text-white text-xs py-1.5" onclick="forceGame('mines', 'none')">↩ Reset</button>
+        </div>`
+    },
+    {
+      id: 'plinko', cat: 'hits', icon: '🟡', name: 'Plinko', maintKey: 'plinko', chanceKey: 'plinko', forced: false,
+      statusHtml: `<span class="px-2 py-0.5 rounded-full text-[10px] bg-zinc-800 text-zinc-400 border border-zinc-700">🟢 Aktiv</span>`,
+      bodyHtml: `<div class="grid grid-cols-2 gap-1">
+          <button class="btn bg-emerald-700 hover:bg-emerald-600 text-xs py-1" onclick="setGlobalRig(1); toast('🍀 Plinko landet außen (5.6× / 26×)!')">🌟 Max Rand</button>
+          <button class="btn bg-red-800 hover:bg-red-700 text-xs py-1" onclick="setGlobalRig(-1); toast('💀 Plinko landet in der Mitte!')">💀 Mitte</button>
+        </div>`
+    },
+    {
+      id: 'towers', cat: 'hits', icon: '🗼', name: 'Towers (Turm)', maintKey: 'towers', chanceKey: 'towers', forced: isAct(d.forced_towers_next, 'none'),
+      statusHtml: badge(d.forced_towers_next, 'none', d.forced_towers_next),
+      bodyHtml: `<div class="grid grid-cols-3 gap-1">
+          <button class="btn bg-emerald-700 hover:bg-emerald-600 text-xs py-1.5 font-bold" onclick="forceGame('towers', 'safe')">🍀 Sicher</button>
+          <button class="btn bg-red-800 hover:bg-red-700 text-xs py-1.5 font-bold" onclick="forceGame('towers', 'boom')">💥 Bombe</button>
+          <button class="btn bg-zinc-900 text-zinc-400 hover:text-white text-xs py-1.5" onclick="forceGame('towers', 'none')">↩ Reset</button>
+        </div>`
+    },
+    {
+      id: 'limbo', cat: 'hits', icon: '🎯', name: 'Limbo', maintKey: 'limbo', chanceKey: 'limbo', forced: isAct(d.forced_limbo_next, 0),
+      statusHtml: badge(d.forced_limbo_next, 0, d.forced_limbo_next + '×'),
+      bodyHtml: `<div class="flex gap-1 mb-1.5">
+          <input id="in_f_limbo" type="number" step="0.05" min="1.05" placeholder="z.B. 100.0" value="${d.forced_limbo_next > 0 ? d.forced_limbo_next : ''}" class="inp py-1 px-2 text-xs flex-1">
+          <button class="btn bg-cyan-600 text-xs px-2.5 py-1" style="width:auto" onclick="forceGame('limbo', $('in_f_limbo').value)">Setzen</button>
         </div>
-      `)}
-
-      <!-- 10. TOWERS -->
-      ${card('🏰', 'Towers (Turm)', badge(d.forced_towers_next, 'none', d.forced_towers_next), `
-        <div class="text-[11px] text-zinc-400 mb-1">Nächste Stufe auf dem Turm:</div>
-        <div class="grid grid-cols-3 gap-1">
-          <button class="btn bg-emerald-700 hover:bg-emerald-600 text-xs py-1.5 font-bold" onclick="forceGame('towers', 'safe')">🍀 Sicher (Treppe)</button>
-          <button class="btn bg-red-800 hover:bg-red-700 text-xs py-1.5 font-bold" onclick="forceGame('towers', 'boom')">💥 Bombe treffen</button>
-          <button class="btn bg-zinc-900 text-zinc-500 hover:text-zinc-300 text-xs py-1.5" onclick="forceGame('towers', 'none')">↩ Reset</button>
-        </div>
-      `)}
-
-      <!-- 11. WHEEL -->
-      ${card('🎡', 'Wheel (Glücksrad)', badge(d.forced_wheel_next, 0, 'Seg #' + d.forced_wheel_next), `
-        <div class="text-[11px] text-zinc-400 mb-1">Segment 1 bis 10 erzwingen:</div>
         <div class="grid grid-cols-4 gap-1">
+          <button class="btn bg-red-900/60 hover:bg-red-800 text-[10px] py-1" onclick="forceGame('limbo', 1.00)">1.00×</button>
+          <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[10px] py-1" onclick="forceGame('limbo', 10.0)">10.0×</button>
+          <button class="btn bg-emerald-900/70 hover:bg-emerald-800 text-[10px] py-1 text-emerald-300" onclick="forceGame('limbo', 500.0)">⭐ 500×</button>
+          <button class="btn bg-zinc-900 text-zinc-400 hover:text-white text-[10px] py-1" onclick="forceGame('limbo', 0)">↩ Reset</button>
+        </div>`
+    },
+    {
+      id: 'deal', cat: 'hits', icon: '💼', name: 'Deal or No Deal', maintKey: 'deal', chanceKey: 'deal', forced: false,
+      statusHtml: `<span class="px-2 py-0.5 rounded-full text-[10px] bg-cyan-950/60 text-cyan-300 border border-cyan-500/40">12 Koffer</span>`,
+      bodyHtml: `<div class="text-[11px] text-zinc-400">Steuert den Koffer-Inhalt &amp; die Höhe der Banker-Angebote über den Chancen-Regler unten.</div>`
+    },
+    {
+      id: 'crypto', cat: 'hits', icon: '📈', name: 'Krypto-Hebel', maintKey: 'crypto', chanceKey: 'crypto', forced: false,
+      statusHtml: `<span class="px-2 py-0.5 rounded-full text-[10px] bg-emerald-950/60 text-emerald-300 border border-emerald-500/40">2×–25× Hebel</span>`,
+      bodyHtml: `<div class="text-[11px] text-zinc-400">Steuert die Kurs-Tendenz (Bull/Bear-Bias) bei offenen Krypto-Positionen über den Chancen-Regler unten.</div>`
+    },
+
+    // TISCH & KARTEN
+    {
+      id: 'blackjack', cat: 'table', icon: '♠️', name: 'Blackjack', maintKey: 'blackjack', chanceKey: 'blackjack', forced: isAct(d.forced_bj_next, 'none'),
+      statusHtml: badge(d.forced_bj_next, 'none', d.forced_bj_next),
+      bodyHtml: `<div class="grid grid-cols-2 gap-1 mb-1">
+          <button class="btn bg-yellow-600 hover:bg-yellow-500 text-black font-bold text-xs py-1" onclick="forceGame('bj', 'blackjack')">🌟 Instant 21</button>
+          <button class="btn bg-emerald-700 hover:bg-emerald-600 text-xs py-1" onclick="forceGame('bj', 'win')">🏆 Win</button>
+        </div>
+        <div class="grid grid-cols-3 gap-1">
+          <button class="btn bg-red-800 hover:bg-red-700 text-[10px] py-1" onclick="forceGame('bj', 'lose')">💀 Lose</button>
+          <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[10px] py-1" onclick="forceGame('bj', 'push')">🤝 Push</button>
+          <button class="btn bg-zinc-900 text-zinc-400 hover:text-white text-[10px] py-1" onclick="forceGame('bj', 'none')">↩ Reset</button>
+        </div>`
+    },
+    {
+      id: 'roulette', cat: 'table', icon: '🎡', name: 'Roulette', maintKey: 'roulette', chanceKey: 'roulette', forced: isAct(d.forced_roulette_next, -1),
+      statusHtml: badge(d.forced_roulette_next, -1, '#' + d.forced_roulette_next),
+      bodyHtml: `<div class="flex gap-1 mb-1.5">
+          <input id="in_f_roul" type="number" min="0" max="36" placeholder="0-36" value="${d.forced_roulette_next >= 0 ? d.forced_roulette_next : ''}" class="inp py-1 px-2 text-xs flex-1">
+          <button class="btn bg-cyan-600 text-xs px-2.5 py-1" style="width:auto" onclick="forceGame('roulette', $('in_f_roul').value)">Setzen</button>
+        </div>
+        <div class="grid grid-cols-4 gap-1">
+          <button class="btn bg-emerald-800 hover:bg-emerald-700 text-[10px] py-1" onclick="forceGame('roulette', 0)">🟢 0</button>
+          <button class="btn bg-red-800 hover:bg-red-700 text-[10px] py-1" onclick="forceGame('roulette', 7)">🔴 7</button>
+          <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[10px] py-1" onclick="forceGame('roulette', 8)">⚫ 8</button>
+          <button class="btn bg-zinc-900 text-zinc-400 hover:text-white text-[10px] py-1" onclick="forceGame('roulette', -1)">↩ Reset</button>
+        </div>`
+    },
+    {
+      id: 'poker', cat: 'table', icon: '♦️', name: 'Video Poker', maintKey: 'poker', chanceKey: 'poker', forced: false,
+      statusHtml: `<span class="px-2 py-0.5 rounded-full text-[10px] bg-purple-950/60 text-purple-300 border border-purple-500/40">Jacks or Better</span>`,
+      bodyHtml: `<div class="text-[11px] text-zinc-400">Steuert die Gewinnwahrscheinlichkeit beim Kartentausch über den Chancen-Regler unten.</div>`
+    },
+    {
+      id: 'baccarat', cat: 'table', icon: '🎴', name: 'Baccarat', maintKey: 'baccarat', chanceKey: 'baccarat', forced: isAct(d.forced_baccarat_next, 'none'),
+      statusHtml: badge(d.forced_baccarat_next, 'none', d.forced_baccarat_next),
+      bodyHtml: `<div class="grid grid-cols-4 gap-1">
+          <button class="btn bg-cyan-700 hover:bg-cyan-600 text-[10px] py-1" onclick="forceGame('baccarat', 'player')">👤 Player</button>
+          <button class="btn bg-red-800 hover:bg-red-700 text-[10px] py-1" onclick="forceGame('baccarat', 'banker')">🏦 Banker</button>
+          <button class="btn bg-purple-700 hover:bg-purple-600 text-[10px] py-1" onclick="forceGame('baccarat', 'tie')">🤝 Tie</button>
+          <button class="btn bg-zinc-900 text-zinc-400 hover:text-white text-[10px] py-1" onclick="forceGame('baccarat', 'none')">↩ Reset</button>
+        </div>`
+    },
+    {
+      id: 'dragon', cat: 'table', icon: '🐉', name: 'Dragon Tiger', maintKey: 'dragon', chanceKey: 'dragon', forced: isAct(d.forced_dragon_next, 'none'),
+      statusHtml: badge(d.forced_dragon_next, 'none', d.forced_dragon_next),
+      bodyHtml: `<div class="grid grid-cols-4 gap-1">
+          <button class="btn bg-red-700 hover:bg-red-600 text-[10px] py-1" onclick="forceGame('dragon', 'dragon')">🐉 Dragon</button>
+          <button class="btn bg-amber-700 hover:bg-amber-600 text-[10px] py-1" onclick="forceGame('dragon', 'tiger')">🐅 Tiger</button>
+          <button class="btn bg-purple-700 hover:bg-purple-600 text-[10px] py-1" onclick="forceGame('dragon', 'tie')">🤝 Tie</button>
+          <button class="btn bg-zinc-900 text-zinc-400 hover:text-white text-[10px] py-1" onclick="forceGame('dragon', 'none')">↩ Reset</button>
+        </div>`
+    },
+    {
+      id: 'war', cat: 'table', icon: '⚔️', name: 'Casino War', maintKey: 'war', chanceKey: 'war', forced: isAct(d.forced_war_next, 'none'),
+      statusHtml: badge(d.forced_war_next, 'none', d.forced_war_next),
+      bodyHtml: `<div class="grid grid-cols-4 gap-1">
+          <button class="btn bg-emerald-700 hover:bg-emerald-600 text-[10px] py-1" onclick="forceGame('war', 'win')">🏆 Win</button>
+          <button class="btn bg-purple-700 hover:bg-purple-600 text-[10px] py-1" onclick="forceGame('war', 'tie')">🤝 Tie</button>
+          <button class="btn bg-red-800 hover:bg-red-700 text-[10px] py-1" onclick="forceGame('war', 'lose')">💀 Lose</button>
+          <button class="btn bg-zinc-900 text-zinc-400 hover:text-white text-[10px] py-1" onclick="forceGame('war', 'none')">↩ Reset</button>
+        </div>`
+    },
+    {
+      id: 'sicbo', cat: 'table', icon: '🔮', name: 'Sic Bo', maintKey: 'sicbo', chanceKey: 'sicbo', forced: isAct(d.forced_sicbo_next, 'none'),
+      statusHtml: badge(d.forced_sicbo_next, 'none', d.forced_sicbo_next),
+      bodyHtml: `<div class="grid grid-cols-4 gap-1">
+          <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[10px] py-1" onclick="forceGame('sicbo', 'low')">⬇ Low</button>
+          <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[10px] py-1" onclick="forceGame('sicbo', 'high')">⬆ High</button>
+          <button class="btn bg-yellow-600 hover:bg-yellow-500 text-black font-bold text-[10px] py-1" onclick="forceGame('sicbo', 'triple')">🎲 Triple</button>
+          <button class="btn bg-zinc-900 text-zinc-400 hover:text-white text-[10px] py-1" onclick="forceGame('sicbo', 'none')">↩ Reset</button>
+        </div>`
+    },
+    {
+      id: 'hilo', cat: 'table', icon: '🃏', name: 'Hi-Lo', maintKey: 'hilo', chanceKey: 'hilo', forced: isAct(d.forced_hilo_next, 'none'),
+      statusHtml: badge(d.forced_hilo_next, 'none', d.forced_hilo_next),
+      bodyHtml: `<div class="grid grid-cols-3 gap-1">
+          <button class="btn bg-emerald-700 hover:bg-emerald-600 text-xs py-1" onclick="forceGame('hilo', 'win')">🍀 Win</button>
+          <button class="btn bg-red-800 hover:bg-red-700 text-xs py-1" onclick="forceGame('hilo', 'lose')">💀 Lose</button>
+          <button class="btn bg-zinc-900 text-zinc-400 hover:text-white text-xs py-1" onclick="forceGame('hilo', 'none')">↩ Reset</button>
+        </div>`
+    },
+
+    // SCHNELLSPIELE
+    {
+      id: 'penalty', cat: 'quick', icon: '⚽', name: 'Elfmeter', maintKey: 'penalty', chanceKey: 'penalty', forced: isAct(d.forced_penalty_next, 'none'),
+      statusHtml: badge(d.forced_penalty_next, 'none', d.forced_penalty_next),
+      bodyHtml: `<div class="grid grid-cols-2 gap-1 mb-1">
+          <button class="btn bg-emerald-600/80 hover:bg-emerald-500 text-xs py-1" onclick="forceGame('penalty', 'win')">🟢 Tor</button>
+          <button class="btn bg-red-700/80 hover:bg-red-600 text-xs py-1" onclick="forceGame('penalty', 'lose')">🔴 Hält</button>
+        </div>
+        <div class="grid grid-cols-3 gap-1">
+          <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[10px] py-1" onclick="forceGame('penalty', 'tl')">↖ Oben L</button>
+          <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[10px] py-1" onclick="forceGame('penalty', 'mid')">⬆ Mitte</button>
+          <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[10px] py-1" onclick="forceGame('penalty', 'tr')">↗ Oben R</button>
+          <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[10px] py-1" onclick="forceGame('penalty', 'bl')">↙ Unten L</button>
+          <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[10px] py-1" onclick="forceGame('penalty', 'br')">↘ Unten R</button>
+          <button class="btn bg-zinc-900 text-zinc-400 hover:text-white text-[10px] py-1" onclick="forceGame('penalty', 'none')">↩ Reset</button>
+        </div>`
+    },
+    {
+      id: 'coinflip', cat: 'quick', icon: '🪙', name: 'Coinflip', maintKey: 'coinflip', chanceKey: 'coinflip', forced: isAct(d.forced_coinflip_next, 'none'),
+      statusHtml: badge(d.forced_coinflip_next, 'none', d.forced_coinflip_next),
+      bodyHtml: `<div class="grid grid-cols-2 gap-1 mb-1">
+          <button class="btn bg-amber-700 hover:bg-amber-600 text-xs py-1" onclick="forceGame('coinflip', 'kopf')">🪙 Kopf</button>
+          <button class="btn bg-amber-800 hover:bg-amber-700 text-xs py-1" onclick="forceGame('coinflip', 'zahl')">🪙 Zahl</button>
+        </div>
+        <div class="grid grid-cols-3 gap-1">
+          <button class="btn bg-emerald-700 hover:bg-emerald-600 text-[10px] py-1" onclick="forceGame('coinflip', 'win')">🍀 Win</button>
+          <button class="btn bg-red-800 hover:bg-red-700 text-[10px] py-1" onclick="forceGame('coinflip', 'lose')">💀 Lose</button>
+          <button class="btn bg-zinc-900 text-zinc-400 hover:text-white text-[10px] py-1" onclick="forceGame('coinflip', 'none')">↩ Reset</button>
+        </div>`
+    },
+    {
+      id: 'dice', cat: 'quick', icon: '🎲', name: 'Dice (Würfel)', maintKey: 'dice', chanceKey: 'dice', forced: isAct(d.forced_dice_next, 0),
+      statusHtml: badge(d.forced_dice_next, 0, '#' + d.forced_dice_next),
+      bodyHtml: `<div class="flex gap-1 mb-1.5">
+          <input id="in_f_dice" type="number" min="1" max="100" placeholder="1-100" value="${d.forced_dice_next > 0 ? d.forced_dice_next : ''}" class="inp py-1 px-2 text-xs flex-1">
+          <button class="btn bg-cyan-600 text-xs px-2.5 py-1" style="width:auto" onclick="forceGame('dice', $('in_f_dice').value)">Setzen</button>
+        </div>
+        <div class="grid grid-cols-4 gap-1">
+          <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[10px] py-1" onclick="forceGame('dice', 1)">1</button>
+          <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[10px] py-1" onclick="forceGame('dice', 50)">50</button>
+          <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[10px] py-1" onclick="forceGame('dice', 99)">99</button>
+          <button class="btn bg-zinc-900 text-zinc-400 hover:text-white text-[10px] py-1" onclick="forceGame('dice', 0)">↩ Reset</button>
+        </div>`
+    },
+    {
+      id: 'cyberrace', cat: 'quick', icon: '🏎️', name: 'Cyber Race', maintKey: 'cyberrace', chanceKey: 'cyberrace', forced: isAct(d.forced_cyberrace_next, 0),
+      statusHtml: badge(d.forced_cyberrace_next, 0, 'Gleiter #' + d.forced_cyberrace_next),
+      bodyHtml: `<div class="grid grid-cols-4 gap-1">
+          <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[10px] py-1" onclick="forceGame('cyberrace', 1)">#1 (2×)</button>
+          <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[10px] py-1" onclick="forceGame('cyberrace', 3)">#3 (5×)</button>
+          <button class="btn bg-yellow-600 hover:bg-yellow-500 text-black font-bold text-[10px] py-1" onclick="forceGame('cyberrace', 5)">#5 (18×)</button>
+          <button class="btn bg-zinc-900 text-zinc-400 hover:text-white text-[10px] py-1" onclick="forceGame('cyberrace', 0)">↩ Reset</button>
+        </div>`
+    },
+    {
+      id: 'horses', cat: 'quick', icon: '🏇', name: 'Pferderennen', maintKey: 'horses', chanceKey: 'horses', forced: false,
+      statusHtml: `<span class="px-2 py-0.5 rounded-full text-[10px] bg-zinc-800 text-zinc-400 border border-zinc-700">4 Pferde</span>`,
+      bodyHtml: `<div class="text-[11px] text-zinc-400">Steuert die Sieg-Chance des getippten Pferds (1,9× bis 7,5×) über den Chancen-Regler unten.</div>`
+    },
+    {
+      id: 'bomb', cat: 'quick', icon: '💣', name: 'Bomben-Entschärfer', maintKey: 'bomb', chanceKey: 'bomb', forced: false,
+      statusHtml: `<span class="px-2 py-0.5 rounded-full text-[10px] bg-zinc-800 text-zinc-400 border border-zinc-700">3 Drähte · 2,75×</span>`,
+      bodyHtml: `<div class="text-[11px] text-zinc-400">Steuert die Erfolgschance beim Draht-Schnitt über den Chancen-Regler unten.</div>`
+    },
+    {
+      id: 'darts', cat: 'quick', icon: '🎯', name: 'Dart-Meister', maintKey: 'darts', chanceKey: 'darts', forced: false,
+      statusHtml: `<span class="px-2 py-0.5 rounded-full text-[10px] bg-zinc-800 text-zinc-400 border border-zinc-700">Bis 12×</span>`,
+      bodyHtml: `<div class="text-[11px] text-zinc-400">Steuert die Trefferzonen-Wahrscheinlichkeit über den Chancen-Regler unten.</div>`
+    },
+    {
+      id: 'wheel', cat: 'quick', icon: '🎯', name: 'Glücksrad', maintKey: 'wheel', chanceKey: 'wheel', forced: isAct(d.forced_wheel_next, 0),
+      statusHtml: badge(d.forced_wheel_next, 0, 'Seg #' + d.forced_wheel_next),
+      bodyHtml: `<div class="grid grid-cols-4 gap-1">
           <button class="btn bg-yellow-600 hover:bg-yellow-500 text-black font-bold text-[10px] py-1" onclick="forceGame('wheel', 10)">⭐ 10 (4×)</button>
           <button class="btn bg-emerald-800 hover:bg-emerald-700 text-[10px] py-1" onclick="forceGame('wheel', 6)">6 (2×)</button>
           <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[10px] py-1" onclick="forceGame('wheel', 1)">1 (0×)</button>
-          <button class="btn bg-zinc-900 text-zinc-500 hover:text-zinc-300 text-[10px] py-1" onclick="forceGame('wheel', 0)">↩ Reset</button>
-        </div>
-      `)}
-
-      <!-- 12. CYBER RACE -->
-      ${card('🏁', 'Cyber Race', badge(d.forced_cyberrace_next, 0, 'Läufer #' + d.forced_cyberrace_next), `
-        <div class="text-[11px] text-zinc-400 mb-1">Gewinner-Läufer erzwingen (1 bis 5):</div>
-        <div class="grid grid-cols-3 gap-1">
-          <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[10px] py-1" onclick="forceGame('cyberrace', 1)">Läufer 1 (2×)</button>
-          <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[10px] py-1" onclick="forceGame('cyberrace', 3)">Läufer 3 (5×)</button>
-          <button class="btn bg-yellow-600 hover:bg-yellow-500 text-black font-bold text-[10px] py-1" onclick="forceGame('cyberrace', 5)">🔥 Läufer 5 (20×)</button>
-        </div>
-      `)}
-
-      <!-- 13. CASINO WAR -->
-      ${card('⚔️', 'Casino War', badge(d.forced_war_next, 'none', d.forced_war_next), `
-        <div class="text-[11px] text-zinc-400 mb-1">Karten-Duell manipulieren:</div>
-        <div class="grid grid-cols-4 gap-1">
-          <button class="btn bg-emerald-700 hover:bg-emerald-600 text-[10px] py-1" onclick="forceGame('war', 'win')">🏆 Win</button>
-          <button class="btn bg-purple-700 hover:bg-purple-600 text-[10px] py-1" onclick="forceGame('war', 'tie')">🤝 Tie (3×)</button>
-          <button class="btn bg-red-800 hover:bg-red-700 text-[10px] py-1" onclick="forceGame('war', 'lose')">💀 Lose</button>
-          <button class="btn bg-zinc-900 text-zinc-500 hover:text-zinc-300 text-[10px] py-1" onclick="forceGame('war', 'none')">↩ Reset</button>
-        </div>
-      `)}
-
-      <!-- 14. KENO -->
-      ${card('🎱', 'Keno', badge(d.forced_keno_hits, -1, d.forced_keno_hits + ' Hits'), `
-        <div class="text-[11px] text-zinc-400 mb-1">Trefferanzahl garantieren (0 - 5):</div>
-        <div class="grid grid-cols-4 gap-1">
+          <button class="btn bg-zinc-900 text-zinc-400 hover:text-white text-[10px] py-1" onclick="forceGame('wheel', 0)">↩ Reset</button>
+        </div>`
+    },
+    {
+      id: 'keno', cat: 'quick', icon: '🔢', name: 'Keno', maintKey: 'keno', chanceKey: 'keno', forced: isAct(d.forced_keno_hits, -1),
+      statusHtml: badge(d.forced_keno_hits, -1, d.forced_keno_hits + ' Hits'),
+      bodyHtml: `<div class="grid grid-cols-4 gap-1">
           <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[10px] py-1" onclick="forceGame('keno', 0)">0 Hits</button>
-          <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[10px] py-1" onclick="forceGame('keno', 3)">3 Hits (4×)</button>
-          <button class="btn bg-yellow-600 hover:bg-yellow-500 text-black font-bold text-[10px] py-1" onclick="forceGame('keno', 5)">⭐ 5 Hits (80×)</button>
-          <button class="btn bg-zinc-900 text-zinc-500 hover:text-zinc-300 text-[10px] py-1" onclick="forceGame('keno', -1)">↩ Reset</button>
-        </div>
-      `)}
-
-      <!-- 15. BACCARAT -->
-      ${card('🎴', 'Baccarat', badge(d.forced_baccarat_next, 'none', d.forced_baccarat_next), `
-        <div class="text-[11px] text-zinc-400 mb-1">Nächste Hand:</div>
-        <div class="grid grid-cols-4 gap-1">
-          <button class="btn bg-cyan-700 hover:bg-cyan-600 text-[10px] py-1" onclick="forceGame('baccarat', 'player')">👤 Player</button>
-          <button class="btn bg-red-800 hover:bg-red-700 text-[10px] py-1" onclick="forceGame('baccarat', 'banker')">🏦 Banker</button>
-          <button class="btn bg-purple-700 hover:bg-purple-600 text-[10px] py-1" onclick="forceGame('baccarat', 'tie')">🤝 Tie (9×)</button>
-          <button class="btn bg-zinc-900 text-zinc-500 hover:text-zinc-300 text-[10px] py-1" onclick="forceGame('baccarat', 'none')">↩ Reset</button>
-        </div>
-      `)}
-
-      <!-- 16. SIC BO -->
-      ${card('🎲', 'Sic Bo', badge(d.forced_sicbo_next, 'none', d.forced_sicbo_next), `
-        <div class="text-[11px] text-zinc-400 mb-1">Würfel-Kombination:</div>
-        <div class="grid grid-cols-4 gap-1">
-          <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[10px] py-1" onclick="forceGame('sicbo', 'low')">⬇ Low</button>
-          <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[10px] py-1" onclick="forceGame('sicbo', 'high')">⬆ High</button>
-          <button class="btn bg-yellow-600 hover:bg-yellow-500 text-black font-bold text-[10px] py-1" onclick="forceGame('sicbo', 'triple')">🎲 Triple (30×)</button>
-          <button class="btn bg-zinc-900 text-zinc-500 hover:text-zinc-300 text-[10px] py-1" onclick="forceGame('sicbo', 'none')">↩ Reset</button>
-        </div>
-      `)}
-
-      <!-- 17. HI-LO -->
-      ${card('📈', 'Hi-Lo', badge(d.forced_hilo_next, 'none', d.forced_hilo_next), `
-        <div class="text-[11px] text-zinc-400 mb-1">Karte manipulieren:</div>
-        <div class="grid grid-cols-3 gap-1">
-          <button class="btn bg-emerald-700 hover:bg-emerald-600 text-xs py-1" onclick="forceGame('hilo', 'win')">🍀 Immer Win</button>
-          <button class="btn bg-red-800 hover:bg-red-700 text-xs py-1" onclick="forceGame('hilo', 'lose')">💀 Immer Lose</button>
-          <button class="btn bg-zinc-900 text-zinc-500 hover:text-zinc-300 text-xs py-1" onclick="forceGame('hilo', 'none')">↩ Reset</button>
-        </div>
-      `)}
-
-      <!-- 18. DRAGON TIGER -->
-      ${card('🐉', 'Dragon Tiger', badge(d.forced_dragon_next, 'none', d.forced_dragon_next), `
-        <div class="text-[11px] text-zinc-400 mb-1">Gewinnerseite:</div>
-        <div class="grid grid-cols-4 gap-1">
-          <button class="btn bg-red-700 hover:bg-red-600 text-[10px] py-1" onclick="forceGame('dragon', 'dragon')">🐉 Dragon</button>
-          <button class="btn bg-amber-700 hover:bg-amber-600 text-[10px] py-1" onclick="forceGame('dragon', 'tiger')">🐅 Tiger</button>
-          <button class="btn bg-purple-700 hover:bg-purple-600 text-[10px] py-1" onclick="forceGame('dragon', 'tie')">🤝 Tie (11×)</button>
-          <button class="btn bg-zinc-900 text-zinc-500 hover:text-zinc-300 text-[10px] py-1" onclick="forceGame('dragon', 'none')">↩ Reset</button>
-        </div>
-      `)}
-
-      <!-- 19. LUCKY 7 -->
-      ${card('🍀', 'Lucky 7', badge(d.forced_lucky7_next, 'none', d.forced_lucky7_next), `
-        <div class="text-[11px] text-zinc-400 mb-1">Würfel-Summe:</div>
-        <div class="grid grid-cols-4 gap-1">
-          <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[10px] py-1" onclick="forceGame('lucky7', 'under')">⬇ Unter 7</button>
-          <button class="btn bg-yellow-600 hover:bg-yellow-500 text-black font-bold text-[10px] py-1" onclick="forceGame('lucky7', 'seven')">⭐ Genau 7 (5.7×)</button>
-          <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[10px] py-1" onclick="forceGame('lucky7', 'over')">⬆ Über 7</button>
-          <button class="btn bg-zinc-900 text-zinc-500 hover:text-zinc-300 text-[10px] py-1" onclick="forceGame('lucky7', 'none')">↩ Reset</button>
-        </div>
-      `)}
-
-      <!-- 20. DOORS -->
-      ${card('🚪', 'Doors', badge(d.forced_doors_next, 'none', d.forced_doors_next), `
-        <div class="text-[11px] text-zinc-400 mb-1">Gewinner-Tür festlegen:</div>
-        <div class="grid grid-cols-4 gap-1">
+          <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[10px] py-1" onclick="forceGame('keno', 3)">3 Hits</button>
+          <button class="btn bg-yellow-600 hover:bg-yellow-500 text-black font-bold text-[10px] py-1" onclick="forceGame('keno', 5)">⭐ 5 (80×)</button>
+          <button class="btn bg-zinc-900 text-zinc-400 hover:text-white text-[10px] py-1" onclick="forceGame('keno', -1)">↩ Reset</button>
+        </div>`
+    },
+    {
+      id: 'lucky7', cat: 'quick', icon: '7️⃣', name: 'Lucky 7', maintKey: 'lucky7', chanceKey: 'lucky7', forced: isAct(d.forced_lucky7_next, 'none'),
+      statusHtml: badge(d.forced_lucky7_next, 'none', d.forced_lucky7_next),
+      bodyHtml: `<div class="grid grid-cols-4 gap-1">
+          <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[10px] py-1" onclick="forceGame('lucky7', 'under')">⬇ &lt;7</button>
+          <button class="btn bg-yellow-600 hover:bg-yellow-500 text-black font-bold text-[10px] py-1" onclick="forceGame('lucky7', 'seven')">⭐ 7</button>
+          <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[10px] py-1" onclick="forceGame('lucky7', 'over')">⬆ &gt;7</button>
+          <button class="btn bg-zinc-900 text-zinc-400 hover:text-white text-[10px] py-1" onclick="forceGame('lucky7', 'none')">↩ Reset</button>
+        </div>`
+    },
+    {
+      id: 'doors', cat: 'quick', icon: '🚪', name: 'Schatztüren', maintKey: 'doors', chanceKey: 'doors', forced: isAct(d.forced_doors_next, 'none'),
+      statusHtml: badge(d.forced_doors_next, 'none', d.forced_doors_next),
+      bodyHtml: `<div class="grid grid-cols-4 gap-1">
           <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[10px] py-1" onclick="forceGame('doors', '1')">Tür 1</button>
           <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[10px] py-1" onclick="forceGame('doors', '2')">Tür 2</button>
           <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[10px] py-1" onclick="forceGame('doors', '3')">Tür 3</button>
-          <button class="btn bg-zinc-900 text-zinc-500 hover:text-zinc-300 text-[10px] py-1" onclick="forceGame('doors', 'none')">↩ Reset</button>
-        </div>
-      `)}
-
-      <!-- 21. NUMBER -->
-      ${card('🔢', 'Number', badge(d.forced_number_next, 0, '#' + d.forced_number_next), `
-        <div class="text-[11px] text-zinc-400 mb-1">Gewinn-Zahl festlegen (1-10):</div>
-        <div class="flex gap-1 mb-2">
+          <button class="btn bg-zinc-900 text-zinc-400 hover:text-white text-[10px] py-1" onclick="forceGame('doors', 'none')">↩ Reset</button>
+        </div>`
+    },
+    {
+      id: 'number', cat: 'quick', icon: '🔟', name: 'Lucky Number', maintKey: 'number', chanceKey: 'number', forced: isAct(d.forced_number_next, 0),
+      statusHtml: badge(d.forced_number_next, 0, '#' + d.forced_number_next),
+      bodyHtml: `<div class="flex gap-1">
           <input id="in_f_num" type="number" min="1" max="10" placeholder="1-10" value="${d.forced_number_next > 0 ? d.forced_number_next : ''}" class="inp py-1 px-2 text-xs flex-1">
           <button class="btn bg-cyan-600 text-xs px-2.5 py-1" style="width:auto" onclick="forceGame('number', $('in_f_num').value)">Setzen</button>
-          <button class="btn bg-zinc-900 text-zinc-500 hover:text-zinc-300 text-xs px-2 py-1" style="width:auto" onclick="forceGame('number', 0)">↩</button>
-        </div>
-      `)}
-
-      <!-- 22. RPS -->
-      ${card('✂️', 'RPS', badge(d.forced_rps_next, 'none', d.forced_rps_next), `
-        <div class="text-[11px] text-zinc-400 mb-1">Ergebnis erzwingen:</div>
-        <div class="grid grid-cols-4 gap-1">
+          <button class="btn bg-zinc-900 text-zinc-400 hover:text-white text-xs px-2 py-1" style="width:auto" onclick="forceGame('number', 0)">↩</button>
+        </div>`
+    },
+    {
+      id: 'rps', cat: 'quick', icon: '✊', name: 'Schere Stein Papier', maintKey: 'rps', chanceKey: 'rps', forced: isAct(d.forced_rps_next, 'none'),
+      statusHtml: badge(d.forced_rps_next, 'none', d.forced_rps_next),
+      bodyHtml: `<div class="grid grid-cols-4 gap-1">
           <button class="btn bg-emerald-700 hover:bg-emerald-600 text-[10px] py-1" onclick="forceGame('rps', 'win')">🍀 Win</button>
           <button class="btn bg-red-800 hover:bg-red-700 text-[10px] py-1" onclick="forceGame('rps', 'lose')">💀 Lose</button>
           <button class="btn bg-zinc-800 hover:bg-zinc-700 text-[10px] py-1" onclick="forceGame('rps', 'draw')">🤝 Draw</button>
-          <button class="btn bg-zinc-900 text-zinc-500 hover:text-zinc-300 text-[10px] py-1" onclick="forceGame('rps', 'none')">↩ Reset</button>
-        </div>
-      `)}
+          <button class="btn bg-zinc-900 text-zinc-400 hover:text-white text-[10px] py-1" onclick="forceGame('rps', 'none')">↩ Reset</button>
+        </div>`
+    },
+    {
+      id: 'double', cat: 'quick', icon: '💰', name: 'Double or Nothing', maintKey: 'double', chanceKey: 'double', forced: isAct(d.forced_double_next, 'none'),
+      statusHtml: badge(d.forced_double_next, 'none', d.forced_double_next),
+      bodyHtml: `<div class="grid grid-cols-3 gap-1">
+          <button class="btn bg-emerald-700 hover:bg-emerald-600 text-xs py-1" onclick="forceGame('double', 'win')">🏆 2× Win</button>
+          <button class="btn bg-red-800 hover:bg-red-700 text-xs py-1" onclick="forceGame('double', 'lose')">💀 Bust</button>
+          <button class="btn bg-zinc-900 text-zinc-400 hover:text-white text-xs py-1" onclick="forceGame('double', 'none')">↩ Reset</button>
+        </div>`
+    },
+    {
+      id: 'allin', cat: 'quick', icon: '🔥', name: 'All In', maintKey: 'allin', chanceKey: 'allin', forced: isAct(d.forced_allin_next, 'none'),
+      statusHtml: badge(d.forced_allin_next, 'none', d.forced_allin_next),
+      bodyHtml: `<div class="grid grid-cols-3 gap-1">
+          <button class="btn bg-emerald-700 hover:bg-emerald-600 text-xs py-1" onclick="forceGame('allin', 'win')">🏆 2× Win</button>
+          <button class="btn bg-red-800 hover:bg-red-700 text-xs py-1" onclick="forceGame('allin', 'lose')">💀 Bust</button>
+          <button class="btn bg-zinc-900 text-zinc-400 hover:text-white text-xs py-1" onclick="forceGame('allin', 'none')">↩ Reset</button>
+        </div>`
+    }
+  ];
 
-      <!-- 23. DOUBLE & ALL-IN -->
-      ${card('💥', 'Double & All-In', badge(d.forced_double_next, 'none', d.forced_double_next), `
-        <div class="text-[11px] text-zinc-400 mb-1">High-Stakes Multiplikation:</div>
-        <div class="grid grid-cols-3 gap-1">
-          <button class="btn bg-emerald-700 hover:bg-emerald-600 text-xs py-1" onclick="forceGame('double', 'win'); forceGame('allin', 'win')">🏆 2× Win</button>
-          <button class="btn bg-red-800 hover:bg-red-700 text-xs py-1" onclick="forceGame('double', 'lose'); forceGame('allin', 'lose')">💀 0× Bust</button>
-          <button class="btn bg-zinc-900 text-zinc-500 hover:text-zinc-300 text-xs py-1" onclick="forceGame('double', 'none'); forceGame('allin', 'none')">↩ Reset</button>
-        </div>
-      `)}
+  // Alle 14 Slots als eigene steuerbare Karten anhängen
+  Object.entries(SLOTS).forEach(([k, m]) => {
+    items.push({
+      id: 'slot_' + k, cat: 'slots', icon: m.icon, name: 'Slot: ' + m.name, maintKey: 'slots', chanceKey: 'slot_' + k, forced: false, slotId: k,
+      statusHtml: `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold border" style="background:${m.col}22;color:${m.col};border-color:${m.col}55">${m.tag}</span>`,
+      bodyHtml: `<div class="text-[11px] text-zinc-400">Pot: <b class="text-yellow-300 font-mono">${Number(SLOT_POTS[k] || 15000).toLocaleString('de-DE')} FC</b> · ${m.n} Walzen</div>`
+    });
+  });
 
-      <!-- 24. PLINKO -->
-      ${card('⚡', 'Plinko', '🟢 Aktiv', `
-        <div class="text-[11px] text-zinc-400 mb-1">Plinko Ball-Fall:</div>
-        <div class="grid grid-cols-2 gap-1">
-          <button class="btn bg-emerald-700 hover:bg-emerald-600 text-xs py-1" onclick="setGlobalRig(1); toast('🍀 Plinko landet ganz außen (5.6×)!')">🌟 Max Slot (5.6×)</button>
-          <button class="btn bg-red-800 hover:bg-red-700 text-xs py-1" onclick="setGlobalRig(-1); toast('💀 Plinko landet in der Mitte (0.5×)!')">💀 Mitte (0.5×)</button>
+  const q = admGameQuery.trim().toLowerCase();
+  const filtered = items.filter(it => {
+    const inMaint = MAINT_GAMES.has(it.maintKey);
+    if (admGameCat === 'forced' && !it.forced) return false;
+    if (admGameCat === 'maint' && !inMaint) return false;
+    if (!['all', 'forced', 'maint'].includes(admGameCat) && it.cat !== admGameCat) return false;
+    if (q && !(it.name + ' ' + it.id).toLowerCase().includes(q)) return false;
+    return true;
+  });
+
+  const renderCard = (it) => {
+    const inMaint = MAINT_GAMES.has(it.maintKey);
+    const openFn = it.slotId ? `show('slots');setTimeout(()=>openSlot('${it.slotId}'),60)` : `show('${it.id}')`;
+    return `<div class="glass rounded-2xl p-4 border ${inMaint ? 'border-amber-500/70 bg-amber-950/10' : it.forced ? 'border-cyan-400/70 bg-cyan-950/10' : 'border-zinc-700/70 hover:border-cyan-500/50'} transition flex flex-col justify-between shadow-lg">
+      <div>
+        <div class="flex items-start justify-between gap-2 mb-2.5">
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="text-2xl shrink-0">${it.icon}</span>
+            <div class="min-w-0">
+              <div class="font-black text-white text-sm truncate">${it.name}</div>
+              <div class="text-[10px] text-zinc-500 font-mono">${it.id}</div>
+            </div>
+          </div>
+          <div class="flex items-center gap-1 shrink-0">
+            ${inMaint ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-500/20 text-amber-300 border border-amber-500/50">🛠️ WARTUNG</span>' : ''}
+            ${it.statusHtml}
+          </div>
         </div>
-      `)}
+        <div class="text-xs text-zinc-300 space-y-2">${it.bodyHtml}</div>
+      </div>
+      <div>
+        ${chanceWidget(it.chanceKey)}
+        <div class="flex gap-1.5 mt-2.5 pt-2 border-t border-zinc-800/70">
+          <button onclick="admToggleMaintQuick('${it.maintKey}')" class="flex-1 py-1 rounded-lg text-[11px] font-bold transition ${inMaint ? 'bg-emerald-700/80 hover:bg-emerald-600 text-white' : 'bg-amber-600/20 hover:bg-amber-600/40 text-amber-300 border border-amber-500/40'}">${inMaint ? '▶️ Freigeben' : '⏸️ Wartung'}</button>
+          <button onclick="sfx.click();${openFn}" class="px-3 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-[11px] font-bold text-zinc-200 transition">🎮 Öffnen</button>
+        </div>
+      </div>
     </div>`;
+  };
+  grid.innerHTML = filtered.length ? filtered.map(renderCard).join('') : '<div class="col-span-full glass rounded-2xl p-8 text-center text-sm text-zinc-400">Keine Spiele für diesen Filter gefunden.</div>';
 }
 
 /* ================= TAB 2: SERVER, QUOTEN & CHANCEN ================= */
