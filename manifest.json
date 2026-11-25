@@ -1,0 +1,19 @@
+{
+  "name": "Future Gambling - NextGen Casino",
+  "short_name": "FutureGambling",
+  "description": "NextGen Fake-Geld Casino mit Slots, Live-Shows, Krypto & PvP",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#09090b",
+  "theme_color": "#09090b",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
