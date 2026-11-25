@@ -3710,7 +3710,33 @@ function renderHist() {
 async function delMe() { if (!confirm('Account endgültig löschen?') || !confirm('Wirklich sicher?')) return; const { error } = await sb.rpc('delete_me'); if (error) return toast(error.message); logout() }
 async function loadMissions() { const d = await call('missions_list', {}); if (d && $('missions')) $('missions').innerHTML = '<div class="font-bold mb-2">📋 Tagesmissionen</div>' + d.map(m => `<div class="glass rounded-xl p-3 mb-2 flex justify-between text-sm"><span>${m.label}</span><b class="text-yellow-400">+${m.reward} FC</b></div>`).join('') }
 // Level system completely removed }
-async function tournamentHtml() { const t = await call('tournament_board', {}); if (!t) return ''; return `<div class="glass rounded-xl p-4 mb-2"><div class="font-bold">🏆 Wochenturnier</div><div class="text-xs text-zinc-400">1. Platz: 5.000 FC</div></div>` }
+async function tournamentHtml() {
+  const d = await call('daily_mult_board', {})
+  if (!d) return ''
+  const hrs = Math.floor((d.secs_left || 0) / 3600), mins = Math.floor(((d.secs_left || 0) % 3600) / 60)
+  const top = d.top || [], yw = d.yesterday_winners || []
+  const medals = ['🥇', '🥈', '🥉', '4.', '5.']
+  return `
+    <div class="glass rounded-2xl p-4 mb-4 border-2 border-yellow-500/50 bg-gradient-to-br from-yellow-950/25 via-zinc-900 to-amber-950/15">
+      <div class="flex flex-wrap justify-between items-center gap-2 mb-2">
+        <div>
+          <div class="font-black text-base text-yellow-300">🏅 Tägliches Multiplikator-Turnier (High-Score-Jagd)</div>
+          <div class="text-xs text-zinc-400">Höchster Einzel-Multiplikator des Tages (ab 10 FC Einsatz) · Auszahlung automatisch um 00:00 Uhr!</div>
+        </div>
+        <span class="text-xs px-2.5 py-1 rounded-full bg-amber-500/20 border border-yellow-500/40 text-yellow-300 font-bold">⏳ Reset in ${hrs}h ${mins}m</span>
+      </div>
+      <div class="flex flex-wrap gap-2 text-[11px] mb-3">
+        <span class="px-2 py-0.5 rounded bg-yellow-950/60 border border-yellow-500/40 text-yellow-300 font-bold">🥇 1. Platz: 5.000 FC</span>
+        <span class="px-2 py-0.5 rounded bg-zinc-800 border border-zinc-600 text-zinc-200 font-bold">🥈 2. Platz: 2.500 FC</span>
+        <span class="px-2 py-0.5 rounded bg-amber-950/50 border border-amber-600/40 text-amber-300 font-bold">🥉 3. Platz: 1.000 FC</span>
+        <span class="px-2 py-0.5 rounded bg-cyan-950/50 border border-cyan-500/40 text-cyan-300 font-bold ml-auto">Dein Rekord heute: ${Number(d.my_best || 0).toFixed(2).replace('.', ',')}×</span>
+      </div>
+      <div class="space-y-1 text-xs mb-2">
+        ${top.length ? top.map((x, i) => `<div class="flex justify-between items-center py-1 px-2.5 rounded-lg bg-zinc-900/70 border border-zinc-800"><span>${medals[i] || (i+1)+'.'} ${nm(x)} <span class="text-zinc-500">(${esc(x.game)})</span></span><b class="text-yellow-300 font-mono">${Number(x.best_mult).toFixed(2).replace('.', ',')}×</b></div>`).join('') : '<div class="text-zinc-500 text-center py-2">Heute noch keine qualifizierten Gewinne (ab 10 FC Einsatz).</div>'}
+      </div>
+      ${yw.length ? `<div class="pt-2 border-t border-zinc-800/80 text-[11px] text-zinc-400"><b>Gestrige Sieger (ausgezahlt):</b> ${yw.map(w => `${medals[w.rank-1]||''} ${esc(w.username)} (${Number(w.mult).toFixed(2).replace('.', ',')}× → +${Number(w.prize).toLocaleString('de-DE')} FC)`).join(' · ')}</div>` : ''}
+    </div>`
+}
 async function admRain() { const t = Number(prompt('Gesamtsumme für alle Spieler (FC):')); if (t > 0) { const d = await call('admin_rain', { total: t }); if (d) toast('🌧️ ' + d.each + ' FC an ' + d.count + ' Spieler') } }
 async function admPayWeek() { const d = await call('admin_pay_week', {}); if (d) toast('🏆 Gewinner bezahlt') }
 
