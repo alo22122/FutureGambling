@@ -2,7 +2,15 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Future Gambling" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="theme-color" content="#09090b" />
+<link rel="manifest" href="manifest.json" />
+<link rel="icon" type="image/svg+xml" href="icon.svg" />
+<link rel="apple-touch-icon" href="icon.svg" />
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://gxxblyzjxsagwmgjvhyu.supabase.co wss://gxxblyzjxsagwmgjvhyu.supabase.co data: blob:;">
 <title>Future Gambling - NextGen Gaming</title>
 <script src="https://cdn.tailwindcss.com"></script>
@@ -532,6 +540,7 @@ async function loadProfile() {
         updateHappyHourBanner(data.happy_hour)
         if (data.global_jp_event) handleGlobalJpAlert(data.global_jp_event)
         if (Array.isArray(data.maintenance_games)) MAINT_GAMES = new Set(data.maintenance_games)
+        if (data.maintenance_reasons && typeof data.maintenance_reasons === 'object') MAINT_REASONS = data.maintenance_reasons
       }
       refreshGlobalJpTicker()
       if (++_tickerCnt % 4 === 0) refreshBigWinsTicker()
@@ -656,7 +665,7 @@ const VIEWS = {
 let PM = [5.6, 2.1, 1.1, 1, 0.5, 1, 1.1, 2.1, 5.6]
 const WM = [0, 0.5, 0, 1.5, 0, 2, 0, 1, 0, 4]
 
-let lobbyCat = 'all', lobbySearch = '', MAINT_GAMES = new Set()
+let lobbyCat = 'all', lobbySearch = '', MAINT_GAMES = new Set(), MAINT_REASONS = {}
 function getFavGames() { try { return JSON.parse(localStorage.getItem('fg_fav_games') || '[]') } catch { return [] } }
 function toggleFavGame(k, ev) {
   if (ev) ev.stopPropagation()
@@ -1787,11 +1796,12 @@ async function admLoadOnlineLive() {
     </div>`).join('');
 }
 
-async function admToggleMaint(gameKey, paused) {
+async function admToggleMaint(gameKey, paused, reason = '') {
   sfx.click();
-  const d = await call('admin_toggle_game_maintenance', { game_key: gameKey, paused });
+  const d = await call('admin_toggle_game_maintenance', { game_key: gameKey, paused, reason: reason || null });
   if (!d) return;
   MAINT_GAMES = new Set(d.maintenance_games || []);
+  MAINT_REASONS = d.maintenance_reasons || {};
   toast(paused ? `🛠️ "${gameKey}" in Wartungsmodus versetzt!` : `▶️ "${gameKey}" wieder freigegeben!`);
   renderAdminServerTab($('adm_tab_content'));
 }
@@ -1855,11 +1865,12 @@ function renderAdminServerTab(c) {
         <select id="adm_maint_sel" class="inp text-xs flex-1 min-w-[12rem]">
           ${Object.entries(GAMES).filter(([k, g]) => k !== 'lobby' && !g.admin).map(([k, g]) => `<option value="${k}">${g.icon} ${esc(g.name)} (${k})</option>`).join('')}
         </select>
-        <button class="btn bg-amber-600 hover:bg-amber-500 text-black text-xs font-black px-3 py-2" style="width:auto" onclick="admToggleMaint($('adm_maint_sel').value, true)">⏸️ Pausieren</button>
+        <input id="adm_maint_reason" type="text" maxlength="160" placeholder="Optional: Grund (z.B. Quoten-Update läuft!)" class="inp text-xs flex-1 min-w-[12rem]">
+        <button class="btn bg-amber-600 hover:bg-amber-500 text-black text-xs font-black px-3 py-2" style="width:auto" onclick="admToggleMaint($('adm_maint_sel').value, true, ($('adm_maint_reason')||{}).value)">⏸️ Pausieren</button>
         <button class="btn bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-black px-3 py-2" style="width:auto" onclick="admToggleMaint($('adm_maint_sel').value, false)">▶️ Freigeben</button>
       </div>
       <div id="adm_maint_list" class="flex flex-wrap gap-1.5 text-xs">
-        ${MAINT_GAMES.size ? [...MAINT_GAMES].map(k => `<span class="px-2.5 py-1 rounded-full bg-amber-950/60 border border-amber-500/50 text-amber-200 font-bold flex items-center gap-1.5">🛠️ ${esc((GAMES[k]||{}).name || k)} <button onclick="admToggleMaint('${k}', false)" class="text-red-300 hover:text-white font-black">✕</button></span>`).join('') : '<span class="text-zinc-500">Aktuell sind alle Spiele freigegeben.</span>'}
+        ${MAINT_GAMES.size ? [...MAINT_GAMES].map(k => `<span class="px-2.5 py-1 rounded-full bg-amber-950/60 border border-amber-500/50 text-amber-200 font-bold flex items-center gap-1.5">🛠️ ${esc((GAMES[k]||{}).name || k)}${MAINT_REASONS[k] ? ` <i class="font-normal text-amber-300/80">(${esc(MAINT_REASONS[k])})</i>` : ''} <button onclick="admToggleMaint('${k}', false)" class="text-red-300 hover:text-white font-black">✕</button></span>`).join('') : '<span class="text-zinc-500">Aktuell sind alle Spiele freigegeben.</span>'}
       </div>
     </div>
 
@@ -2883,14 +2894,15 @@ function show(g) {
   if (typeof stopCryptoLoop === 'function') stopCryptoLoop()
   wheelRot = 0; msg(''); renderHist(); clearInterval(chatTimer); clearInterval(dTimer); clearInterval(pvpTimer); stopSnake(); stopTetris(); cg_ = null; if (cr) { clearInterval(cr.timer); cr = null };
   if (MAINT_GAMES.has(g) && ROLE !== 'admin') {
+    const customReason = MAINT_REASONS[g] ? esc(MAINT_REASONS[g]) : `Der Admin passt gerade Quoten oder Design für <b>${esc(GAMES[g].name)}</b> an. Schau gleich wieder vorbei!`
     $('view').innerHTML = `<div class="glass rounded-2xl p-8 text-center border-2 border-amber-500/50 bg-amber-950/15">
       <div class="text-5xl mb-3">🛠️</div>
       <div class="text-xl font-black text-amber-300 mb-2">Dieses Spiel wird gerade gewartet</div>
-      <div class="text-xs text-zinc-300 mb-4">Der Admin passt gerade Quoten oder Design für <b>${esc(GAMES[g].name)}</b> an. Schau gleich wieder vorbei!</div>
+      <div class="text-sm text-zinc-200 mb-4 max-w-md mx-auto">${customReason}</div>
       <button onclick="show('lobby')" class="btn bg-cyan-600 text-xs font-black" style="width:auto">← Zurück zur Lobby</button>
     </div>`
   } else {
-    const maintWarn = (MAINT_GAMES.has(g) && ROLE === 'admin') ? '<div class="mb-3 px-3 py-2 rounded-xl bg-amber-950/40 border border-amber-500/50 text-xs text-amber-200 font-bold">🛠️ Wartungsmodus für Spieler aktiv (Admin-Vorschau)</div>' : ''
+    const maintWarn = (MAINT_GAMES.has(g) && ROLE === 'admin') ? `<div class="mb-3 px-3 py-2 rounded-xl bg-amber-950/40 border border-amber-500/50 text-xs text-amber-200 font-bold">🛠️ Wartungsmodus für Spieler aktiv (Admin-Vorschau)${MAINT_REASONS[g] ? ` · Grund: "${esc(MAINT_REASONS[g])}"` : ''}</div>` : ''
     $('view').innerHTML = maintWarn + VIEWS[g]()
     if (PAGEINIT[g]) PAGEINIT[g]()
   }
@@ -3018,28 +3030,31 @@ async function shopAct(fn, id) { sfx.click(); const d = await call(fn, { item: i
 async function saveBio() { const d = await call('set_bio', { t: $('bio').value }); if (d) { ME.bio = $('bio').value; toast('Bio gespeichert') } }
 
 /* ---- Battle Pass & Achievements ---- */
-const BPITEM = { 10: '🔥', 20: '👾', 30: '🏆+Titel' }
+const BPITEM = { 5: '🔥', 10: '👾', 15: '🏆+Titel' }
 VIEWS.bp = () => '<div id="bpbox" class="text-zinc-400">Lade...</div>'
 PAGEINIT.bp = async () => {
   const d = await call('bp_info', {}), box = $('bpbox'); if (!d || !box) return
   const f = n => Number(n).toLocaleString('de-DE')
   const hrs = Math.floor(d.secs_left / 3600), mins = Math.floor((d.secs_left % 3600) / 60)
+  const premPrice = Number(d.premium_price || 5000)
   const rows = Array.from({ length: 15 }, (_, i) => i + 1).map(t => {
     const fr = d.free_claimed.includes(t), pr = d.prem_claimed.includes(t), ok = t <= d.tier
-    const free = fr ? '<span class="text-zinc-500 font-bold">✔ ' + (t * 250) + ' FC</span>' : ok ? '<button class="btn bg-emerald-700" style="width:auto;padding:.2rem .6rem" onclick="bpClaim(' + t + ',\'free\')">+' + (t * 250) + ' FC</button>' : '<span class="text-zinc-600">' + (t * 250) + ' FC</span>'
-    const prem = !d.premium ? '<span class="text-zinc-600">🔒</span>' : pr ? '<span class="text-yellow-500 font-bold">✔ ⭐ ' + (t * 500) + '</span>' : ok ? '<button class="btn bg-yellow-500 text-black font-bold" style="width:auto;padding:.2rem .6rem" onclick="bpClaim(' + t + ',\'premium\')">⭐ +' + (t * 500) + ' FC</button>' : '<span class="text-zinc-600">⭐ ' + (t * 500) + '</span>'
-    return '<div class="glass rounded-xl px-3.5 py-2.5 mb-1.5 flex justify-between items-center text-sm ' + (ok ? 'border border-cyan-500/40' : 'opacity-60') + '"><b>Stufe ' + t + '</b><span class="flex gap-2 items-center">' + free + prem + '</span></div>'
+    const freeAmt = t * 100, premAmt = t * 200
+    const bonus = t === 15 ? ' + 🏆' : t === 5 ? ' + 🔥' : t === 10 ? ' + 👾' : ''
+    const free = fr ? `<span class="text-zinc-500 font-bold">✔ ${f(freeAmt)} FC</span>` : ok ? `<button class="btn bg-emerald-700" style="width:auto;padding:.2rem .6rem" onclick="bpClaim(${t},'free')">+${f(freeAmt)} FC${t===15?' + 👑':''}</button>` : `<span class="text-zinc-600">${f(freeAmt)} FC</span>`
+    const prem = !d.premium ? `<span class="text-zinc-600">🔒 ${f(premAmt)}${bonus}</span>` : pr ? `<span class="text-yellow-500 font-bold">✔ ⭐ ${f(premAmt)}</span>` : ok ? `<button class="btn bg-yellow-500 text-black font-bold" style="width:auto;padding:.2rem .6rem" onclick="bpClaim(${t},'premium')">⭐ +${f(premAmt)} FC${bonus}</button>` : `<span class="text-zinc-600">⭐ ${f(premAmt)}${bonus}</span>`
+    return `<div class="glass rounded-xl px-3.5 py-2.5 mb-1.5 flex justify-between items-center text-sm ${ok ? 'border border-cyan-500/40' : 'opacity-60'}"><b>Stufe ${t} <span class="text-[10px] text-zinc-500 font-normal">(${t*100} XP)</span></b><span class="flex gap-2 items-center">${free}${prem}</span></div>`
   }).join('')
-  box.innerHTML = '<div class="glass rounded-2xl p-4 mb-3 border border-yellow-500/40 bg-gradient-to-r from-yellow-950/30 via-zinc-900 to-yellow-950/30">' +
-    '<div class="flex justify-between items-center"><div class="font-bold text-white text-base">🎫 Täglicher Battle Pass</div>' +
-    '<span class="text-xs bg-amber-500/20 text-yellow-400 px-2 py-0.5 rounded-full border border-yellow-500/40">Reset in: ' + hrs + 'h ' + mins + 'm</span></div>' +
-    '<div class="h-2.5 rounded-full bg-zinc-800 my-3 overflow-hidden border border-zinc-700"><div class="h-full bg-gradient-to-r from-cyan-500 to-emerald-400 transition-all duration-500" style="width:' + Math.min(100, (d.tier / 15) * 100) + '%"></div></div>' +
-    '<div class="flex justify-between text-xs text-zinc-400"><span>Fortschritt: <b>Stufe ' + d.tier + ' / 15</b></span><span>Resettet jeden Tag um Mitternacht!</span></div>' +
-    (d.premium ? '<div class="text-yellow-400 font-bold text-sm mt-3 flex items-center gap-1.5"><span>⭐</span> Daily Premium Pass Aktiv</div>' : '<button class="btn bg-gradient-to-r from-yellow-500 to-amber-600 text-black font-extrabold mt-3 shadow-lg" onclick="bpPremium()">⭐ Daily Premium freischalten (5.000 FC)</button>') +
-    '</div>' + rows
+  box.innerHTML = `<div class="glass rounded-2xl p-4 mb-3 border border-yellow-500/40 bg-gradient-to-r from-yellow-950/30 via-zinc-900 to-yellow-950/30">
+    <div class="flex justify-between items-center"><div class="font-bold text-white text-base">🎫 Täglicher Battle Pass (15 Stufen)</div>
+    <span class="text-xs bg-amber-500/20 text-yellow-400 px-2 py-0.5 rounded-full border border-yellow-500/40">Reset in: ${hrs}h ${mins}m</span></div>
+    <div class="h-2.5 rounded-full bg-zinc-800 my-3 overflow-hidden border border-zinc-700"><div class="h-full bg-gradient-to-r from-cyan-500 to-emerald-400 transition-all duration-500" style="width:${Math.min(100, (d.tier / 15) * 100)}%"></div></div>
+    <div class="flex justify-between text-xs text-zinc-400"><span>Fortschritt: <b>Stufe ${d.tier} / 15</b> (${f(d.xp)} XP)</span><span>Free: bis 12.000 FC · Premium: +24.000 FC</span></div>
+    ${d.premium ? '<div class="text-yellow-400 font-bold text-sm mt-3 flex items-center gap-1.5"><span>⭐</span> Daily Premium Pass Aktiv</div>' : `<button class="btn bg-gradient-to-r from-yellow-500 to-amber-600 text-black font-extrabold mt-3 shadow-lg" onclick="bpPremium(${premPrice})">⭐ Daily Premium freischalten (${f(premPrice)} FC)</button>`}
+    </div>` + rows
 }
-async function bpClaim(t, track) { const d = await call('bp_claim', { btier: t, btrack: track }); if (!d) return; sfx.claim(); setBalance(d.balance); toast('🎫 +' + d.reward + ' FC!'); PAGEINIT.bp() }
-async function bpPremium() { if (!confirm('Daily Premium Pass freischalten (5.000 FC)?')) return; const d = await call('bp_premium', {}); if (d) { sfx.bigwin(); setBalance(d.balance); toast('⭐ Daily Premium aktiviert!'); PAGEINIT.bp() } }
+async function bpClaim(t, track) { const d = await call('bp_claim', { btier: t, btrack: track }); if (!d) return; sfx.claim(); setBalance(d.balance); toast('🎫 +' + Number(d.reward).toLocaleString('de-DE') + ' FC!' + (d.item ? ' + Bonus-Item!' : '')); PAGEINIT.bp() }
+async function bpPremium(price = 5000) { if (!confirm(`Daily Premium Pass freischalten (${Number(price).toLocaleString('de-DE')} FC)?`)) return; const d = await call('bp_premium', {}); if (d) { sfx.bigwin(); setBalance(d.balance); toast('⭐ Daily Premium aktiviert!'); PAGEINIT.bp() } }
 
 VIEWS.ach = () => '<div id="achbox" class="text-zinc-400">Lade...</div>'
 PAGEINIT.ach = async () => {
