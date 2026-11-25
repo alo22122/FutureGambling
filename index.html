@@ -486,6 +486,7 @@ const GAMES = {
   bank:      { icon: '💳', name: 'Pfandhaus & Kredite', desc: 'Verpfände Luxusgüter für Sofort-Cash oder vergib Kredite mit Zinsen.', page: true },
   vault:     { icon: '💎', name: 'VIP Tresor', desc: 'Sicheres Sparkonto mit 12h Verlust-Schutz und 1% täglichen Zinsen!', page: true },
   history:   { icon: '📜', name: 'Meine Wetten', desc: 'Dein persönliches Spiel-Historien-Buch: letzte 50 Runden, Gewinnkurve & bester Treffer.', page: true },
+  odds:      { icon: '📊', name: 'Chancen & Quoten', desc: 'Alle Gewinnchancen, Multiplikatoren, Jackpot-Quoten & RTPs für jedes Spiel & jeden Slot.', page: true },
   court:     { icon: '⚖️', name: 'Casino-Gericht', desc: 'Öffentliches Tribunal! Stimme über Verdächtige ab (Schuldig vs. Unschuldig).', page: true },
   // PvP & Mini-Games
   community:{ icon: '🌍', name: 'Community', desc: 'Community-Ziel, Lotterie und Clans.', page: true },
@@ -652,7 +653,7 @@ const NAVGROUPS = [
   ['⚔️', 'PvP & Arcade', ['duel', 'chess', 'versus', 'snake', 'typing', 'trivia', 'tetris']],
   ['💎', 'Bank & Wirtschaft', ['vault', 'stocks', 'bank', 'luxury', 'forbes']],
   ['🌍', 'Community & Ruhm', ['chat', 'hof', 'board', 'leagues', 'clanhq', 'community', 'court', 'votes', 'friends', 'players', 'feed']],
-  ['👤', 'Konto & Boni', ['earn', 'bp', 'ach', 'shop', 'stats', 'history', 'admin']]
+  ['👤', 'Konto & Boni', ['earn', 'bp', 'ach', 'shop', 'stats', 'history', 'odds', 'admin']]
 ]
 const navOpen = {}
 const grpOpen = (name, keys) => name in navOpen ? navOpen[name] : (name === 'Casino Hits' || keys.includes(current))
@@ -856,12 +857,273 @@ VIEWS.lobby = () => `
     <!-- Search & Category Tabs -->
     <div class="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center justify-between">
       <div id="lobby_tabs" class="flex gap-1.5 overflow-x-auto pb-1" style="scrollbar-width:none"></div>
-      <input id="lobby_search" value="${esc(lobbySearch)}" oninput="lobbySearch=this.value;renderLobbyGrid()" placeholder="🔍 Spiel suchen (z.B. Crash, Kisten, Poker)..." class="inp text-xs py-2 px-3 sm:w-64">
+      <div class="flex gap-2 items-center">
+        <button onclick="sfx.click();show('odds')" class="px-3 py-2 rounded-xl bg-cyan-600/20 hover:bg-cyan-600/35 border border-cyan-500/40 text-cyan-300 text-xs font-bold whitespace-nowrap transition">📊 Chancen &amp; Quoten</button>
+        <input id="lobby_search" value="${esc(lobbySearch)}" oninput="lobbySearch=this.value;renderLobbyGrid()" placeholder="🔍 Spiel suchen (z.B. Crash, Kisten, Poker)..." class="inp text-xs py-2 px-3 sm:w-56">
+      </div>
     </div>
 
     <div id="lobby_grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3"></div>
   </div>`
 PAGEINIT.lobby = () => renderLobbyGrid()
+
+/* ================= CHANCEN & QUOTEN (ALLE SPIELE & SLOTS) ================= */
+let oddsTab = 'all', oddsSearch = '', oddsCustomSlots = []
+const SLOT_SPECS = {
+  globalpot:   { n: 5, s: 7, min: null, tbl: [0, 0.25, 2.0, 15.0, 120.0] },
+  classic:     { n: 3, s: 7, min: 10,   tbl: [0, 0.40, 14.0] },
+  fruit:       { n: 5, s: 6, min: 10,   tbl: [0, 0.20, 1.20, 6.0, 25.0] },
+  volcano:     { n: 5, s: 7, min: 10,   tbl: [0, 0.00, 2.00, 18.0, 150.0] },
+  mega:        { n: 5, s: 9, min: 250,  tbl: [0, 0.00, 3.00, 35.0, 400.0] },
+  jackpot:     { n: 3, s: 7, min: 500,  tbl: [0, 0.45, 12.0] },
+  scratch:     { n: 6, s: 7, min: 10,   tbl: [0, 0.00, 1.10, 5.0, 22.0, 150.0] },
+  cyber:       { n: 4, s: 7, min: 10,   tbl: [0, 0.35, 3.00, 20.0] },
+  pirate:      { n: 5, s: 7, min: 10,   tbl: [0, 0.25, 1.50, 9.0, 60.0] },
+  egypt:       { n: 3, s: 7, min: 10,   tbl: [0, 0.45, 16.0] },
+  space:       { n: 5, s: 7, min: 500,  tbl: [0, 0.30, 2.20, 18.0, 200.0] },
+  billionaire: { n: 3, s: 7, min: 1000, tbl: [0, 0.45, 18.0] },
+  monopoly:    { n: 5, s: 7, min: 5000, tbl: [0, 0.30, 2.50, 25.0, 300.0] },
+  emperor:     { n: 5, s: 7, min: 10000,tbl: [0, 0.35, 3.00, 35.0, 500.0] }
+}
+function calcSlotExactOdds(n, s, tbl, isGlobalPot) {
+  const fact = [1, 1, 2, 6, 24, 120, 720]
+  const pJpSym = isGlobalPot ? (1 / s) : (0.015 + 0.985 / s)
+  const pOther = isGlobalPot ? (1 / s) : (0.985 / s)
+  const probs = {}
+  for (let k = 1; k <= n; k++) probs[k] = 0
+  let jpProb = 0
+  function rec(idx, rem, maxC, prodP, denom, cJp) {
+    if (idx === s - 1) {
+      const c = rem
+      const nm = Math.max(maxC, c)
+      const p = fact[n] / (denom * fact[c]) * prodP * Math.pow(idx === 0 ? pJpSym : pOther, c)
+      probs[nm] += p
+      if (nm === n && cJp === n) jpProb += p
+      return
+    }
+    const pSym = idx === 0 ? pJpSym : pOther
+    for (let c = 0; c <= rem; c++) {
+      rec(idx + 1, rem - c, Math.max(maxC, c), prodP * Math.pow(pSym, c), denom * fact[c], idx === 0 ? c : cJp)
+    }
+  }
+  rec(0, n, 0, 1, 1, 0)
+  if (isGlobalPot) jpProb = 0.0002
+  let rtp = 0, hitAny = 0, winProfit = 0
+  for (let k = 2; k <= n; k++) {
+    const m = tbl[k - 1] || 0
+    if (m > 0) {
+      rtp += probs[k] * m
+      hitAny += probs[k]
+      if (m >= 1) winProfit += probs[k]
+    }
+  }
+  return { probs, jpProb, rtp: rtp * 100, hitAny: hitAny * 100, winProfit: winProfit * 100 }
+}
+const ODDS_GAMES = [
+  // Casino Hits
+  { cat: 'hits', id: 'crash', icon: '🚀', name: 'Crash', rtp: '95,0 % RTP', odds: 'Multiplikator 1,00× bis 1.000× · Formel: floor(95 / (1 − U)) / 100', details: ['≥ 1,50×: ~63,3 %', '≥ 2,00×: ~47,5 %', '≥ 5,00×: ~19,0 %', '≥ 10,00×: ~9,5 %', 'Instant-Crash (1,00×): ~5,0 %'] },
+  { cat: 'hits', id: 'limbo', icon: '🎯', name: 'Limbo', rtp: '95,0 % RTP', odds: 'Ziel-Multiplikator 1,01× bis 10.000× · Formel: 95 / Ziel %', details: ['2,00× Ziel: 47,50 %', '5,00× Ziel: 19,00 %', '10,00× Ziel: 9,50 %', '100,00× Ziel: 0,95 %', '1.000× Ziel: 0,095 %'] },
+  { cat: 'hits', id: 'mines', icon: '💣', name: 'Mines', rtp: '94,0 % RTP', odds: '25 Felder (1, 3, 5, 10, 15 oder 20 Minen) – jeder Klick skaliert dynamisch', details: ['1 Mine (1. Feld): 96,0 % Chance (0,98×)', '3 Minen (1. Feld): 88,0 % Chance (1,07×)', '5 Minen (1. Feld): 80,0 % Chance (1,18×)', '10 Minen (1. Feld): 60,0 % Chance (1,57×)', '20 Minen (1. Feld): 20,0 % Chance (4,70×)'] },
+  { cat: 'hits', id: 'plinko', icon: '🟡', name: 'Plinko', rtp: 'Binomial (8 Reihen)', odds: '8 Ebenen (50/50 links/rechts) – 9 Körbe (Pascal-Verteilung)', details: ['Niedrig: [3×, 1,5×, 1,2×, 1×, 0,65×, 1×, 1,2×, 1,5×, 3×]', 'Mittel: [5,6×, 2,1×, 1,1×, 1×, 0,5×, 1×, 1,1×, 2,1×, 5,6×]', 'Hoch: [26×, 4×, 1,5×, 0,3×, 0,2×, 0,3×, 1,5×, 4×, 26×]', 'Rand-Chance (26× / 5,6× / 3×): je 0,39 % (1:256)', 'Mitte-Chance (Korb 4): 27,34 %'] },
+  { cat: 'hits', id: 'towers', icon: '🗼', name: 'Towers', rtp: '95,0 % RTP/Ebene', odds: '8 Ebenen aufsteigen – je nach Schwierigkeit 2 bis 4 Felder pro Ebene', details: ['🟢 Leicht (4 Felder, 1 Bombe): 75 % pro Ebene', '🟡 Mittel (3 Felder, 1 Bombe): 66,7 % pro Ebene', '🔴 Schwer (2 Felder, 1 Bombe): 50 % pro Ebene', '💀 Extrem (3 Felder, 2 Bomben): 33,3 % pro Ebene'] },
+  { cat: 'hits', id: 'deal', icon: '💼', name: 'Deal or No Deal', rtp: 'Skill / Banker', odds: '12 Koffer mit Werten von 0,05× bis 2,25× (gebalancetes Set)', details: ['Koffer-Werte: 0,05× bis max. 2,25×', 'Banker-Angebot: fairer Koffer-Schnitt × Faktor (~90–95 %)', 'Cashout jederzeit über Deal möglich'] },
+  { cat: 'hits', id: 'crypto', icon: '📈', name: 'Krypto-Hebel', rtp: 'Markt-Sim', odds: 'Long / Short mit 2× bis 25× Hebel in Echtzeit', details: ['Hebel 2×–25× wählbar', 'Liquidierung bei entsprechendem Gegenkurs', 'Jederzeit Cashout per Button'] },
+  // Tisch & Karten
+  { cat: 'table', id: 'blackjack', icon: '♠️', name: 'Blackjack', rtp: '~99,0 % RTP', odds: 'Standard-Deck gegen Dealer (Dealer zieht bis 17)', details: ['Blackjack (21 mit 2 Karten): 2,50× (3:2)', 'Normaler Sieg: 2,00×', 'Unentschieden (Push): 1,00× zurück', 'Double Down: Einsatz verdoppeln für 1 Karte'] },
+  { cat: 'table', id: 'roulette', icon: '🎡', name: 'Roulette', rtp: '97,3 % (Rot/Schwarz)', odds: 'Europäisches Roulette (37 Felder: 0–36)', details: ['🔴 Rot (18/37 = 48,65 %): 2,00×', '⚫ Schwarz (18/37 = 48,65 %): 2,00×', '🟢 Grün / 0 (1/37 = 2,70 %): 14,00×'] },
+  { cat: 'table', id: 'poker', icon: '♦️', name: 'Video Poker', rtp: 'Jacks or Better', odds: '52-Karten-Deck, 1× Tauschen – Auszahlung bis 800×', details: ['Jacks or Better (Paar J+): 1×', 'Two Pair: 2× · Drilling: 3× · Straight: 4×', 'Flush: 6× · Full House: 9× · Vierling: 25×', 'Straight Flush: 50× · Royal Flush: 800×'] },
+  { cat: 'table', id: 'baccarat', icon: '🎴', name: 'Baccarat', rtp: '~95,5 % RTP', odds: 'Player vs. Banker (näher an 9)', details: ['👤 Player (~44,6 %): 1,95×', '🏦 Banker (~45,9 %): 1,95×', '🤝 Tie (~9,5 %): 8,50×'] },
+  { cat: 'table', id: 'dragon', icon: '🐉', name: 'Dragon Tiger', rtp: '96,2 % RTP', odds: '2 Karten (1–13): Höhere Karte gewinnt', details: ['🐉 Dragon (78/169 = 46,15 %): 1,95×', '🐅 Tiger (78/169 = 46,15 %): 1,95×', '🤝 Tie (13/169 = 7,69 %): 10,00×'] },
+  { cat: 'table', id: 'war', icon: '⚔️', name: 'Casino War', rtp: '96,2 % RTP', odds: '1 Karte (1–13) gegen Dealer-Karte (1–13)', details: ['Sieg (höhere Karte, 46,15 %): 1,75×', 'Gleichstand (Tie, 7,69 %): 2,00×', 'Niederlage (46,15 %): 0×'] },
+  { cat: 'table', id: 'sicbo', icon: '🔮', name: 'Sic Bo', rtp: '~90,3 %–97,2 %', odds: '3 Würfel (6×6×6 = 216 Kombinationen)', details: ['⬇ Low (Summe ≤ 10 ohne Triple, 48,61 %): 1,95×', '⬆ High (Summe ≥ 11 ohne Triple, 48,61 %): 1,95×', '🎲 Beliebiger Triple-Pasch (6/216 = 2,78 %): 28,00×'] },
+  { cat: 'table', id: 'hilo', icon: '🃏', name: 'Hi-Lo', rtp: 'Dynamisch (~96 %)', odds: 'Nächste Karte (2–14) höher oder niedriger als aktuelle Karte', details: ['Quote berechnet sich live aus verbleibenden höheren/tieferen Karten', 'Je höher das Risiko, desto höher der Multiplikator'] },
+  // Schnellspiele
+  { cat: 'quick', id: 'coinflip', icon: '🪙', name: 'Coinflip', rtp: '96,0 % RTP', odds: '50,0 % Kopf / 50,0 % Zahl', details: ['Gewinnchance: 50,00 %', 'Auszahlung: 1,92×'] },
+  { cat: 'quick', id: 'dice', icon: '🎲', name: 'Dice', rtp: '95,0 % RTP', odds: 'Freie Gewinnchance von 5 % bis 94 % wählbar', details: ['Formel: Multiplikator = 95 / Gewinnchance', '50 % Chance → 1,90× · 25 % → 3,80× · 5 % → 19,00×'] },
+  { cat: 'quick', id: 'penalty', icon: '⚽', name: 'Elfmeter', rtp: '92,5 % RTP', odds: '5 Ecken im Tor (Torwart springt zufällig in 1 von 5)', details: ['Treffer-Chance: 50,0 % (im Standard-Modus)', 'Auszahlung bei Tor: 1,85×'] },
+  { cat: 'quick', id: 'cyberrace', icon: '🏎️', name: 'Cyber Race', rtp: '~90–94 % RTP', odds: '5 Gleiter mit festen Sieg-Wahrscheinlichkeiten', details: ['Gleiter 1: 45 % Chance', 'Gleiter 2: 25 % Chance', 'Gleiter 3: 15 % Chance', 'Gleiter 4: 10 % Chance', 'Gleiter 5 (Underdog): 5 % Chance (bis 18×)'] },
+  { cat: 'quick', id: 'horses', icon: '🏇', name: 'Pferderennen', rtp: '~81–88 % RTP', odds: '4 Rennpferde mit unterschiedlichen Quoten', details: ['Pferd 1 (Favorit): 42 % Chance → 1,9×', 'Pferd 2: 28 % Chance → 2,8×', 'Pferd 3: 20 % Chance → 4,0×', 'Pferd 4 (Außenseiter): 10 % Chance → 7,5×'] },
+  { cat: 'quick', id: 'bomb', icon: '💣', name: 'Bomben-Entschärfer', rtp: '91,7 % RTP', odds: '1 richtiger von 3 Drähten (Rot, Blau, Grün)', details: ['Gewinnchance: 33,33 % (1 von 3)', 'Auszahlung: 2,75×'] },
+  { cat: 'quick', id: 'darts', icon: '🎯', name: 'Dart-Meister', rtp: '88,3 % RTP', odds: '5 Trefferzonen auf der Dartscheibe', details: ['🎯 Bullseye (1 %): 12,0×', '🔥 Triple-Ring (5 %): 4,5×', '✅ Inner-Ring (22 %): 1,6×', '🟡 Outer-Ring (32 %): 0,5×', '❌ Daneben (40 %): 0×'] },
+  { cat: 'quick', id: 'wheel', icon: '🎯', name: 'Glücksrad', rtp: '90,0 % RTP', odds: '10 gleich große Segmente (je 10 % Chance)', details: ['5× Niete (0×): 50 %', '1× 0,5×: 10 % · 1× 1,0×: 10 %', '1× 1,5×: 10 % · 1× 2,0×: 10 % · 1× 4,0×: 10 %'] },
+  { cat: 'quick', id: 'keno', icon: '🔢', name: 'Keno', rtp: '5 aus 40 (10 gezogen)', odds: 'Wähle 5 Zahlen aus 40 – 10 werden gezogen', details: ['2 Treffer (21,3 %): 1,5×', '3 Treffer (6,1 %): 4,0×', '4 Treffer (0,77 %): 15,0×', '5 Treffer (0,038 %): 80,0×'] },
+  { cat: 'quick', id: 'lucky7', icon: '7️⃣', name: 'Lucky 7', rtp: '~86–90 % RTP', odds: '2 Würfel (Summe 2–12, 36 Kombinationen)', details: ['⬇ Unter 7 (15/36 = 41,67 %): 2,15×', '7️⃣ Exakt 7 (6/36 = 16,67 %): 5,20×', '⬆ Über 7 (15/36 = 41,67 %): 2,15×'] },
+  { cat: 'quick', id: 'doors', icon: '🚪', name: 'Schatztüren', rtp: '93,3 % RTP', odds: '1 von 3 Türen enthält den Schatz', details: ['Gewinnchance: 33,33 % (1 von 3)', 'Auszahlung: 2,80×'] },
+  { cat: 'quick', id: 'number', icon: '🔟', name: 'Lucky Number', rtp: '90,0 % RTP', odds: 'Exakte Zahl von 1 bis 10 erraten', details: ['Gewinnchance: 10,00 % (1 von 10)', 'Auszahlung: 9,00×'] },
+  { cat: 'quick', id: 'rps', icon: '✊', name: 'Schere Stein Papier', rtp: '95,0 % RTP', odds: '3 gleich wahrscheinliche Züge (je 33,33 %)', details: ['Sieg (33,33 %): 2,35×', 'Unentschieden (33,33 %): 0,50× zurück', 'Niederlage (33,33 %): 0×'] },
+  { cat: 'quick', id: 'double', icon: '💰', name: 'Double or Nothing', rtp: '93,0 % RTP', odds: '46,5 % Chance auf 2× pro Stufe', details: ['1 Stufe: 46,5 % (2×)', '2 Stufen: 21,6 % (4×)', '3 Stufen: 10,1 % (8×)', '5 Stufen: 2,2 % (32×)'] },
+  { cat: 'quick', id: 'allin', icon: '🔥', name: 'All In', rtp: '92,0 % RTP', odds: 'Gesamtes Guthaben auf eine Karte', details: ['Gewinnchance: 46,00 %', 'Auszahlung: 2,00×'] }
+]
+VIEWS.odds = () => `
+  <div class="space-y-4">
+    <div class="glass rounded-2xl p-4 border border-cyan-500/30 bg-cyan-950/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div>
+        <div class="text-sm font-black text-white">📊 Transparenz &amp; Gewinnchancen</div>
+        <div class="text-xs text-zinc-400">Exakte Basis-Wahrscheinlichkeiten, Multiplikatoren &amp; Jackpot-Quoten für alle Spiele, alle 14 Slots (+ Custom Slots) und alle 11 Kisten.</div>
+      </div>
+      <input id="odds_search" value="${esc(oddsSearch)}" oninput="oddsSearch=this.value;renderOddsView()" placeholder="🔍 Spiel oder Slot suchen..." class="inp text-xs py-2 px-3 sm:w-64">
+    </div>
+    <div id="odds_tabs" class="flex gap-1.5 overflow-x-auto pb-1" style="scrollbar-width:none"></div>
+    <div id="odds_body" class="space-y-4"></div>
+  </div>`
+function setOddsTab(t) { oddsTab = t; renderOddsView() }
+async function PAGEINIT_odds() {
+  refreshAllSlotPots()
+  try {
+    const cs = await call('custom_slots_list', {}, true)
+    oddsCustomSlots = Array.isArray(cs) ? cs : []
+  } catch (e) { oddsCustomSlots = [] }
+  renderOddsView()
+}
+PAGEINIT.odds = () => PAGEINIT_odds()
+function renderOddsView() {
+  const tabs = [
+    ['all', '🌟 Alle'],
+    ['slots', '🎰 Alle Slots (' + (Object.keys(SLOTS).length + oddsCustomSlots.length) + ')'],
+    ['cases', '📦 Kisten (' + CASE_LIST.length + ')'],
+    ['hits', '🔥 Casino Hits'],
+    ['table', '🃏 Tisch & Karten'],
+    ['quick', '⚡ Schnellspiele']
+  ]
+  if ($('odds_tabs')) {
+    $('odds_tabs').innerHTML = tabs.map(([id, lbl]) => `<button onclick="sfx.click();setOddsTab('${id}')" class="px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition ${oddsTab === id ? 'bg-cyan-600 text-white shadow' : 'bg-zinc-800/80 text-zinc-400 hover:text-white'}">${lbl}</button>`).join('')
+  }
+  const q = oddsSearch.trim().toLowerCase()
+  const match = txt => !q || String(txt).toLowerCase().includes(q)
+  let html = ''
+
+  // 1. SLOTS SECTION
+  if (oddsTab === 'all' || oddsTab === 'slots') {
+    const slotCards = Object.entries(SLOTS).filter(([k, m]) => match(m.name + ' ' + m.desc + ' ' + m.tag + ' ' + k)).map(([k, m]) => {
+      const sp = SLOT_SPECS[k] || { n: m.n, s: m.sym.length, min: 10, tbl: [] }
+      const o = calcSlotExactOdds(sp.n, sp.s, sp.tbl, k === 'globalpot')
+      const minBet = k === 'globalpot' ? getGlobalPotMinBet() : sp.min
+      const potVal = Number(SLOT_POTS[k] || 15000).toLocaleString('de-DE')
+      const tiers = []
+      for (let cnt = 2; cnt <= sp.n; cnt++) {
+        const mult = sp.tbl[cnt - 1] || 0
+        if (mult > 0) tiers.push(`<div class="flex justify-between text-[11px]"><span>${cnt}× Gleiche (${mult}×)</span><b class="text-zinc-200 font-mono">${(o.probs[cnt] * 100).toFixed(2).replace('.', ',')} %</b></div>`)
+      }
+      const jpStr = k === 'globalpot'
+        ? `0,02 % Basis (1:5.000) · bis 0,12 % mit 3× Ticket + Hot Pot`
+        : `${(o.jpProb * 100).toFixed(4).replace('.', ',')} % (1 : ${Math.round(1 / o.jpProb).toLocaleString('de-DE')})`
+      return `<div class="glass rounded-2xl p-4 border border-zinc-800 hover:border-yellow-500/40 transition flex flex-col justify-between gap-2.5">
+        <div>
+          <div class="flex items-start justify-between gap-2">
+            <div class="flex items-center gap-2.5">
+              <span class="text-3xl">${m.icon}</span>
+              <div>
+                <div class="font-black text-white text-sm">${m.name}</div>
+                <div class="text-[11px] text-zinc-400">${sp.n} Walzen · ${sp.s} Symbole · Min. ${Number(minBet).toLocaleString('de-DE')} FC</div>
+              </div>
+            </div>
+            <span class="text-[10px] px-2 py-0.5 rounded-full font-bold border whitespace-nowrap" style="background:${m.col}22;color:${m.col};border-color:${m.col}55">${m.tag}</span>
+          </div>
+          <div class="mt-2.5 grid grid-cols-3 gap-1.5 text-center">
+            <div class="rounded-lg bg-zinc-900/80 p-1.5 border border-zinc-800"><div class="text-[10px] text-zinc-400">Treffer-Chance</div><div class="text-xs font-black text-cyan-300">${o.hitAny.toFixed(1).replace('.', ',')} %</div></div>
+            <div class="rounded-lg bg-zinc-900/80 p-1.5 border border-zinc-800"><div class="text-[10px] text-zinc-400">Gewinn (≥1×)</div><div class="text-xs font-black text-emerald-400">${o.winProfit.toFixed(2).replace('.', ',')} %</div></div>
+            <div class="rounded-lg bg-zinc-900/80 p-1.5 border border-zinc-800"><div class="text-[10px] text-zinc-400">Basis-RTP</div><div class="text-xs font-black text-yellow-300">${o.rtp.toFixed(1).replace('.', ',')} %</div></div>
+          </div>
+          <div class="mt-2.5 space-y-1 bg-black/30 rounded-xl p-2.5 border border-zinc-800/80">
+            ${tiers.join('')}
+            <div class="flex justify-between text-[11px] pt-1 border-t border-zinc-800/80 text-yellow-300">
+              <span>🏆 ${sp.n}× ${m.sym[m.sym.length - 1]} (Pot: ${potVal} FC)</span>
+              <b class="font-mono text-right">${jpStr}</b>
+            </div>
+          </div>
+        </div>
+        <button onclick="sfx.click();show('slots');setTimeout(()=>openSlot('${k}'),60)" class="w-full py-1.5 rounded-xl bg-zinc-800 hover:bg-yellow-500/20 border border-zinc-700 hover:border-yellow-500/50 text-xs font-bold text-yellow-300 transition">🎰 ${m.name} spielen</button>
+      </div>`
+    })
+
+    const customCards = oddsCustomSlots.filter(cs => match(cs.name + ' custom slot')).map(cs => {
+      const syms = Array.isArray(cs.symbols) ? cs.symbols : []
+      return `<div class="glass rounded-2xl p-4 border border-purple-500/30 bg-purple-950/10 flex flex-col justify-between gap-2">
+        <div class="flex items-start justify-between">
+          <div><div class="font-black text-white text-sm">${esc(cs.icon || '🎰')} ${esc(cs.name)} <span class="text-[10px] text-purple-300">(Custom)</span></div>
+          <div class="text-[11px] text-zinc-400">${cs.reels} Walzen · ${syms.length} Symbole</div></div>
+          <span class="text-[11px] font-mono font-black text-yellow-300">${Number(cs.jackpot || 0).toLocaleString('de-DE')} FC</span>
+        </div>
+        <div class="space-y-1 bg-black/30 rounded-xl p-2.5 text-[11px] border border-zinc-800">
+          <div class="flex justify-between"><span>Paar-Multiplikator</span><b>${cs.pair_mult}×</b></div>
+          <div class="flex justify-between"><span>Vollbild-Multiplikator (${cs.reels}×)</span><b class="text-emerald-400">${cs.win_mult}×</b></div>
+          <div class="flex justify-between text-yellow-300"><span>🏆 Jackpot-Chance</span><b>${Number(cs.jp_chance || 0).toFixed(2).replace('.', ',')} %</b></div>
+        </div>
+      </div>`
+    })
+
+    if (slotCards.length || customCards.length) {
+      html += `<div>
+        <div class="text-sm font-black text-yellow-300 mb-2.5 flex items-center gap-2">🎰 Alle Slot-Maschinen <span class="text-xs font-normal text-zinc-400">(${slotCards.length + customCards.length})</span></div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">${slotCards.join('')}${customCards.join('')}</div>
+      </div>`
+    }
+  }
+
+  // 2. CASES SECTION
+  if (oddsTab === 'all' || oddsTab === 'cases') {
+    const caseMatches = CASE_LIST.filter(c => match(c.name + ' ' + c.id + ' kiste crate'))
+    if (caseMatches.length) {
+      const tiers = [
+        { icon: '👑', name: 'Goldenes Relikt', chance: '0,30 %', col: 'text-yellow-300', multFn: c => `${c.maxM}×` },
+        { icon: '💎', name: 'Blut-Diamant', chance: '2,20 %', col: 'text-red-400', multFn: () => '4,8×' },
+        { icon: '⚡', name: 'Neon-Plasma-Kern', chance: '9,50 %', col: 'text-pink-400', multFn: () => '2,1×' },
+        { icon: '🔮', name: 'Amethyst-Splitter', chance: '26,00 %', col: 'text-purple-400', multFn: () => '1,10×' },
+        { icon: '🪙', name: 'Silber-Chip', chance: '32,00 %', col: 'text-cyan-400', multFn: () => '0,40×' },
+        { icon: '🧦', name: 'Alte Socke (Niete)', chance: '30,00 %', col: 'text-zinc-400', multFn: () => '0,10×' }
+      ]
+      html += `<div>
+        <div class="text-sm font-black text-pink-300 mb-2.5">📦 Mystery-Kisten (11 Kisten · identische Drop-Chancen, steigender Gold-Jackpot)</div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          ${caseMatches.map(c => {
+            const rtp = 0.003 * c.maxM + 0.022 * 4.8 + 0.095 * 2.1 + 0.26 * 1.1 + 0.32 * 0.4 + 0.30 * 0.1
+            return `<div class="glass rounded-2xl p-4 border border-zinc-800">
+              <div class="flex items-center justify-between mb-2">
+                <div class="flex items-center gap-2"><span class="text-2xl">${c.icon}</span><div><div class="font-black text-white text-sm">${c.name}</div><div class="text-[11px] text-zinc-400">Preis: ${c.cost.toLocaleString('de-DE')} FC · RTP: <b class="text-yellow-300">${(rtp * 100).toFixed(1).replace('.', ',')} %</b></div></div></div>
+                <button onclick="sfx.click();show('cases')" class="px-2.5 py-1 rounded-lg bg-pink-600/20 border border-pink-500/40 text-pink-300 text-[11px] font-bold">Öffnen</button>
+              </div>
+              <div class="space-y-1 bg-black/30 rounded-xl p-2.5 border border-zinc-800">
+                ${tiers.map(t => `<div class="flex justify-between text-[11px] ${t.col}"><span>${t.icon} ${t.name} (${t.multFn(c)})</span><b class="font-mono">${t.chance}</b></div>`).join('')}
+              </div>
+            </div>`
+          }).join('')}
+        </div>
+      </div>`
+    }
+  }
+
+  // 3. OTHER GAME CATEGORIES
+  const cats = [
+    ['hits', '🔥 Casino Hits'],
+    ['table', '🃏 Tisch- & Kartenspiele'],
+    ['quick', '⚡ Schnellspiele']
+  ]
+  for (const [cid, title] of cats) {
+    if (oddsTab !== 'all' && oddsTab !== cid) continue
+    const list = ODDS_GAMES.filter(g => g.cat === cid && match(g.name + ' ' + g.odds + ' ' + g.details.join(' ')))
+    if (!list.length) continue
+    html += `<div>
+      <div class="text-sm font-black text-cyan-300 mb-2.5">${title} <span class="text-xs font-normal text-zinc-400">(${list.length})</span></div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        ${list.map(g => `<div class="glass rounded-2xl p-4 border border-zinc-800 flex flex-col justify-between gap-2.5">
+          <div>
+            <div class="flex items-start justify-between gap-2">
+              <div class="flex items-center gap-2"><span class="text-2xl">${g.icon}</span><div><div class="font-black text-white text-sm">${g.name}</div><div class="text-[11px] text-zinc-400">${g.odds}</div></div></div>
+              <span class="text-[10px] px-2 py-0.5 rounded-full font-bold bg-emerald-950/60 text-emerald-300 border border-emerald-500/40 whitespace-nowrap">${g.rtp}</span>
+            </div>
+            <ul class="mt-2.5 space-y-1 bg-black/30 rounded-xl p-2.5 border border-zinc-800 text-[11px] text-zinc-300">
+              ${g.details.map(d => `<li class="flex items-start gap-1.5"><span class="text-cyan-400">•</span><span>${d}</span></li>`).join('')}
+            </ul>
+          </div>
+          <button onclick="sfx.click();show('${g.id}')" class="w-full py-1.5 rounded-xl bg-zinc-800 hover:bg-cyan-600/20 border border-zinc-700 hover:border-cyan-500/40 text-xs font-bold text-cyan-300 transition">${g.icon} ${g.name} spielen</button>
+        </div>`).join('')}
+      </div>
+    </div>`
+  }
+
+  if (!html) html = `<div class="glass rounded-2xl p-8 text-center text-sm text-zinc-400">Keine Spiele oder Slots für „${esc(oddsSearch)}“ gefunden.</div>`
+  if ($('odds_body')) $('odds_body').innerHTML = html
+}
 
 /* ================= NEUE GAMES: LIMBO, PENALTY, WAR, CYBER RACE ================= */
 VIEWS.limbo = () => betBox() + `
@@ -1222,7 +1484,10 @@ const SLOTS = {
 
 VIEWS.slots = () => {
   slotCur = null; scr = null
-  return `<div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">${Object.entries(SLOTS).map(([k, m]) => `
+  return `<div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+    <div class="text-xs text-zinc-400">14 Automaten + Custom Slots – jeder mit eigenem Jackpot-Pot</div>
+    <button onclick="sfx.click();oddsTab='slots';show('odds')" class="px-3 py-1.5 rounded-xl bg-cyan-600/20 hover:bg-cyan-600/35 border border-cyan-500/40 text-cyan-300 text-xs font-bold transition">📊 Alle Slot-Chancen ansehen</button>
+  </div><div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">${Object.entries(SLOTS).map(([k, m]) => `
     <button onclick="sfx.click();openSlot('${k}')" class="glass jackpot-card rounded-2xl p-4 text-left hover:border-yellow-400 transition shadow-lg group">
       <div class="flex items-start justify-between">
         <div class="text-4xl mb-1 group-hover:scale-110 transition-transform">${m.icon}</div>
@@ -1248,7 +1513,10 @@ function openSlot(k) {
   const dynMin = k === 'globalpot' ? getGlobalPotMinBet() : 0
   $('view').innerHTML = `
     <div class="flex justify-between items-center mb-3">
-      <button class="text-xs text-zinc-400 hover:text-white px-2 py-1 rounded bg-zinc-800" onclick="show('slots')">← Alle Slots</button>
+      <div class="flex items-center gap-2">
+        <button class="text-xs text-zinc-400 hover:text-white px-2 py-1 rounded bg-zinc-800" onclick="show('slots')">← Alle Slots</button>
+        <button class="text-xs text-cyan-300 hover:text-cyan-200 px-2 py-1 rounded bg-cyan-950/50 border border-cyan-500/30" onclick="oddsTab='slots';show('odds')">📊 Slot-Chancen</button>
+      </div>
       ${speedBox()}
     </div>
 
