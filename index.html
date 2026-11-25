@@ -2253,6 +2253,49 @@ function renderAdminServerTab(c) {
           <button class="btn bg-purple-700 hover:bg-purple-600 text-[11px] py-1.5 font-bold col-span-3" onclick="admSetGlobalWinChance(100)">🌟 100% GUARANTEED WIN (God Mode)</button>
         </div>
       </div>
+      <!-- Einzel-Spiel / Kisten / Slots Chancen-Regler -->
+      <div class="mt-4 pt-4 border-t border-zinc-800/80">
+        <div class="text-xs font-bold text-zinc-300 mb-2">🎛️ Einzel-Spiel / Kisten / Slot Chancen-Regler (überschreibt Global-Wert für dieses Spiel):</div>
+        <div class="flex flex-wrap gap-2 items-center">
+          <select id="adm_pg_game" class="inp text-xs py-2 flex-1 min-w-[180px]">
+            <option value="cases">📦 Mystery-Kisten (alle 11 Kisten)</option>
+            <option value="slots">🎰 Alle Slots (Standard)</option>
+            <option value="crash">🚀 Crash</option>
+            <option value="limbo">🎯 Limbo</option>
+            <option value="mines">💣 Mines</option>
+            <option value="plinko">🟡 Plinko</option>
+            <option value="towers">🗼 Towers</option>
+            <option value="deal">💼 Deal or No Deal</option>
+            <option value="crypto">📈 Krypto-Hebel</option>
+            <option value="blackjack">♠️ Blackjack</option>
+            <option value="roulette">🎡 Roulette</option>
+            <option value="poker">♦️ Video Poker</option>
+            <option value="baccarat">🎴 Baccarat</option>
+            <option value="dragon">🐉 Dragon Tiger</option>
+            <option value="war">⚔️ Casino War</option>
+            <option value="sicbo">🔮 Sic Bo</option>
+            <option value="hilo">🃏 Hi-Lo</option>
+            <option value="penalty">⚽ Elfmeter</option>
+            <option value="coinflip">🪙 Coinflip</option>
+            <option value="dice">🎲 Dice</option>
+            <option value="cyberrace">🏎️ Cyber Race</option>
+            <option value="horses">🏇 Pferderennen</option>
+            <option value="bomb">💣 Bomben-Entschärfer</option>
+            <option value="darts">🎯 Dart-Meister</option>
+            <option value="wheel">🎯 Glücksrad</option>
+            <option value="keno">🔢 Keno</option>
+            <option value="lucky7">7️⃣ Lucky 7</option>
+            <option value="doors">🚪 Schatztüren</option>
+            <option value="number">🔟 Lucky Number</option>
+            <option value="rps">✊ Schere Stein Papier</option>
+            <option value="double">💰 Double or Nothing</option>
+            <option value="allin">🔥 All In</option>
+            ${Object.entries(SLOTS).map(([k, m]) => `<option value="slot_${k}">${m.icon} Slot: ${m.name}</option>`).join('')}
+          </select>
+          <input id="adm_pg_val" type="number" min="0" max="100" value="50" class="inp text-xs py-2 w-24 text-center" placeholder="%">
+          <button onclick="admSetPerGameChance()" class="btn bg-cyan-600 hover:bg-cyan-500 text-xs px-4 py-2 font-bold" style="width:auto">💾 Setzen</button>
+        </div>
+      </div>
     </div>
 
     <!-- Server Glück / Rig Mode -->
