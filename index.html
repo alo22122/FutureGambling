@@ -147,6 +147,10 @@
       ⚡ GOLDEN HAPPY HOUR AKTIV! Alle Gewinne werden mit <span id="hh-mult">1.5×</span> multipliziert! (<span id="hh-secs">600</span>s)
     </div>
 
+    <div id="offlineBanner" class="hidden bg-amber-500 text-black px-4 py-1.5 text-center text-xs font-black shadow border-b border-amber-700/40">
+      📡 Verbindung unterbrochen – wird wiederhergestellt...
+    </div>
+
     <div id="serverBanner" class="hidden bg-gradient-to-r from-red-600 via-amber-600 to-red-600 text-white px-4 py-2 text-center text-sm font-bold shadow flex items-center justify-between">
       <div class="flex-1 text-center" id="serverBannerText">📢 Server-Ankündigung</div>
       <button onclick="$('serverBanner').classList.add('hidden')" class="text-xs bg-black/30 hover:bg-black/50 px-2 py-0.5 rounded cursor-pointer">✕</button>
@@ -529,21 +533,37 @@ async function loadProfile() {
   ME = data; $('welcome').innerHTML = nm(data) + (data.role === 'admin' ? ' <span class="text-purple-400 font-bold text-[10px] bg-purple-900/50 px-1.5 py-0.5 rounded border border-purple-500/40">ADMIN</span>' : data.role === 'vip' ? ' <span class="text-yellow-400 font-bold text-[10px] bg-yellow-900/50 px-1.5 py-0.5 rounded border border-yellow-500/40">VIP</span>' : '') + (data.is_hidden_test ? ' <span class="text-cyan-300 font-bold text-[10px] bg-cyan-900/50 px-1.5 py-0.5 rounded border border-cyan-500/40">🧪 TEST</span>' : '')
   if ($('testRefillBtn')) $('testRefillBtn').classList.toggle('hidden', !(data.is_hidden_test || data.role === 'admin'))
   if (!hb) {
-    sb.rpc('poll_troll').then(({ data }) => { if (data && data.troll) triggerClientTroll(data.troll) })
+    let wasOffline = false
+    const setOffline = off => {
+      if ($('offlineBanner')) $('offlineBanner').classList.toggle('hidden', !off)
+      if (wasOffline && !off) toast('✅ Verbindung wiederhergestellt!')
+      wasOffline = off
+    }
+    window.addEventListener('offline', () => setOffline(true))
+    window.addEventListener('online', () => setOffline(false))
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) setOffline(true)
+
+    sb.rpc('poll_troll').then(({ data }) => { if (data && data.troll) triggerClientTroll(data.troll) }).catch(() => {})
     hb = setInterval(async () => {
-      const { data } = await sb.rpc('poll_troll')
-      if (data) {
-        if (data.troll) triggerClientTroll(data.troll, data.msg, data.no_prank)
-        updateLiveDropBanner(data.drop)
-        updateLiveQuizBanner(data.quiz)
-        updateLockdownState(data.lockdown, data.lockdown_reason)
-        updateHappyHourBanner(data.happy_hour)
-        if (data.global_jp_event) handleGlobalJpAlert(data.global_jp_event)
-        if (Array.isArray(data.maintenance_games)) MAINT_GAMES = new Set(data.maintenance_games)
-        if (data.maintenance_reasons && typeof data.maintenance_reasons === 'object') MAINT_REASONS = data.maintenance_reasons
+      try {
+        const { data, error } = await sb.rpc('poll_troll')
+        if (error) { setOffline(true); return }
+        setOffline(false)
+        if (data) {
+          if (data.troll) triggerClientTroll(data.troll, data.msg, data.no_prank)
+          updateLiveDropBanner(data.drop)
+          updateLiveQuizBanner(data.quiz)
+          updateLockdownState(data.lockdown, data.lockdown_reason)
+          updateHappyHourBanner(data.happy_hour)
+          if (data.global_jp_event) handleGlobalJpAlert(data.global_jp_event)
+          if (Array.isArray(data.maintenance_games)) MAINT_GAMES = new Set(data.maintenance_games)
+          if (data.maintenance_reasons && typeof data.maintenance_reasons === 'object') MAINT_REASONS = data.maintenance_reasons
+        }
+        refreshGlobalJpTicker()
+        if (++_tickerCnt % 4 === 0) refreshBigWinsTicker()
+      } catch {
+        setOffline(true)
       }
-      refreshGlobalJpTicker()
-      if (++_tickerCnt % 4 === 0) refreshBigWinsTicker()
     }, 4500)
   }
   setBalance(data.balance); renderNav()
@@ -3037,6 +3057,11 @@ PAGEINIT.bp = async () => {
   const f = n => Number(n).toLocaleString('de-DE')
   const hrs = Math.floor(d.secs_left / 3600), mins = Math.floor((d.secs_left % 3600) / 60)
   const premPrice = Number(d.premium_price || 5000)
+  let claimableCnt = 0
+  for (let t = 1; t <= d.tier; t++) {
+    if (!d.free_claimed.includes(t)) claimableCnt++
+    if (d.premium && !d.prem_claimed.includes(t)) claimableCnt++
+  }
   const rows = Array.from({ length: 15 }, (_, i) => i + 1).map(t => {
     const fr = d.free_claimed.includes(t), pr = d.prem_claimed.includes(t), ok = t <= d.tier
     const freeAmt = t * 100, premAmt = t * 200
@@ -3051,8 +3076,10 @@ PAGEINIT.bp = async () => {
     <div class="h-2.5 rounded-full bg-zinc-800 my-3 overflow-hidden border border-zinc-700"><div class="h-full bg-gradient-to-r from-cyan-500 to-emerald-400 transition-all duration-500" style="width:${Math.min(100, (d.tier / 15) * 100)}%"></div></div>
     <div class="flex justify-between text-xs text-zinc-400"><span>Fortschritt: <b>Stufe ${d.tier} / 15</b> (${f(d.xp)} XP)</span><span>Free: bis 12.000 FC · Premium: +24.000 FC</span></div>
     ${d.premium ? '<div class="text-yellow-400 font-bold text-sm mt-3 flex items-center gap-1.5"><span>⭐</span> Daily Premium Pass Aktiv</div>' : `<button class="btn bg-gradient-to-r from-yellow-500 to-amber-600 text-black font-extrabold mt-3 shadow-lg" onclick="bpPremium(${premPrice})">⭐ Daily Premium freischalten (${f(premPrice)} FC)</button>`}
+    ${claimableCnt > 0 ? `<button class="btn bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white font-black mt-2 shadow-lg" onclick="bpClaimAll()">🎁 Alle ${claimableCnt} freigeschalteten Belohnungen abholen</button>` : ''}
     </div>` + rows
 }
+async function bpClaimAll() { const d = await call('bp_claim_all', {}); if (!d) return; sfx.bigwin(); setBalance(d.balance); toast(`🎁 ${d.count} Belohnungen (+${Number(d.total_reward).toLocaleString('de-DE')} FC) abgeholt!`); PAGEINIT.bp() }
 async function bpClaim(t, track) { const d = await call('bp_claim', { btier: t, btrack: track }); if (!d) return; sfx.claim(); setBalance(d.balance); toast('🎫 +' + Number(d.reward).toLocaleString('de-DE') + ' FC!' + (d.item ? ' + Bonus-Item!' : '')); PAGEINIT.bp() }
 async function bpPremium(price = 5000) { if (!confirm(`Daily Premium Pass freischalten (${Number(price).toLocaleString('de-DE')} FC)?`)) return; const d = await call('bp_premium', {}); if (d) { sfx.bigwin(); setBalance(d.balance); toast('⭐ Daily Premium aktiviert!'); PAGEINIT.bp() } }
 
