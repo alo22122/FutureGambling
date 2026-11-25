@@ -185,6 +185,10 @@
     </div>
     <nav id="nav" class="flex-1 space-y-1 overflow-y-auto mb-3"></nav>
     <div class="grid grid-cols-2 gap-2">
+      <div class="col-span-2 flex gap-1">
+        <input id="promo_in" placeholder="🎟️ Promo-Code" class="inp py-1.5 px-2 text-xs flex-1 uppercase" onkeydown="if(event.key==='Enter')redeemPromo()">
+        <button onclick="redeemPromo()" class="btn bg-purple-600 hover:bg-purple-500 text-xs font-black px-2.5 py-1.5" style="width:auto">OK</button>
+      </div>
       <button id="testRefillBtn" onclick="testRefill(100000)" class="hidden btn bg-cyan-700 hover:bg-cyan-600 text-white font-bold col-span-2 text-xs" style="padding:.45rem">🧪 +100.000 Test-Coins</button>
       <button onclick="claimDaily()" class="btn bg-yellow-500 text-black col-span-2" style="padding:.5rem">🎁 Daily abholen</button>
       <button onclick="logout()" class="btn bg-zinc-800" style="padding:.4rem;font-size:.8rem">Logout</button>
@@ -583,6 +587,50 @@ async function testRefill(amt = 100000) {
   if (error) return toast('❌ ' + error.message)
   setBalance(data.balance)
   toast(`🧪 +${Number(data.added || amt).toLocaleString('de-DE')} Test-Coins gutgeschrieben!`)
+}
+
+async function redeemPromo() {
+  const inp = $('promo_in'), code = (inp ? inp.value : '').trim()
+  if (!code) return toast('Bitte Promo-Code eingeben!')
+  sfx.click()
+  const d = await call('redeem_promo_code', { p_code: code })
+  if (!d) return
+  if (inp) inp.value = ''
+  sfx.jackpot()
+  setBalance(d.balance)
+  toast(`🎟️ Code "${d.code}" eingelöst! +${Number(d.reward).toLocaleString('de-DE')} FC!`)
+}
+
+async function admCreatePromo() {
+  const code = ($('pr_code') || {}).value || ''
+  const rew = Number(($('pr_rew') || {}).value) || 0
+  const uses = Number(($('pr_uses') || {}).value) || 10
+  const hrs = Number(($('pr_hrs') || {}).value) || 0
+  sfx.click()
+  const d = await call('admin_create_promo', { p_code: code, p_reward: rew, p_max_uses: uses, p_hours: hrs })
+  if (!d) return
+  if ($('pr_code')) $('pr_code').value = ''
+  toast(`🎟️ Code "${d.code}" (+${d.reward} FC, max ${d.max_uses}×) erstellt!`)
+  admLoadPromos()
+}
+
+async function admLoadPromos() {
+  const box = $('adm_promo_list'); if (!box) return
+  const rows = await call('admin_list_promos', {})
+  if (!rows || !rows.length) { box.innerHTML = '<div class="text-zinc-500">Noch keine Promo-Codes erstellt.</div>'; return }
+  box.innerHTML = rows.map(p => {
+    const exp = p.expires_at ? new Date(p.expires_at).toLocaleString('de-DE', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }) : '∞'
+    return `<div class="flex flex-wrap justify-between items-center gap-2 py-1.5 px-2.5 rounded-xl bg-zinc-900/70 border border-zinc-800 ${!p.active ? 'opacity-50' : ''}">
+      <span><b class="font-mono text-purple-300">${esc(p.code)}</b> · <b class="text-emerald-400">+${Number(p.reward).toLocaleString('de-DE')} FC</b> · ${p.used_count}/${p.max_uses} genutzt · Ablauf: ${exp}</span>
+      <button onclick="admTogglePromo('${esc(p.code)}', ${!p.active})" class="px-2 py-0.5 rounded ${p.active ? 'bg-red-800 text-white' : 'bg-emerald-700 text-white'} text-[10px] font-bold">${p.active ? 'Deaktivieren' : 'Aktivieren'}</button>
+    </div>`
+  }).join('')
+}
+
+async function admTogglePromo(code, active) {
+  sfx.click()
+  await call('admin_toggle_promo', { p_code: code, p_active: active })
+  admLoadPromos()
 }
 
 async function checkAnnouncement() {
@@ -2162,7 +2210,7 @@ function renderAdminUsers(data) {
 }
 
 /* ================= TAB 4: SLOT-JACKPOTS & ECONOMY ================= */
-function renderAdminEconomyTab(c) { setTimeout(() => { admLoadCustomSlots(); admLoadAllSlotConfigs(); }, 0);
+function renderAdminEconomyTab(c) { setTimeout(() => { admLoadCustomSlots(); admLoadAllSlotConfigs(); admLoadPromos(); }, 0);
   const d = ADM_DATA;
   const gpot = Number(d.jackpot || 100000);
   const gMin = Math.max(1000, Math.floor(gpot / 25000));
@@ -2194,6 +2242,20 @@ function renderAdminEconomyTab(c) { setTimeout(() => { admLoadCustomSlots(); adm
           ${Number(d.hot_pot_threshold ?? 500000000) > 0 && gpot >= Number(d.hot_pot_threshold ?? 500000000) ? '🔥 AKTIV!' : '(Inaktiv)'}
         </span>
       </div>
+    </div>
+
+    <!-- GUTSCHEIN- / PROMO-CODES VERWALTEN -->
+    <div class="glass rounded-2xl p-5 border-2 border-purple-500/40 bg-purple-950/10 mb-4">
+      <div class="font-black text-lg text-purple-300 mb-1">🎟️ Glücks- &amp; Gutschein-Codes (Promo-Codes)</div>
+      <div class="text-xs text-zinc-400 mb-3">Erstelle zeitlich oder mengenmäßig begrenzte Codes, die Spieler links in der Sidebar einlösen können.</div>
+      <div class="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-3">
+        <input id="pr_code" placeholder="Code (z.B. FREITAG500)" class="inp text-xs uppercase sm:col-span-2">
+        <input id="pr_rew" type="number" min="1" value="500" placeholder="Coins (FC)" class="inp text-xs font-mono">
+        <input id="pr_uses" type="number" min="1" value="10" placeholder="Max. Einlösungen" class="inp text-xs font-mono">
+        <input id="pr_hrs" type="number" min="0" value="24" placeholder="Stunden (0=∞)" class="inp text-xs font-mono">
+      </div>
+      <button onclick="admCreatePromo()" class="btn bg-purple-600 hover:bg-purple-500 text-xs font-black mb-3">➕ Promo-Code erstellen</button>
+      <div id="adm_promo_list" class="space-y-1.5 text-xs">Lade Promo-Codes...</div>
     </div>
 
     <!-- ADMIN SLOT-ADDER (VOLLBREITE) -->
@@ -3041,17 +3103,31 @@ VIEWS.shop = () => '<div id="shop" class="text-zinc-400">Lade...</div>'
 PAGEINIT.shop = async () => {
   const cat = await call('shop_catalog', {}); if (!cat || !$('shop')) return
   const owned = ME.owned || [], eq = { avatar: ME.avatar, color: ME.color, title: ME.title }
+  const curTheme = (typeof localStorage !== 'undefined' && localStorage.getItem('fg_theme')) || 'cyber'
   const sec = (slot, label) => `<div class="flex justify-between items-center mt-5 mb-2"><b>${label}</b><button class="text-xs text-zinc-500" onclick="shopAct('equip','reset_${slot}')">zurücksetzen</button></div><div class="grid grid-cols-2 gap-2">` +
     cat.filter(i => i.slot === slot).map(i => {
-      const has = owned.includes(i.id), on = eq[slot] === i.v
-      const show_ = slot === 'color' ? `<span style="color:${i.v}">■ ${esc(i.name)}</span>` : esc(i.v)
+      const has = owned.includes(i.id), on = slot === 'theme' ? curTheme === i.v : eq[slot] === i.v
+      const show_ = slot === 'color' ? `<span style="color:${i.v}">■ ${esc(i.name)}</span>` : slot === 'theme' ? esc(i.name) : esc(i.v)
       return `<div class="glass rounded-xl p-3 text-center ${on ? 'sel' : ''}"><div class="${slot === 'avatar' ? 'text-3xl' : 'font-bold'} mb-2">${show_}</div>` +
         (has ? `<button class="btn bg-cyan-700" style="padding:.3rem" onclick="shopAct('equip','${i.id}')">${on ? '✔ Aktiv' : 'Anlegen'}</button>`
           : i.rare ? `<div class="text-xs text-purple-300 py-1">🔒 ${esc(i.how)}</div>` : `<button class="btn bg-yellow-500 text-black" style="padding:.3rem" onclick="shopAct('shop_buy','${i.id}')">${i.price.toLocaleString('de-DE')} FC</button>`) + '</div>'
     }).join('') + '</div>'
-  $('shop').innerHTML = `<div class="glass rounded-xl p-4"><b>Bio</b><div class="flex gap-2 mt-2"><input id="bio" maxlength="80" value="${esc(ME.bio || '')}" class="inp flex-1 min-w-0"><button class="btn bg-cyan-600" style="width:auto" onclick="saveBio()">Speichern</button></div></div>` + sec('avatar', '😎 Avatare') + sec('color', '🎨 Namensfarben') + sec('title', '🏷️ Titel')
+  const sbCard = `
+    <div class="glass rounded-2xl p-4 mt-5 border border-cyan-500/40 bg-cyan-950/10">
+      <div class="font-black text-sm text-cyan-300 mb-1">🎧 Casino-Soundboard</div>
+      <div class="text-xs text-zinc-400 mb-3">Teste alle Casino-Soundeffekte direkt hier (Sound oben links einschalten).</div>
+      <div class="grid grid-cols-3 sm:grid-cols-6 gap-2">
+        <button onclick="sfx.bet()" class="btn bg-zinc-800 hover:bg-zinc-700 text-xs py-2">🪙 Bet</button>
+        <button onclick="sfx.spin()" class="btn bg-zinc-800 hover:bg-zinc-700 text-xs py-2">🎰 Spin</button>
+        <button onclick="sfx.win()" class="btn bg-emerald-800 hover:bg-emerald-700 text-xs py-2">🎉 Win</button>
+        <button onclick="sfx.bigwin()" class="btn bg-amber-700 hover:bg-amber-600 text-xs py-2">🔥 BigWin</button>
+        <button onclick="sfx.jackpot()" class="btn bg-yellow-600 hover:bg-yellow-500 text-black font-bold text-xs py-2">💰 Jackpot</button>
+        <button onclick="sfx.whistle()" class="btn bg-cyan-800 hover:bg-cyan-700 text-xs py-2">📣 Pfiff</button>
+      </div>
+    </div>`
+  $('shop').innerHTML = `<div class="glass rounded-xl p-4"><b>Bio</b><div class="flex gap-2 mt-2"><input id="bio" maxlength="80" value="${esc(ME.bio || '')}" class="inp flex-1 min-w-0"><button class="btn bg-cyan-600" style="width:auto" onclick="saveBio()">Speichern</button></div></div>` + sec('avatar', '😎 Avatare') + sec('color', '🎨 Namensfarben') + sec('title', '🏷️ Titel') + sec('theme', '🌌 Exklusive Shop-Themes') + sbCard
 }
-async function shopAct(fn, id) { sfx.click(); const d = await call(fn, { item: id }); if (!d) return; sfx.claim(); setBalance(d.balance); await loadProfile(); show('shop') }
+async function shopAct(fn, id) { sfx.click(); const d = await call(fn, { item: id }); if (!d) return; sfx.claim(); setBalance(d.balance); if (d.equipped_theme) { applyTheme(d.equipped_theme); toast('🌌 Theme aktiviert!') } await loadProfile(); show('shop') }
 async function saveBio() { const d = await call('set_bio', { t: $('bio').value }); if (d) { ME.bio = $('bio').value; toast('Bio gespeichert') } }
 
 /* ---- Battle Pass & Achievements ---- */
@@ -5137,11 +5213,15 @@ async function godRandomJp() {
 
 /* ================= CASINO THEMES ================= */
 const THEMES = {
-  cyber:  'radial-gradient(1200px 600px at 80% -10%,rgba(34,211,238,.12),transparent),#09090b',
-  royal:  'radial-gradient(1200px 600px at 80% -10%,rgba(234,179,8,.18),transparent),#0c0a05',
-  blood:  'radial-gradient(1200px 600px at 80% -10%,rgba(239,68,68,.18),transparent),#0f0507',
-  matrix: 'radial-gradient(1200px 600px at 80% -10%,rgba(16,185,129,.18),transparent),#030f09',
-  synth:  'radial-gradient(1200px 600px at 80% -10%,rgba(236,72,153,.20),transparent),#120514'
+  cyber:     'radial-gradient(1200px 600px at 80% -10%,rgba(34,211,238,.12),transparent),#09090b',
+  royal:     'radial-gradient(1200px 600px at 80% -10%,rgba(234,179,8,.18),transparent),#0c0a05',
+  blood:     'radial-gradient(1200px 600px at 80% -10%,rgba(239,68,68,.18),transparent),#0f0507',
+  matrix:    'radial-gradient(1200px 600px at 80% -10%,rgba(16,185,129,.18),transparent),#030f09',
+  synth:     'radial-gradient(1200px 600px at 80% -10%,rgba(236,72,153,.20),transparent),#120514',
+  cybergold: 'radial-gradient(1100px 600px at 50% -10%,rgba(250,204,21,.25),rgba(34,211,238,.10),transparent),#090804',
+  bloodmoon: 'radial-gradient(1100px 600px at 50% -10%,rgba(220,38,38,.30),rgba(127,29,29,.15),transparent),#0c0305',
+  matrixpro: 'radial-gradient(1100px 600px at 50% -10%,rgba(34,197,94,.28),rgba(6,78,59,.15),transparent),#020c06',
+  neonice:   'radial-gradient(1100px 600px at 50% -10%,rgba(56,189,248,.28),rgba(168,85,247,.12),transparent),#040914'
 }
 function applyTheme(t) {
   document.body.style.background = THEMES[t] || THEMES.cyber
