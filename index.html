@@ -4869,39 +4869,29 @@ PAGEINIT.forbes = async () => {
 }
 
 /* ================= LIVE-EVENT GLÜCKSRAD MIT ADMIN-LIVE-STOPP ================= */
-const LW_SEGS = [
-  { label: '0×', mult: 0, col: '#3f3f46' },
-  { label: '1.5×', mult: 1.5, col: '#0891b2' },
-  { label: '2×', mult: 2, col: '#059669' },
-  { label: '0×', mult: 0, col: '#52525b' },
-  { label: '3×', mult: 3, col: '#7c3aed' },
-  { label: '5×', mult: 5, col: '#db2777' },
-  { label: '10×', mult: 10, col: '#ea580c' },
-  { label: '25×', mult: 25, col: '#eab308' }
-]
-let lwSeg = 2, lwAngle = 0, lwLastRound = 0, lwTimer = null
+const LW_COLORS = ['#0891b2', '#059669', '#7c3aed', '#db2777', '#ea580c', '#eab308', '#2563eb', '#dc2626', '#14b8a6', '#f97316']
+let lwSeg = 0, lwAngle = 0, lwLastRound = 0, lwTimer = null, lwEntriesCache = []
 
 VIEWS.livewheel = () => `
   <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center mb-4">
     <div class="relative flex flex-col items-center justify-center p-4 glass rounded-2xl border border-zinc-700">
+      <div class="text-xs font-black uppercase text-amber-300 mb-1">🏆 Rest-Pot: <span id="lw-pot" class="gold-shimmer text-lg font-mono">0 FC</span></div>
       <div class="text-2xl mb-1 z-10">🔻</div>
-      <canvas id="lw-canvas" width="260" height="260" class="rounded-full transition-transform duration-[4500ms] ease-[cubic-bezier(0.1,0.88,0.18,1)] shadow-2xl border-4 border-yellow-500/60"></canvas>
-      <div id="lw-status" class="mt-3 text-sm font-black text-cyan-400">Lade Live-Rad...</div>
+      <canvas id="lw-canvas" width="280" height="280" class="rounded-full transition-transform duration-[4500ms] ease-[cubic-bezier(0.1,0.88,0.18,1)] shadow-2xl border-4 border-yellow-500/60"></canvas>
+      <div id="lw-status" class="mt-3 text-sm font-black text-cyan-400 text-center">Lade Live-Rad...</div>
     </div>
     <div class="space-y-3">
-      <div class="glass rounded-2xl p-4 border border-zinc-800">
-        <div class="text-xs font-bold text-zinc-400 mb-2">1. Feld wählen & Einsatz setzen:</div>
-        <div class="grid grid-cols-4 gap-1.5 mb-3">
-          ${LW_SEGS.map((s, i) => `<button id="lwseg_${i}" onclick="pickLwSeg(${i})" class="py-2 rounded-lg text-xs font-black border-2 transition ${lwSeg === i ? 'border-white scale-105' : 'border-transparent opacity-80'}" style="background:${s.col}">${s.label}</button>`).join('')}
-        </div>
+      <div class="glass rounded-2xl p-4 border border-zinc-800 space-y-2">
+        <div class="text-xs font-bold text-zinc-300">🎡 Einsatz setzen &amp; mit deinem Namen aufs Rad!</div>
+        <div class="text-[11px] text-zinc-400">Je höher dein Einsatz, desto größer dein Feld auf dem Rad. Der Gewinner räumt den gesamten Pot ab!</div>
         <div class="flex gap-2">
           <input id="lw-bet" type="number" min="10" value="500" class="inp flex-1">
-          <button onclick="placeLwBet()" class="btn bg-emerald-600 font-black" style="width:auto">Wetten!</button>
+          <button onclick="placeLwBet()" class="btn bg-emerald-600 hover:bg-emerald-500 font-black" style="width:auto">🎡 Mitmachen!</button>
         </div>
       </div>
-      <div class="glass rounded-2xl p-3 border border-zinc-800 max-h-40 overflow-y-auto">
-        <div class="text-xs font-bold text-zinc-400 mb-1">Live-Wetten dieser Runde:</div>
-        <div id="lw-bets" class="text-xs space-y-1 text-zinc-300">Keine Wetten bisher.</div>
+      <div class="glass rounded-2xl p-3 border border-zinc-800 max-h-48 overflow-y-auto">
+        <div class="text-xs font-bold text-zinc-400 mb-1">Teilnehmer auf dem Rad:</div>
+        <div id="lw-bets" class="text-xs space-y-1 text-zinc-300">Keine Teilnehmer bisher.</div>
       </div>
     </div>
   </div>
@@ -4909,46 +4899,53 @@ VIEWS.livewheel = () => `
   <div class="glass rounded-2xl p-4 border-2 border-yellow-500/60 bg-yellow-950/20">
     <div class="text-sm font-black text-yellow-400 mb-2">👑 ADMIN LIVE-RAD KONTROLLE (Echtzeit-Stopp)</div>
     <div class="flex flex-wrap gap-2 mb-3">
-      <button onclick="admLwAction('admin_live_wheel_start')" class="btn bg-emerald-600 text-xs font-black" style="width:auto">▶ Neue Runde starten (30s)</button>
-      <button onclick="admLwAction('admin_live_wheel_stop')" class="btn bg-red-600 text-xs font-black" style="width:auto">🛑 JETZT STOPPEN & AUSZAHLEN</button>
+      <button onclick="admLwAction('admin_live_wheel_start')" class="btn bg-emerald-600 text-xs font-black" style="width:auto">▶ Neue Pot-Runde starten (30s)</button>
+      <button onclick="admLwAction('admin_live_wheel_stop')" class="btn bg-red-600 text-xs font-black" style="width:auto">🛑 JETZT STOPPEN &amp; POT AUSZAHLEN</button>
     </div>
-    <div class="text-xs text-zinc-300 mb-1.5">🎯 Auf welchem Feld soll das Rad stehen bleiben? <b id="lw-adm-forced" class="text-yellow-300">Zufällig</b></div>
-    <div class="grid grid-cols-4 sm:grid-cols-8 gap-1.5">
-      ${LW_SEGS.map((s, i) => `<button onclick="admLwForce(${i})" class="py-1.5 rounded-lg text-xs font-black border border-white/20 hover:scale-105 transition" style="background:${s.col}">#${i} (${s.label})</button>`).join('')}
-    </div>
+    <div class="text-xs text-zinc-300 mb-1.5">🎯 Ziel-Gewinner: <b id="lw-adm-forced" class="text-yellow-300">Zufällig (gewichtet)</b></div>
+    <div id="lw-adm-players" class="flex flex-wrap gap-1.5"></div>
   </div>` : ''}
 `
 
 PAGEINIT.livewheel = () => {
-  drawLiveWheel()
+  drawLiveWheel([])
   loadLiveWheelState()
   if (lwTimer) clearInterval(lwTimer)
   lwTimer = setInterval(() => { if (current === 'livewheel') loadLiveWheelState(); else clearInterval(lwTimer) }, 2500)
 }
 
-function drawLiveWheel() {
+function drawLiveWheel(entries) {
   const cv = $('lw-canvas'); if (!cv) return
-  const ctx = cv.getContext('2d'), R = 130, slice = Math.PI * 2 / 8
-  LW_SEGS.forEach((s, i) => {
-    const a0 = i * slice - Math.PI / 2 - slice / 2
+  const ctx = cv.getContext('2d'), R = cv.width / 2
+  ctx.clearRect(0, 0, cv.width, cv.height)
+  const list = Array.isArray(entries) ? entries : []
+  const tot = list.reduce((s, e) => s + Number(e.bet || 0), 0)
+  if (!list.length || tot <= 0) {
+    ctx.beginPath(); ctx.arc(R, R, R, 0, Math.PI * 2); ctx.fillStyle = '#27272a'; ctx.fill()
+    ctx.fillStyle = '#a1a1aa'; ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center'
+    ctx.fillText('Warte auf Spieler...', R, R + 5)
+    return
+  }
+  let a0 = -Math.PI / 2
+  list.forEach((e, i) => {
+    const share = Number(e.bet) / tot
+    const slice = share * Math.PI * 2
+    const col = LW_COLORS[i % LW_COLORS.length]
     ctx.beginPath(); ctx.moveTo(R, R); ctx.arc(R, R, R, a0, a0 + slice); ctx.closePath()
-    ctx.fillStyle = s.col; ctx.fill(); ctx.strokeStyle = '#18181b'; ctx.lineWidth = 2; ctx.stroke()
+    ctx.fillStyle = col; ctx.fill(); ctx.strokeStyle = '#18181b'; ctx.lineWidth = 2; ctx.stroke()
     ctx.save(); ctx.translate(R, R); ctx.rotate(a0 + slice / 2)
-    ctx.fillStyle = '#fff'; ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'right'
-    ctx.fillText(s.label, R - 16, 5); ctx.restore()
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'right'
+    const lbl = `${String(e.username || 'Spieler').slice(0, 11)} (${Math.round(share * 100)}%)`
+    ctx.fillText(lbl, R - 12, 4); ctx.restore()
+    a0 += slice
   })
-}
-
-function pickLwSeg(i) {
-  sfx.click(); lwSeg = i
-  LW_SEGS.forEach((_, x) => { const b = $('lwseg_' + x); if (b) b.className = 'py-2 rounded-lg text-xs font-black border-2 transition ' + (x === i ? 'border-white scale-105' : 'border-transparent opacity-80') })
 }
 
 async function placeLwBet() {
   const bet = Math.floor(+($('lw-bet') || {}).value)
   sfx.bet()
-  const d = await call('live_wheel_bet', { seg: lwSeg, bet_amount: bet })
-  if (d) { setBalance(d.balance); toast('🎡 Wette platziert!'); loadLiveWheelState() }
+  const d = await call('live_wheel_bet', { seg: 0, bet_amount: bet })
+  if (d) { setBalance(d.balance); toast('🎡 Einsatz im Pot! Dein Name ist auf dem Rad!'); loadLiveWheelState() }
 }
 
 async function admLwAction(fn) {
@@ -4960,21 +4957,37 @@ async function admLwAction(fn) {
 async function admLwForce(seg) {
   sfx.click()
   const d = await call('admin_live_wheel_force', { seg })
-  if (d) { toast('🎯 Rad wird auf Feld #' + seg + ' (' + LW_SEGS[seg].label + ') landen!'); loadLiveWheelState() }
+  if (d) { toast('🎯 Gewinner-Feld #' + seg + ' vorgemerkt!'); loadLiveWheelState() }
 }
 
 async function loadLiveWheelState() {
   const d = await call('live_wheel_state', {})
   if (!d || !$('lw-status')) return
+  const entries = d.entries || []
+  const totPot = Number(d.total_pot || 0)
+  lwEntriesCache = entries
+  if ($('lw-pot')) $('lw-pot').textContent = totPot.toLocaleString('de-DE') + ' FC'
+  if (d.status !== 'result' || lwLastRound !== d.round_id) drawLiveWheel(entries)
+
   if (d.status === 'betting') {
-    $('lw-status').innerHTML = '<span class="text-emerald-400">🟢 RUNDE #' + d.round_id + ' OFFEN! (' + d.secs_left + 's)</span>'
+    $('lw-status').innerHTML = `<span class="text-emerald-400">🟢 RUNDE #${d.round_id} OFFEN! (${d.secs_left}s · ${entries.length} Spieler)</span>`
     lwLastRound = 0
   } else if (d.status === 'result' && d.result_segment !== null) {
-    const winSeg = d.result_segment
-    $('lw-status').innerHTML = '<span class="text-yellow-400">🏆 ERGEBNIS: Feld #' + winSeg + ' (' + LW_SEGS[winSeg].label + ')</span>'
+    const winIdx = Number(d.result_segment || 0)
+    const wName = d.winner_name || (entries[winIdx] ? entries[winIdx].username : 'Niemand')
+    $('lw-status').innerHTML = `<span class="text-yellow-400">🏆 GEWINNER: ${esc(wName)} (+${totPot.toLocaleString('de-DE')} FC)!</span>`
     if (lwLastRound !== d.round_id) {
       lwLastRound = d.round_id
-      const targetDeg = 360 * 5 - winSeg * 45
+      let midFrac = 0.5
+      if (entries.length && totPot > 0) {
+        let acc = 0
+        for (let i = 0; i < entries.length; i++) {
+          const frac = Number(entries[i].bet) / totPot
+          if (i === winIdx) { midFrac = acc + frac / 2; break }
+          acc += frac
+        }
+      }
+      const targetDeg = 360 * 5 - midFrac * 360
       lwAngle = Math.floor(lwAngle / 360) * 360 + targetDeg
       const cv = $('lw-canvas'); if (cv) cv.style.transform = `rotate(${lwAngle}deg)`
       sfx.spin()
@@ -4983,9 +4996,15 @@ async function loadLiveWheelState() {
   } else {
     $('lw-status').textContent = '⏳ Warte auf den Admin, um die nächste Live-Runde zu starten...'
   }
-  if ($('lw-adm-forced')) $('lw-adm-forced').textContent = d.forced_segment !== null ? '#' + d.forced_segment + ' (' + LW_SEGS[d.forced_segment].label + ')' : 'Zufällig'
+  if ($('lw-adm-forced')) $('lw-adm-forced').textContent = d.forced_segment !== null ? (entries[d.forced_segment] ? entries[d.forced_segment].username : '#' + d.forced_segment) : 'Zufällig (gewichtet)'
+  if ($('lw-adm-players')) {
+    $('lw-adm-players').innerHTML = entries.map((e, i) => `<button onclick="admLwForce(${i})" class="px-2.5 py-1 rounded-lg text-xs font-black border border-white/20" style="background:${LW_COLORS[i % LW_COLORS.length]}">${esc(e.username)}</button>`).join('')
+  }
   if ($('lw-bets')) {
-    $('lw-bets').innerHTML = (d.bets || []).map(b => `<div class="flex justify-between"><span>${esc(b.username)} auf <b>#${b.segment} (${LW_SEGS[b.segment].label})</b></span><span class="text-yellow-400 font-mono">${Number(b.bet).toLocaleString('de-DE')} FC</span></div>`).join('') || 'Noch keine Wetten.'
+    $('lw-bets').innerHTML = entries.map((e, i) => {
+      const pct = totPot > 0 ? ((Number(e.bet) / totPot) * 100).toFixed(1) : '0.0'
+      return `<div class="flex justify-between items-center"><span class="flex items-center gap-1.5"><span class="inline-block w-2.5 h-2.5 rounded-full" style="background:${LW_COLORS[i % LW_COLORS.length]}"></span><b>${esc(e.username)}</b></span><span class="text-yellow-400 font-mono">${Number(e.bet).toLocaleString('de-DE')} FC (${pct}%)</span></div>`
+    }).join('') || 'Noch keine Teilnehmer.'
   }
 }
 
@@ -6613,6 +6632,8 @@ async function loadRaffleState() {
   if (box.contains(document.activeElement) && ['INPUT','SELECT'].includes(document.activeElement.tagName)) return
   const saved = { t: ($('rf_title')||{}).value, p: ($('rf_prize')||{}).value, pr: ($('rf_price')||{}).value, f: ($('rf_force_sel')||{}).value }
   const d = await call('raffle_state', {}); if (!d && d !== null) return
+  if (d && window._lastRfStatus === 'open' && d.status === 'drawn') { sfx.bigwin(); loadProfile() }
+  window._lastRfStatus = d ? d.status : null
   let h = ''
   if (!d) {
     h = '<div class="glass rounded-2xl p-6 text-center text-zinc-400 mb-4">Aktuell läuft keine Admin-Verlosung.</div>'
@@ -6692,15 +6713,18 @@ async function lpReset() {
 }
 
 /* ================= LAST MAN STANDING BATTLE-ROYALE-POT ================= */
-let royTimer = null
+let royTimer = null, royLastStatus = null
 VIEWS.royale = () => '<div id="roybox" class="text-zinc-400">Lade Battle Royale...</div>'
 PAGEINIT.royale = () => {
+  royLastStatus = null
   loadRoyaleState()
   if (royTimer) clearInterval(royTimer)
   royTimer = setInterval(() => { if (current === 'royale') loadRoyaleState(); else clearInterval(royTimer) }, 2500)
 }
 async function loadRoyaleState() {
   const d = await call('royale_state', {}), box = $('roybox'); if (!d || !box) return
+  if (royLastStatus && royLastStatus !== 'finished' && d.status === 'finished') { sfx.bigwin(); loadProfile() }
+  royLastStatus = d.status
   const pls = d.players || []
   const alive = pls.filter(p => p.alive).length
   box.innerHTML = `
@@ -6961,6 +6985,8 @@ async function loadProphetState() {
   if (box.contains(document.activeElement) && ['INPUT','SELECT'].includes(document.activeElement.tagName)) return
   const saved = { b: ($('pr-bet')||{}).value, q: ($('adm_pr_q')||{}).value }
   const d = await call('prophet_state', {})
+  if (d && window._lastPrStatus === 'open' && d.status === 'resolved') { sfx.bigwin(); loadProfile() }
+  window._lastPrStatus = d ? d.status : null
   let h = ''
   if (!d) {
     h = '<div class="glass rounded-2xl p-6 text-center text-zinc-400 mb-4">Aktuell läuft keine Admin-Prophet Wette.</div>'
