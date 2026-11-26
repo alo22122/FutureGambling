@@ -476,7 +476,7 @@ const GAMES = {
   raffle:    { icon: '🎟️', name: 'Admin-Verlosung', desc: 'Kaufe Lose für den Mega-Jackpot! Der Admin lost den Sieger live aus.', page: true },
   royale:    { icon: '⚡', name: 'Last Man Standing', desc: 'Squid-Game Battle-Royale! 1.000 FC Einsatz, 30% fliegen pro Runde raus.', page: true },
   prophet:   { icon: '🧠', name: 'Admin-Prophet', desc: 'Wette mit JA oder NEIN auf Live-Events des Admins!', page: true },
-  deal:      { icon: '💼', name: 'Deal or No Deal', desc: '12 Koffer bis 2,25×! Nimmst du das Banker-Angebot an?', page: true },
+  deal:      { icon: '💼', name: 'Deal or No Deal', desc: '12 Koffer bis 2,00×! Nimmst du das Banker-Angebot an?', page: true },
   votes:     { icon: '🗳️', name: 'Abstimmungen & Ideen', desc: 'Schlage neue Features vor und stimme für die besten Ideen ab!', page: true },
   forbes:    { icon: '📜', name: 'Forbes Top 10', desc: 'Reichen- & Luxus-Pranger: Gesamtwert aus Coins + Autos + Villen + Jets!', page: true },
   hof:       { icon: '🏛️', name: 'Hall of Fame', desc: 'Casino-Weltrekorde! Höchste Einzelsiege, Crash-Rekorde & längste Streaks.', page: true },
@@ -535,7 +535,9 @@ async function loadProfile() {
   const { data, error } = await sb.rpc('get_me')
   if (error) { console.error(error); if (/gesperrt/.test(error.message)) { alert(error.message); logout() } else toast('Profil-Fehler: ' + error.message); return }
   ROLE = data.role
+  ACCOUNT_FAVS = Array.isArray(data.favorites) ? data.favorites : []
   ME = data; $('welcome').innerHTML = nm(data) + (data.role === 'admin' ? ' <span class="text-purple-400 font-bold text-[10px] bg-purple-900/50 px-1.5 py-0.5 rounded border border-purple-500/40">ADMIN</span>' : data.role === 'vip' ? ' <span class="text-yellow-400 font-bold text-[10px] bg-yellow-900/50 px-1.5 py-0.5 rounded border border-yellow-500/40">VIP</span>' : '') + (data.is_hidden_test ? ' <span class="text-cyan-300 font-bold text-[10px] bg-cyan-900/50 px-1.5 py-0.5 rounded border border-cyan-500/40">🧪 TEST</span>' : '')
+  if (current === 'lobby') renderLobbyGrid()
   if ($('testRefillBtn')) $('testRefillBtn').classList.toggle('hidden', !(data.is_hidden_test || data.role === 'admin'))
   if (!hb) {
     let wasOffline = false
@@ -544,7 +546,7 @@ async function loadProfile() {
       if (wasOffline && !off) {
         toast('✅ Verbindung wiederhergestellt! Kontostand wird synchronisiert...')
         sb.rpc('get_me').then(({ data: meData }) => {
-          if (meData) { ROLE = meData.role; ME = meData; setBalance(meData.balance); renderNav() }
+          if (meData) { ROLE = meData.role; ACCOUNT_FAVS = Array.isArray(meData.favorites) ? meData.favorites : []; ME = meData; setBalance(meData.balance); renderNav() }
         }).catch(() => {})
       }
       wasOffline = off
@@ -739,15 +741,17 @@ const VIEWS = {
 let PM = [5.6, 2.1, 1.1, 1, 0.5, 1, 1.1, 2.1, 5.6]
 const WM = [0, 0.5, 0, 1.5, 0, 2, 0, 1, 0, 4]
 
-let lobbyCat = 'all', lobbySearch = '', MAINT_GAMES = new Set(), MAINT_REASONS = {}
-function getFavGames() { try { return JSON.parse(localStorage.getItem('fg_fav_games') || '[]') } catch { return [] } }
-function toggleFavGame(k, ev) {
+let lobbyCat = 'all', lobbySearch = '', MAINT_GAMES = new Set(), MAINT_REASONS = {}, ACCOUNT_FAVS = []
+function getFavGames() { return Array.isArray(ACCOUNT_FAVS) ? ACCOUNT_FAVS : [] }
+async function toggleFavGame(k, ev) {
   if (ev) ev.stopPropagation()
   sfx.click()
-  const favs = new Set(getFavGames())
-  if (favs.has(k)) favs.delete(k); else favs.add(k)
-  localStorage.setItem('fg_fav_games', JSON.stringify([...favs]))
+  const s = new Set(getFavGames())
+  if (s.has(k)) s.delete(k); else s.add(k)
+  ACCOUNT_FAVS = [...s]
   renderLobbyGrid()
+  const d = await call('toggle_favorite', { game_key: k })
+  if (d && Array.isArray(d.favorites)) { ACCOUNT_FAVS = d.favorites; renderLobbyGrid() }
 }
 const LOBBY_TABS = [
   ['all', '🔥 Alle'],
@@ -926,7 +930,7 @@ const ODDS_GAMES = [
   { cat: 'hits', id: 'mines', icon: '💣', name: 'Mines', rtp: '94,0 % RTP', odds: '25 Felder (1, 3, 5, 10, 15 oder 20 Minen) – jeder Klick skaliert dynamisch', details: ['1 Mine (1. Feld): 96,0 % Chance (0,98×)', '3 Minen (1. Feld): 88,0 % Chance (1,07×)', '5 Minen (1. Feld): 80,0 % Chance (1,18×)', '10 Minen (1. Feld): 60,0 % Chance (1,57×)', '20 Minen (1. Feld): 20,0 % Chance (4,70×)'] },
   { cat: 'hits', id: 'plinko', icon: '🟡', name: 'Plinko', rtp: 'Binomial (8 Reihen)', odds: '8 Ebenen (50/50 links/rechts) – 9 Körbe (Pascal-Verteilung)', details: ['Niedrig: [3×, 1,5×, 1,2×, 1×, 0,65×, 1×, 1,2×, 1,5×, 3×]', 'Mittel: [5,6×, 2,1×, 1,1×, 1×, 0,5×, 1×, 1,1×, 2,1×, 5,6×]', 'Hoch: [26×, 4×, 1,5×, 0,3×, 0,2×, 0,3×, 1,5×, 4×, 26×]', 'Rand-Chance (26× / 5,6× / 3×): je 0,39 % (1:256)', 'Mitte-Chance (Korb 4): 27,34 %'] },
   { cat: 'hits', id: 'towers', icon: '🗼', name: 'Towers', rtp: '95,0 % RTP/Ebene', odds: '8 Ebenen aufsteigen – je nach Schwierigkeit 2 bis 4 Felder pro Ebene', details: ['🟢 Leicht (4 Felder, 1 Bombe): 75 % pro Ebene', '🟡 Mittel (3 Felder, 1 Bombe): 66,7 % pro Ebene', '🔴 Schwer (2 Felder, 1 Bombe): 50 % pro Ebene', '💀 Extrem (3 Felder, 2 Bomben): 33,3 % pro Ebene'] },
-  { cat: 'hits', id: 'deal', icon: '💼', name: 'Deal or No Deal', rtp: 'Skill / Banker', odds: '12 Koffer mit Werten von 0,05× bis 2,25× (gebalancetes Set)', details: ['Koffer-Werte: 0,05× bis max. 2,25×', 'Banker-Angebot: fairer Koffer-Schnitt × Faktor (~90–95 %)', 'Cashout jederzeit über Deal möglich'] },
+  { cat: 'hits', id: 'deal', icon: '💼', name: 'Deal or No Deal', rtp: '~88 % RTP', odds: '12 Koffer mit Werten von 0,01× bis 2,00×', details: ['Koffer-Werte: 0,01× bis max. 2,00×', 'Banker-Angebot: fairer Koffer-Schnitt × 0,72', 'Cashout jederzeit über Deal möglich'] },
   { cat: 'hits', id: 'crypto', icon: '📈', name: 'Krypto-Hebel', rtp: 'Markt-Sim', odds: 'Long / Short mit 2× bis 25× Hebel in Echtzeit', details: ['Hebel 2×–25× wählbar', 'Liquidierung bei entsprechendem Gegenkurs', 'Jederzeit Cashout per Button'] },
   // Tisch & Karten
   { cat: 'table', id: 'blackjack', icon: '♠️', name: 'Blackjack', rtp: '~99,0 % RTP', odds: 'Standard-Deck gegen Dealer (Dealer zieht bis 17)', details: ['Blackjack (21 mit 2 Karten): 2,50× (3:2)', 'Normaler Sieg: 2,00×', 'Unentschieden (Push): 1,00× zurück', 'Double Down: Einsatz verdoppeln für 1 Karte'] },
@@ -1334,8 +1338,25 @@ async function bj(act) {
   setBalance(d.balance); renderBj(d)
 }
 function renderBj(d) {
-  $('bjt').innerHTML = `<div><div class="text-xs text-zinc-400 mb-1">Dealer ${d.dv ?? ''}</div><div class="flex gap-2">${d.d.map(card).join('')}${d.done ? '' : '<span class="glass rounded-lg px-3 py-2 text-xl">🂠</span>'}</div></div>
-    <div><div class="text-xs text-zinc-400 mb-1">Du ${d.pv}</div><div class="flex gap-2">${d.p.map(card).join('')}</div></div>`
+  const hand2Html = d.p2 ? `
+    <div class="p-2.5 rounded-xl border ${!d.done && d.active_hand === 2 ? 'border-cyan-400 bg-cyan-950/20' : 'border-zinc-800 bg-zinc-900/40'}">
+      <div class="text-xs text-zinc-400 mb-1 flex items-center justify-between">
+        <span>Hand 2 (${d.pv2})${!d.done && d.active_hand === 2 ? ' <b class="text-cyan-300">◀ Aktiv</b>' : ''}</span>
+        ${d.res2 ? `<span class="font-bold ${d.res2==='win'?'text-emerald-400':d.res2==='push'?'text-yellow-300':'text-red-400'}">${d.res2.toUpperCase()}</span>` : ''}
+      </div>
+      <div class="flex gap-2 flex-wrap">${d.p2.map(card).join('')}</div>
+    </div>` : ''
+  $('bjt').innerHTML = `<div><div class="text-xs text-zinc-400 mb-1">Dealer ${d.dv ?? ''}</div><div class="flex gap-2 flex-wrap">${d.d.map(card).join('')}${d.done ? '' : '<span class="glass rounded-lg px-3 py-2 text-xl">🂠</span>'}</div></div>
+    <div class="${d.p2 ? 'grid grid-cols-1 sm:grid-cols-2 gap-3' : ''}">
+      <div class="${d.p2 ? `p-2.5 rounded-xl border ${!d.done && d.active_hand === 1 ? 'border-cyan-400 bg-cyan-950/20' : 'border-zinc-800 bg-zinc-900/40'}` : ''}">
+        <div class="text-xs text-zinc-400 mb-1 flex items-center justify-between">
+          <span>${d.p2 ? 'Hand 1' : 'Du'} ${d.pv}${d.p2 && !d.done && d.active_hand === 1 ? ' <b class="text-cyan-300">◀ Aktiv</b>' : ''}</span>
+          ${d.res1 ? `<span class="font-bold ${d.res1==='win'?'text-emerald-400':d.res1==='push'?'text-yellow-300':'text-red-400'}">${d.res1.toUpperCase()}</span>` : ''}
+        </div>
+        <div class="flex gap-2 flex-wrap">${d.p.map(card).join('')}</div>
+      </div>
+      ${hand2Html}
+    </div>`
   const B = $('bjb')
   if (d.done) {
     const net = d.payout - d.bet
@@ -1345,8 +1366,10 @@ function renderBj(d) {
     logRound(net)
   } else {
     msg('')
+    const curLen = (d.p2 && d.active_hand === 2) ? d.p2.length : d.p.length
     B.innerHTML = `<button class="btn bg-cyan-600" onclick="bj('hit')">Hit</button><button class="btn bg-orange-600" onclick="bj('stand')">Stand</button>` +
-      (d.p.length === 2 ? `<button class="btn bg-pink-600" onclick="bj('double')">Double</button>` : '')
+      (curLen === 2 ? `<button class="btn bg-pink-600" onclick="bj('double')">Double</button>` : '') +
+      (d.can_split ? `<button class="btn bg-purple-600" onclick="bj('split')">✂️ Split</button>` : '')
   }
 }
 
@@ -1731,9 +1754,12 @@ PAGEINIT.admin = () => {
   };
 
 async function loadAdminFullDashboard() {
-  const d = await call('admin_get_full_dashboard', {});
+  const [d, ch] = await Promise.all([
+    call('admin_get_full_dashboard', {}),
+    call('admin_get_chances', {}, true)
+  ]);
   if (!d) return;
-  ADM_DATA = d;
+  ADM_DATA = Object.assign({}, d, ch && typeof ch === 'object' ? ch : {});
   ADMIN_USERS_CACHE = d.users || [];
   renderAdminContent();
 }
@@ -1764,6 +1790,14 @@ async function admSetGameChance(key, val) {
     const rng = $('ag_rng_' + key); if (rng) rng.value = v;
     toast('🎯 Chance für ' + key.toUpperCase() + ' auf ' + v + '% gesetzt!');
   }
+}
+async function admApplyGlobalToAll(val) {
+  const v = Math.max(0, Math.min(100, Number(val)));
+  if (isNaN(v)) return;
+  if (!confirm(`Wirklich ALLE Spiele & Slots auf ${v}% setzen?`)) return;
+  sfx.click();
+  const d = await call('admin_apply_global_chance_to_all', { val: v });
+  if (d) { toast(`🌐 Alle Spiele & Slots auf ${v}% gesetzt!`); loadAdminFullDashboard(); }
 }
 async function admToggleMaintQuick(gameKey) {
   const inMaint = MAINT_GAMES.has(gameKey);
@@ -1816,9 +1850,8 @@ function renderAdminGamesTab(c) {
           <span class="text-xs px-2.5 py-1 rounded-lg ${rigCount > 0 ? 'bg-amber-900/60 text-amber-300 border border-amber-500 font-bold' : 'bg-zinc-800 text-zinc-400'}">
             ${rigCount > 0 ? '⚡ ' + rigCount + ' forciert' : '🟢 Normal'}
           </span>
-          <button onclick="admSetGlobalWinChance(100)" class="btn bg-emerald-700 hover:bg-emerald-600 text-xs px-2.5 py-1.5 font-bold" style="width:auto">🍀 Global 100%</button>
-          <button onclick="admSetGlobalWinChance(50)" class="btn bg-zinc-800 hover:bg-zinc-700 text-xs px-2.5 py-1.5" style="width:auto">🟢 Global 50%</button>
-          <button onclick="admSetGlobalWinChance(10)" class="btn bg-red-900/70 hover:bg-red-800 text-xs px-2.5 py-1.5 text-red-200" style="width:auto">😈 Global 10%</button>
+          <button onclick="admApplyGlobalToAll(ADM_DATA.global_win_chance ?? 50)" class="btn bg-cyan-700 hover:bg-cyan-600 text-xs px-2.5 py-1.5 font-bold" style="width:auto">🌐 Global (${ADM_DATA.global_win_chance ?? 50}%) auf ALLE anwenden</button>
+          <button onclick="admApplyGlobalToAll(50)" class="btn bg-zinc-800 hover:bg-zinc-700 text-xs px-2.5 py-1.5" style="width:auto">🟢 Alle 50% Fair</button>
           <button onclick="resetAllForces()" class="btn bg-zinc-800 hover:bg-zinc-700 text-xs px-3 py-1.5 border border-zinc-600" style="width:auto">↩ Alle Forcings Reset</button>
         </div>
       </div>
@@ -1845,7 +1878,7 @@ function renderAdminGamesGrid() {
   };
 
   const chanceWidget = (chanceKey) => {
-    const cur = d['chance_' + chanceKey] !== undefined ? Number(d['chance_' + chanceKey]) : (d.global_win_chance !== undefined ? Number(d.global_win_chance) : 50);
+    const cur = d['chance_' + chanceKey] !== undefined ? Number(d['chance_' + chanceKey]) : 50;
     return `<div class="pt-2 mt-2 border-t border-zinc-800/80">
       <div class="flex items-center justify-between text-[11px] mb-1">
         <span class="text-zinc-400">🎛️ Chancen-Regler:</span>
@@ -2636,12 +2669,23 @@ function renderAdminUsers(data) {
 }
 
 /* ================= TAB 4: SLOT-JACKPOTS & ECONOMY ================= */
-function renderAdminEconomyTab(c) { setTimeout(() => { admLoadCustomSlots(); admLoadAllSlotConfigs(); admLoadPromos(); }, 0);
+function renderAdminEconomyTab(c) { setTimeout(() => { admLoadCustomSlots(); admLoadAllSlotConfigs(); admLoadPromos(); admLoadBankLoans(); }, 0);
   const d = ADM_DATA;
   const gpot = Number(d.jackpot || 100000);
   const gMin = Math.max(1000, Math.floor(gpot / 25000));
 
   c.innerHTML = `
+    <!-- BANK-KREDIT-ANFRAGEN -->
+    <div class="glass rounded-2xl p-5 border-2 border-emerald-500/50 mb-4">
+      <div class="flex items-center justify-between mb-3">
+        <div>
+          <div class="font-black text-lg text-emerald-300">🏦 Bank-Kredit-Anfragen (Admin-Genehmigung)</div>
+          <div class="text-xs text-zinc-400">Spieler beantragen Kredite bei der Casino-Bank (+15% Zinsen). Erst nach deiner Genehmigung wird ausgezahlt.</div>
+        </div>
+        <button onclick="admLoadBankLoans()" class="btn bg-zinc-800 hover:bg-zinc-700 text-xs px-3 py-1.5" style="width:auto">↻ Aktualisieren</button>
+      </div>
+      <div id="adm_bank_loans_box" class="space-y-2 text-xs text-zinc-400">Lade Kredit-Anfragen...</div>
+    </div>
     <!-- ECHTER GLOBAL POT VERWALTEN (ÄNDERN & RESETTEN) -->
     <div class="glass jackpot-card rounded-2xl p-5 border-2 border-yellow-400/70 mb-4">
       <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
@@ -5123,13 +5167,42 @@ async function claimLeagueReward() {
 VIEWS.bank = () => '<div id="bankbox" class="text-zinc-400">Lade Pfandhaus & Kredite...</div>'
 PAGEINIT.bank = async () => {
   await loadProfile()
-  const d = await call('loans_list', {}), box = $('bankbox')
+  const [d, bankLoans] = await Promise.all([call('loans_list', {}), call('bank_loan_my_list', {}, true)])
+  const box = $('bankbox')
   if (!d || !box) return
   const myLux = (ME.owned || []).filter(x => x.startsWith('lux:')).map(x => LUXURY_ITEMS.find(i => 'lux:' + i.id === x)).filter(Boolean)
   const pawned = (d.pawned || []).map(x => LUXURY_ITEMS.find(i => 'lux:' + i.id === x)).filter(Boolean)
   const loans = d.loans || []
+  const bList = Array.isArray(bankLoans) ? bankLoans : []
 
   box.innerHTML = `
+    <!-- CASINO-BANK KREDIT (MIT ADMIN-GENEHMIGUNG) -->
+    <div class="glass rounded-2xl p-4 border-2 border-emerald-500/50 bg-emerald-950/15 mb-4">
+      <div class="font-black text-emerald-300 text-base mb-1">🏦 Casino-Bank Kredit beantragen (Admin-Genehmigung)</div>
+      <div class="text-xs text-zinc-400 mb-3">Beantrage Geld von der Casino-Bank (+15 % Zinsen). Sobald der Admin deine Anfrage annimmt, wird das Geld sofort gutgeschrieben.</div>
+      <div class="flex flex-wrap gap-2 mb-3">
+        <input id="bl-amt" type="number" min="100" max="50000000" placeholder="Betrag in FC (z.B. 50000)" class="inp flex-1 min-w-[160px] text-xs">
+        <input id="bl-reason" type="text" maxlength="160" placeholder="Grund (optional, z.B. All-In Comeback)" class="inp flex-1 min-w-[180px] text-xs">
+        <button onclick="reqBankLoan()" class="btn bg-emerald-600 hover:bg-emerald-500 text-xs font-black px-4 py-2" style="width:auto">📨 Kredit beantragen</button>
+      </div>
+      <div class="space-y-1.5">
+        ${bList.length ? bList.map(l => {
+          const rem = Math.max(0, Number(l.repay_amount) - Number(l.repaid))
+          const stBadge = l.status === 'pending' ? '⏳ Wartet auf Admin' : l.status === 'approved' ? '✅ Aktiv' : l.status === 'repaid' ? '🎉 Abbezahlt' : '❌ Abgelehnt'
+          return `<div class="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl bg-black/30 border border-zinc-800 text-xs">
+            <div>
+              <b>${Number(l.amount).toLocaleString('de-DE')} FC</b> → Rückzahlung: <b class="text-yellow-300">${Number(l.repay_amount).toLocaleString('de-DE')} FC</b>
+              <span class="text-zinc-400">(Bezahlt: ${Number(l.repaid).toLocaleString('de-DE')} FC · Rest: ${rem.toLocaleString('de-DE')} FC)</span>
+              ${l.reason ? `<div class="text-[11px] text-zinc-500">Grund: ${esc(l.reason)}</div>` : ''}
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-zinc-800 text-zinc-200">${stBadge}</span>
+              ${l.status === 'approved' ? `<button onclick="repayBankLoan(${l.id}, ${rem})" class="btn bg-yellow-500 hover:bg-yellow-400 text-black text-[11px] font-black px-2.5 py-1" style="width:auto">💸 Alles tilgen (${rem.toLocaleString('de-DE')})</button><button onclick="repayBankLoanPrompt(${l.id}, ${rem})" class="btn bg-zinc-700 text-white text-[11px] font-bold px-2 py-1" style="width:auto">Teilbetrag</button>` : ''}
+            </div>
+          </div>`
+        }).join('') : '<div class="text-xs text-zinc-500">Noch keine Bank-Kredite beantragt.</div>'}
+      </div>
+    </div>
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
       <div class="glass rounded-2xl p-4 border border-amber-500/40">
         <div class="font-black text-amber-400 mb-2">💎 Pfandhaus (Sofort-Cash 60%)</div>
@@ -5171,6 +5244,46 @@ async function sendLoanOffer() {
   if (d) { sfx.claim(); setBalance(d.balance); toast('💳 Kreditangebot gesendet!'); PAGEINIT.bank() }
 }
 async function actLoan(fn, lid) { sfx.click(); const d = await call(fn, { lid }); if (d) { sfx.claim(); setBalance(d.balance); toast('✔ Erledigt!'); PAGEINIT.bank() } }
+async function reqBankLoan() {
+  const amt = Number(($('bl-amt') || {}).value), reason = ($('bl-reason') || {}).value || ''
+  if (!(amt >= 100)) return toast('Mindestens 100 FC eingeben!')
+  sfx.click()
+  const d = await call('bank_loan_request', { req_amount: amt, req_reason: reason })
+  if (d) { sfx.claim(); toast('📨 Kredit-Anfrage an Admin gesendet!'); PAGEINIT.bank() }
+}
+async function repayBankLoan(lid, amt) {
+  sfx.click()
+  const d = await call('bank_loan_repay', { loan_id: lid, pay_amount: amt })
+  if (d) { sfx.claim(); setBalance(d.balance); toast('💸 ' + Number(d.paid).toLocaleString('de-DE') + ' FC zurückgezahlt!'); PAGEINIT.bank() }
+}
+function repayBankLoanPrompt(lid, maxRem) {
+  const v = Number(prompt('Wie viel FC möchtest du zurückzahlen? (Max ' + maxRem.toLocaleString('de-DE') + ' FC)', Math.min(maxRem, 1000)))
+  if (v >= 1) repayBankLoan(lid, v)
+}
+async function admLoadBankLoans() {
+  const box = $('adm_bank_loans_box'); if (!box) return
+  const rows = await call('admin_bank_loans', {}, true)
+  if (!Array.isArray(rows) || !rows.length) { box.innerHTML = '<div class="text-zinc-500">Keine Bank-Kredit-Anfragen vorhanden.</div>'; return }
+  box.innerHTML = rows.map(l => `
+    <div class="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl bg-black/35 border ${l.status === 'pending' ? 'border-amber-500/60' : 'border-zinc-800'}">
+      <div>
+        <b class="text-white">${esc(l.username)}</b> · Betrag: <b class="text-emerald-400">${Number(l.amount).toLocaleString('de-DE')} FC</b> → Rückzahlung: <b class="text-yellow-300">${Number(l.repay_amount).toLocaleString('de-DE')} FC</b>
+        <span class="text-zinc-400">(Bezahlt: ${Number(l.repaid).toLocaleString('de-DE')} FC)</span>
+        ${l.reason ? `<div class="text-[11px] text-zinc-400">Grund: ${esc(l.reason)}</div>` : ''}
+      </div>
+      <div class="flex items-center gap-1.5">
+        ${l.status === 'pending'
+          ? `<button onclick="admDecideBankLoan(${l.id}, true)" class="btn bg-emerald-600 hover:bg-emerald-500 text-xs font-black px-3 py-1" style="width:auto">✅ Genehmigen</button>
+             <button onclick="admDecideBankLoan(${l.id}, false)" class="btn bg-red-700 hover:bg-red-600 text-xs font-bold px-3 py-1" style="width:auto">❌ Ablehnen</button>`
+          : `<span class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-zinc-800 text-zinc-300">${l.status}</span>`}
+      </div>
+    </div>`).join('')
+}
+async function admDecideBankLoan(id, approve) {
+  sfx.click()
+  const d = await call('admin_bank_loan_decide', { loan_id: id, approve })
+  if (d) { toast(approve ? '✅ Kredit genehmigt & ausgezahlt!' : '❌ Kredit abgelehnt'); admLoadBankLoans(); loadAdminFullDashboard() }
+}
 
 
 /* ================= ALLMÄCHTIGER GOD-EDITOR (ALLES ÄNDERN) ================= */
