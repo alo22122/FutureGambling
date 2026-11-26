@@ -65,6 +65,10 @@
   @keyframes jpGlow{from{box-shadow:0 0 15px rgba(234,179,8,.25);border-color:rgba(234,179,8,.5)}to{box-shadow:0 0 35px rgba(245,158,11,.6);border-color:rgba(252,211,77,1)}}
   .gold-shimmer{background:linear-gradient(90deg,#fef08a,#eab308,#fef08a);-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:shimmer 3s infinite linear;background-size:200% auto}
   @keyframes shimmer{to{background-position:200% center}}
+  .econ-ticker-wrap{overflow:hidden;white-space:nowrap;position:relative}
+  .econ-ticker-track{display:inline-flex;gap:2.5rem;padding-left:100%;animation:tickerScroll 28s linear infinite}
+  .econ-ticker-wrap:hover .econ-ticker-track{animation-play-state:paused}
+  @keyframes tickerScroll{0%{transform:translateX(0)}100%{transform:translateX(-100%)}}
 </style>
 </head>
 <body>
@@ -5400,7 +5404,19 @@ const BIZ_TIERS = {
   4: { name: 'Mega-Syndikat', icon: '🏦', fee: 2500000, minTr: 500000, reqWag: 500000, baseVal: 65000, matCost: 150000, repCost: 120000, upk: 60000, maxSt: 350, upgCost: 7500000 },
   5: { name: 'Kapitalisten-Imperium', icon: '👑', fee: 10000000, minTr: 2000000, reqWag: 2000000, baseVal: 280000, matCost: 500000, repCost: 400000, upk: 250000, maxSt: 1000, upgCost: 0 }
 }
-let compData = null, activeTaskModal = null, compTab = 'jobs', hqTab = 'ops'
+let compData = null, activeTaskModal = null, compTab = 'jobs', hqTab = 'ops', activeHqCid = null
+
+function renderTickerBar(ticker) {
+  const items = Array.isArray(ticker) && ticker.length ? ticker : [{ icon: '📰', message: 'Willkommen am Kapitalismus-Marktplatz!', tone: 'info' }]
+  const html = items.map(t => {
+    const col = t.tone === 'up' ? 'text-emerald-300' : t.tone === 'down' ? 'text-rose-300' : 'text-amber-200'
+    return `<span class="${col} font-bold">${esc(t.icon || '📰')} ${esc(t.message)}</span>`
+  }).join('<span class="text-zinc-600 mx-2">•</span>')
+  return `<div class="econ-ticker-wrap rounded-xl bg-zinc-950/90 border border-yellow-500/30 px-3 py-1.5 text-[11px] flex items-center gap-2">
+    <span class="shrink-0 px-2 py-0.5 rounded bg-yellow-500/20 text-yellow-300 font-black text-[10px]">📰 LIVE</span>
+    <div class="econ-ticker-wrap flex-1"><div class="econ-ticker-track">${html}</div></div>
+  </div>`
+}
 
 VIEWS.companies = () => `
   <div id="comp_box" class="space-y-4 text-zinc-400">Lade Firmen &amp; Arbeitsmarkt...</div>
@@ -5416,15 +5432,22 @@ async function loadCompanies() {
   const isBroke = Number(d.balance || 0) < 100
   const comps = d.companies || []
   const prods = d.products || []
-  const myComp = comps.find(c => ME && c.owner_id === ME.id)
+  const myComps = comps.filter(c => ME && c.owner_id === ME.id)
+  const myComp = myComps[0] || null
+  const tender = d.active_tender || null
+  const shorts = d.my_shorts || []
+  const tenderInd = tender && tender.industry !== 'any' ? (INDUSTRIES[tender.industry] || null) : null
+  const tenderSecsLeft = tender ? Math.max(0, Math.floor((new Date(tender.ends_at) - Date.now()) / 1000)) : 0
+  const tenderTimeStr = tenderSecsLeft > 0 ? `${Math.floor(tenderSecsLeft/3600)}h ${Math.floor((tenderSecsLeft%3600)/60)}m` : 'Läuft ab...'
+  const matchComp = (tender && !tender.winner_company_id) ? myComps.find(c => (tender.industry === 'any' || c.industry === tender.industry) && Number(c.prod_points) >= Number(tender.target_points)) : null
 
   const tabBar = `
+    ${renderTickerBar(d.ticker)}
     <div class="flex flex-wrap items-center justify-between gap-2">
       <div class="flex gap-1.5 flex-wrap">
-        <button onclick="sfx.click();compTab='jobs';loadCompanies()" class="px-3.5 py-2 rounded-xl text-xs font-black transition ${compTab==='jobs'?'bg-emerald-600 text-white shadow':'bg-zinc-800 text-zinc-300 hover:text-white'}">💼 Jobs (${comps.length})</button>
-        ${myComp
-          ? `<button onclick="sfx.click();show('company_hq')" class="px-3.5 py-2 rounded-xl text-xs font-black bg-gradient-to-r from-yellow-500 to-amber-500 text-black shadow">🏛️ Mein CEO-HQ (${esc(myComp.name)})</button>`
-          : `<button onclick="sfx.click();compTab='found';loadCompanies()" class="px-3.5 py-2 rounded-xl text-xs font-black transition ${compTab==='found'?'bg-yellow-500 text-black shadow':'bg-zinc-800 text-zinc-300 hover:text-white'}">🏗️ Firma gründen</button>`}
+        <button onclick="sfx.click();compTab='jobs';loadCompanies()" class="px-3.5 py-2 rounded-xl text-xs font-black transition ${compTab==='jobs'?'bg-emerald-600 text-white shadow':'bg-zinc-800 text-zinc-300 hover:text-white'}">💼 Jobs &amp; Börse (${comps.length})</button>
+        ${myComps.length ? `<button onclick="sfx.click();activeHqCid=${myComps[0].id};show('company_hq')" class="px-3.5 py-2 rounded-xl text-xs font-black bg-gradient-to-r from-yellow-500 to-amber-500 text-black shadow">🏛️ Konzern-HQ (${myComps.length}/5)</button>` : ''}
+        ${myComps.length < 5 ? `<button onclick="sfx.click();compTab='found';loadCompanies()" class="px-3.5 py-2 rounded-xl text-xs font-black transition ${compTab==='found'?'bg-yellow-500 text-black shadow':'bg-zinc-800 text-zinc-300 hover:text-white'}">🏗️ Firma gründen (${myComps.length}/5)</button>` : ''}
         <button onclick="sfx.click();compTab='safety';loadCompanies()" class="px-3.5 py-2 rounded-xl text-xs font-black transition ${compTab==='safety'?'bg-cyan-600 text-white shadow':'bg-zinc-800 text-zinc-300 hover:text-white'}">🛡️ Rettungsschirm &amp; Info</button>
       </div>
       <div class="flex gap-1.5">
@@ -5504,7 +5527,7 @@ async function loadCompanies() {
         const col = dp >= 115 ? 'text-emerald-400 border-emerald-500/40' : dp <= 75 ? 'text-red-400 border-red-500/40' : 'text-amber-300 border-zinc-700'
         return `<div class="glass rounded-xl p-2.5 border ${col} text-center"><div class="text-[11px] text-zinc-400">${iv.icon} ${iv.name}</div><div class="text-sm font-black font-mono">${dp} % Nachfrage</div></div>`
       }).join('')}
-    </div>` : ''}` : '') + (compTab === 'found' && !myComp ? `
+    </div>` : ''}` : '') + (compTab === 'found' && myComps.length < 5 ? `
 
     <!-- NEUE FIRMA GRÜNDEN (5 BUSINESS TIERS) -->
     <div class="glass rounded-2xl p-4 border border-yellow-500/40 bg-yellow-950/10 space-y-3">
@@ -5542,8 +5565,47 @@ async function loadCompanies() {
       </div>
     </div>` : '') + (compTab === 'jobs' ? `
 
-    <!-- FREIER ARBEITSMARKT -->
-    <div>
+    <!-- FREIER ARBEITSMARKT, STAATS-AUSSCHREIBUNG & SHORTING -->
+    <div class="space-y-4">
+      ${tender ? `<div class="glass rounded-2xl p-4 border-2 ${tender.winner_company_id ? 'border-zinc-700 bg-zinc-900/60' : 'border-amber-400/70 bg-gradient-to-r from-amber-950/30 to-yellow-950/20'} flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <div class="text-[11px] font-black uppercase text-amber-300">📜 Staats-Ausschreibung (Live-Wettbewerb · ⏱️ ${tenderTimeStr})</div>
+          <div class="text-sm font-black text-white">${esc(tender.title)}</div>
+          <div class="text-xs text-zinc-300">Ziel: <b>${tender.target_points} Waren-Punkte</b> (${tenderInd ? `${tenderInd.icon} ${tenderInd.name}` : '🌐 Jede Branche'}) · Staats-Pot: <b class="text-emerald-400 font-mono">+${Number(tender.reward_fc).toLocaleString('de-DE')} FC</b></div>
+        </div>
+        <div>
+          ${tender.winner_company_id
+            ? `<span class="px-3 py-1.5 rounded-xl bg-emerald-950/60 border border-emerald-500/40 text-emerald-300 text-xs font-black">🏆 Gewonnen von ${esc(tender.winner_name)} (${esc(tender.winner_owner)})</span>`
+            : matchComp
+              ? `<button onclick="deliverTender(${matchComp.id})" class="btn bg-gradient-to-r from-amber-400 to-yellow-500 text-black text-xs font-black px-4 py-2 shadow-lg">📜 Jetzt mit ${esc(matchComp.name)} liefern!</button>`
+              : `<span class="px-3 py-1.5 rounded-xl bg-zinc-800 text-zinc-400 text-[11px]">${myComps.length ? `Braucht ${tender.target_points} Pkt im Lager` : 'Nur für Firmen-CEOs'}</span>`}
+        </div>
+      </div>` : ''}
+
+      ${shorts.length ? `<div class="glass rounded-2xl p-4 border border-rose-500/50 bg-rose-950/15 space-y-2">
+        <div class="font-black text-rose-300 text-sm">🏅 Deine aktiven Leerverkäufe / Short-Wetten (${shorts.length})</div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          ${shorts.map(s => {
+            const pDrop = (Number(s.entry_share_price) - Math.max(1, Number(s.current_share_price))) / Math.max(1, Number(s.entry_share_price))
+            const hDrop = (Number(s.entry_health) - Number(s.current_health)) * 0.015
+            const sBon = s.is_striking ? 0.25 : 0
+            const mult = Math.max(0, Math.min(4, 1 + pDrop * 2 + hDrop + sBon))
+            const estPay = Math.floor(Number(s.stake) * mult)
+            const pnl = estPay - Number(s.stake)
+            return `<div class="p-2.5 rounded-xl bg-black/40 border border-zinc-800 flex items-center justify-between gap-2 text-xs">
+              <div>
+                <div class="font-black text-white">${esc(s.company_icon||'🏢')} ${esc(s.company_name)} ${s.is_striking ? '<span class="text-red-400">⚡ STREIK (+25%)</span>' : ''}</div>
+                <div class="text-[11px] text-zinc-400">Einsatz: <b>${Number(s.stake).toLocaleString('de-DE')}</b> · Einstieg: ${Number(s.entry_share_price).toLocaleString('de-DE')} → Jetzt: ${Number(s.current_share_price).toLocaleString('de-DE')}</div>
+              </div>
+              <div class="text-right">
+                <div class="font-mono font-black ${pnl>=0?'text-emerald-400':'text-rose-400'}">${mult.toFixed(2)}× (${pnl>=0?'+':''}${pnl.toLocaleString('de-DE')})</div>
+                <button onclick="closeCompanyShort(${s.id})" class="btn bg-rose-600 hover:bg-rose-500 text-white text-[11px] font-black px-2.5 py-1 mt-1" style="width:auto">💰 Glattstellen</button>
+              </div>
+            </div>`
+          }).join('')}
+        </div>
+      </div>` : ''}
+
       <div class="flex items-center justify-between mb-2">
         <div class="font-black text-white text-sm">💼 Freier Arbeitsmarkt (${comps.length} Firmen · 0 FC Einsatz zum Arbeiten!)</div>
         <button onclick="loadCompanies()" class="btn bg-zinc-800 text-xs px-3 py-1" style="width:auto">↻ Aktualisieren</button>
@@ -5596,9 +5658,10 @@ async function loadCompanies() {
                 ${!isMine ? (c.my_joined
                   ? `<button onclick="leaveCompany(${c.id})" class="btn bg-zinc-800 hover:bg-red-900/60 text-zinc-300 text-xs font-bold px-2.5 py-2" style="width:auto">🚪 Austreten</button>`
                   : `<button onclick="joinCompany(${c.id})" class="btn bg-indigo-700 hover:bg-indigo-600 text-white text-xs font-bold px-2.5 py-2" style="width:auto">🤝 Beitreten</button>`) : ''}
-                ${isMine ? `<button onclick="sfx.click();show('company_hq')" class="btn bg-yellow-500 text-black text-xs font-black px-3 py-2" style="width:auto">🏛️ CEO-HQ</button>` : (c.ipo_open ? `<button onclick="buyCompShare(${c.id}, 1)" class="btn bg-cyan-900/60 hover:bg-cyan-800 text-cyan-200 text-xs font-bold px-3 py-2" style="width:auto">📈 +1 Aktie</button>` : `<span class="px-2.5 py-2 rounded-xl bg-zinc-900 text-zinc-500 text-[11px] border border-zinc-800">🔒 IPO zu</span>`)}
+                ${isMine ? `<button onclick="sfx.click();activeHqCid=${c.id};show('company_hq')" class="btn bg-yellow-500 text-black text-xs font-black px-3 py-2" style="width:auto">🏛️ CEO-HQ</button>` : (c.ipo_open ? `<button onclick="buyCompShare(${c.id}, 1)" class="btn bg-cyan-900/60 hover:bg-cyan-800 text-cyan-200 text-xs font-bold px-3 py-2" style="width:auto">📈 +1 Aktie</button>` : `<span class="px-2.5 py-2 rounded-xl bg-zinc-900 text-zinc-500 text-[11px] border border-zinc-800">🔒 IPO zu</span>`)}
                 ${c.my_shares > 0 ? `<button onclick="sellCompShare(${c.id}, 1)" class="btn bg-zinc-800 hover:bg-zinc-700 text-xs font-bold px-3 py-2" style="width:auto">📉 -1</button><button onclick="sellCompShare(${c.id}, ${c.my_shares})" class="btn bg-rose-800 hover:bg-rose-700 text-xs font-bold px-2.5 py-2" style="width:auto">Alles vk</button>` : ''}
-                ${!myComp && !isMine ? `<button onclick="sendMaOffer(${c.id}, '${esc(c.name)}')" class="btn bg-amber-700/80 hover:bg-amber-600 text-xs font-bold px-2.5 py-2" style="width:auto">🤝 M&amp;A</button>` : ''}
+                ${!isMine ? `<button onclick="openCompanyShort(${c.id}, '${esc(c.name)}')" class="btn bg-rose-900/70 hover:bg-rose-800 text-rose-200 text-xs font-bold px-2.5 py-2" style="width:auto">📉 Shorten</button>` : ''}
+                ${myComps.length < 5 && !isMine ? `<button onclick="sendMaOffer(${c.id}, '${esc(c.name)}')" class="btn bg-amber-700/80 hover:bg-amber-600 text-xs font-bold px-2.5 py-2" style="width:auto">🤝 M&amp;A</button>` : ''}
                 ${!isMine && c.shares_issued >= 5 && (c.my_shares * 2 > c.shares_issued) ? `<button onclick="takeoverCompany(${c.id})" class="btn bg-gradient-to-r from-yellow-500 to-amber-500 text-black text-xs font-black px-3 py-2" style="width:auto">👑 Übernahme</button>` : ''}
               </div>
             </div>
@@ -5613,7 +5676,38 @@ async function createCompany() {
   const tr = Number(($('cmp_treas')||{}).value||0), wg = Number(($('cmp_wage')||{}).value||500)
   sfx.click()
   const d = await call('company_create', { cname: name, cicon: INDUSTRIES[ind].icon, cindustry: ind, init_treasury: tr, wage: wg, ctier })
-  if (d) { sfx.claim(); setBalance(d.balance); toast('🏢 Business gegründet! Willkommen im CEO-HQ!'); show('company_hq') }
+  if (d) { sfx.claim(); activeHqCid = d.id || null; setBalance(d.balance); toast('🏢 Business gegründet! Willkommen im Konzern-HQ!'); show('company_hq') }
+}
+async function deliverTender(cid) {
+  sfx.click()
+  const d = await call('tender_deliver', { cid })
+  if (d) { sfx.jackpot(); toast('🏆 Staatsauftrag gewonnen! +' + Number(d.reward).toLocaleString('de-DE') + ' FC aufs Firmenkonto!'); loadCompanies() }
+}
+async function takeCompanyLoan(cid, maxLoan) {
+  const raw = prompt(`🏛️ B2B-Investitionskredit (5.000 bis ${maxLoan.toLocaleString('de-DE')} FC, 15% Festzins, auto-Tilgung 25% bei Verkäufen):`, String(Math.min(maxLoan, 50000)))
+  if (raw === null) return
+  sfx.click()
+  const d = await call('company_loan', { cid, act: 'take', amount: Number(raw) || 0 })
+  if (d) { sfx.claim(); toast('🏛️ Kredit genehmigt! Rückzahlung: ' + Number(d.loan_remaining).toLocaleString('de-DE') + ' FC'); loadCompanyHq() }
+}
+async function repayCompanyLoan(cid, remaining) {
+  const raw = prompt(`🏛️ Kredit tilgen (Offen: ${Number(remaining).toLocaleString('de-DE')} FC, Betrag oder 0 für Komplett-Tilgung):`, String(remaining))
+  if (raw === null) return
+  sfx.click()
+  const d = await call('company_loan', { cid, act: 'repay', amount: Number(raw) || 0 })
+  if (d) { sfx.claim(); toast('✅ Kredit getilgt (-' + Number(d.paid).toLocaleString('de-DE') + ' FC)!'); loadCompanyHq() }
+}
+async function openCompanyShort(cid, cname) {
+  const raw = prompt(`📉 Short-Wette (Leerverkauf) gegen „${cname}“ (500 – 500.000 FC).\nDu verdienst, wenn Aktienkurs oder Zustand sinken (+25% Streik-Bonus!):`, '10000')
+  if (raw === null) return
+  sfx.click()
+  const d = await call('company_short', { cid, act: 'open', val: Number(raw) || 0 })
+  if (d) { sfx.claim(); setBalance(d.balance); toast('📉 Short-Position gegen ' + cname + ' eröffnet!'); loadCompanies() }
+}
+async function closeCompanyShort(sid) {
+  sfx.click()
+  const d = await call('company_short', { cid: sid, act: 'close', val: 0 })
+  if (d) { sfx.win(); setBalance(d.balance); toast('💰 Short geschlossen (' + d.mult + '×): +' + Number(d.payout).toLocaleString('de-DE') + ' FC!'); loadCompanies() }
 }
 async function manageComp(cid, act, val = 0) {
   if (val === null) return
@@ -5710,7 +5804,9 @@ PAGEINIT.company_hq = () => loadCompanyHq()
 async function loadCompanyHq() {
   const d = await call('company_list', {}), box = $('hq_box')
   if (!d || !box) return
-  const myComp = (d.companies || []).find(c => ME && c.owner_id === ME.id)
+  const myComps = (d.companies || []).filter(c => ME && c.owner_id === ME.id)
+  const myComp = myComps.find(c => c.id === activeHqCid) || myComps[0] || null
+  if (myComp) activeHqCid = myComp.id
   if (!myComp) {
     box.innerHTML = `<div class="glass rounded-2xl p-8 text-center space-y-3 border border-yellow-500/40">
       <div class="text-4xl">🏛️</div>
@@ -5744,8 +5840,19 @@ async function loadCompanyHq() {
   const matPrice = (isKmu && myComp.alliance_id) ? Math.floor(t.matCost * 0.70) : t.matCost
   const robCost = ((myComp.robot_level || 0) + 1) * 250000
   const onStrike = myComp.strike_until && new Date(myComp.strike_until) > new Date()
+  const maxLoan = ({ 1: 50000, 2: 250000, 3: 1000000, 4: 5000000, 5: 15000000 })[myComp.tier || 1] || 50000
+  const loanRem = Number(myComp.loan_remaining || 0)
+  const konzernCash = myComps.reduce((s, c) => s + Number(c.treasury || 0), 0)
 
   box.innerHTML = `
+    ${renderTickerBar(d.ticker)}
+    ${myComps.length >= 1 ? `<div class="glass rounded-2xl p-3 border border-yellow-500/30 bg-yellow-950/10 flex flex-wrap items-center justify-between gap-2">
+      <div class="flex items-center gap-1.5 flex-wrap">
+        <span class="text-[11px] font-black text-yellow-300 mr-1">🏢 Konzern (${myComps.length}/5 · Σ ${konzernCash.toLocaleString('de-DE')} FC):</span>
+        ${myComps.map(c => `<button onclick="sfx.click();activeHqCid=${c.id};loadCompanyHq()" class="px-2.5 py-1 rounded-xl text-xs font-black transition ${c.id===myComp.id?'bg-yellow-500 text-black shadow':'bg-zinc-800 text-zinc-300 hover:text-white'}">${esc(c.icon||'🏢')} ${esc(c.name)}</button>`).join('')}
+      </div>
+      ${myComps.length < 5 ? `<button onclick="sfx.click();compTab='found';show('companies')" class="btn bg-emerald-700 hover:bg-emerald-600 text-xs font-black px-3 py-1" style="width:auto">+ Weitere Firma</button>` : ''}
+    </div>` : ''}
     <div class="glass rounded-2xl p-5 border-2 border-yellow-400/60 bg-gradient-to-br from-yellow-950/20 via-zinc-900 to-zinc-950">
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div class="flex items-center gap-3">
@@ -5802,6 +5909,19 @@ async function loadCompanyHq() {
         </div>
         <div class="text-[11px] text-purple-200 bg-purple-950/30 border border-purple-500/30 rounded-xl p-2">
           <b>🎁 Dein Firmen-Boost:</b> ${esc(pMeta.desc)}
+        </div>
+      </div>
+
+      <!-- B2B-BANK (UNTERNEHMENS-KREDITE) -->
+      <div class="glass rounded-2xl p-4 border border-cyan-500/30 bg-cyan-950/10 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <div class="font-black text-cyan-300 text-sm">🏛️ B2B-Bank (Unternehmens-Kredit)</div>
+          <div class="text-xs text-zinc-300">${loanRem > 0 ? `Offene Restschuld: <b class="text-rose-400 font-mono">${loanRem.toLocaleString('de-DE')} FC</b> (25% jedes Warenverkaufs tilgt automatisch)` : `Kreditrahmen für Tier ${myComp.tier||1}: bis <b class="text-emerald-300 font-mono">${maxLoan.toLocaleString('de-DE')} FC</b> (15% Festzins)`}</div>
+        </div>
+        <div class="flex gap-2">
+          ${loanRem > 0
+            ? `<button onclick="repayCompanyLoan(${myComp.id}, ${loanRem})" class="btn bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black px-3 py-2" style="width:auto">💸 Kredit tilgen</button>`
+            : `<button onclick="takeCompanyLoan(${myComp.id}, ${maxLoan})" class="btn bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-black px-3 py-2" style="width:auto">🏛️ Kredit aufnehmen</button>`}
         </div>
       </div>` : ''}
 
