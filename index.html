@@ -4140,7 +4140,7 @@ async function buyMysteryCase(cid, cnt = 1) {
   if (!d) return
   setBalance(d.balance)
   sfx.claim()
-  toast(`🛒 ${cnt}× ${cObj.name} gekauft! (Jetzt ${d.qty}× oben im Inventar)`)
+  toast(`🛒 ${cnt}× ${cObj.name} gekauft!${d.discounted ? ' (🎟️ 20% Rabatt eingelöst!)' : ''} (Jetzt ${d.qty}× oben im Inventar)`)
   loadCaseInventory()
 }
 
@@ -5333,12 +5333,24 @@ async function loadCompanies() {
         <button onclick="startMiniTask(null)" class="btn ${isBroke ? 'bg-amber-500 hover:bg-amber-400 text-black' : 'bg-zinc-800 text-zinc-400'} text-xs font-black py-1.5">🛠️ Notfall-Schicht starten</button>
       </div>
       <div class="glass rounded-2xl p-4 border border-cyan-500/30 bg-cyan-950/10">
-        <div class="text-xs font-black text-cyan-300">🏛️ Staatliche Job-Kasse &amp; Inventar</div>
+        <div class="text-xs font-black text-cyan-300">🏛️ Job-Kasse &amp; Firmen-Produkte</div>
         <div class="text-xl font-black font-mono text-yellow-300 my-1">${Number(d.state_job_fund || 0).toLocaleString('de-DE')} FC</div>
-        <div class="text-[11px] text-zinc-400 mb-1.5">Wird durch 5 % Wirtschafts-Steuer gefüllt.</div>
-        <div class="flex flex-wrap gap-1">${prods.length ? prods.map(p => `<span class="px-2 py-0.5 rounded-lg bg-zinc-900 border border-zinc-700 text-[10px] text-white">${(PRODUCT_META[p.product_key]||{}).icon||'📦'} ${(PRODUCT_META[p.product_key]||{}).name||p.product_key}: <b>${p.qty}×</b></span>`).join('') : '<span class="text-[10px] text-zinc-500">Noch keine Firmen-Produkte im Inventar.</span>'}</div>
+        <div class="text-[11px] text-zinc-400 mb-1">Aktive Buffs:
+          ${(d.buffs&&d.buffs.case_discount_uses>0)?`<b class="text-pink-300">🎟️ -20% Kisten (${d.buffs.case_discount_uses}×)</b> `:''}
+          ${(d.buffs&&d.buffs.vault_shield_uses>0)?`<b class="text-cyan-300">🛡️ Schild (${d.buffs.vault_shield_uses}×)</b> `:''}
+          ${(d.buffs&&d.buffs.quote_token_uses>0)?`<b class="text-emerald-300">📈 +10% Quote (${d.buffs.quote_token_uses}×)</b> `:''}
+          ${(d.buffs&&d.buffs.crypto_boost_uses>0)?`<b class="text-yellow-300">⚡ Krypto (${d.buffs.crypto_boost_uses}×)</b>`:''}
+          ${(!d.buffs||(!d.buffs.case_discount_uses&&!d.buffs.vault_shield_uses&&!d.buffs.quote_token_uses&&!d.buffs.crypto_boost_uses))?'<span class="text-zinc-500">keine</span>':''}
+        </div>
+        <div class="flex flex-wrap gap-1">${prods.length ? prods.map(p => `<button onclick="useProduct('${p.product_key}')" class="px-2 py-1 rounded-lg bg-zinc-900 hover:bg-emerald-900/50 border border-zinc-700 hover:border-emerald-500/50 text-[10px] text-white transition">${(PRODUCT_META[p.product_key]||{}).icon||'📦'} ${(PRODUCT_META[p.product_key]||{}).name||p.product_key} (<b>${p.qty}×</b>) · <b class="text-emerald-300">⚡ Einlösen</b></button>`).join('') : '<span class="text-[10px] text-zinc-500">Noch keine Firmen-Produkte im Inventar.</span>'}</div>
       </div>
     </div>
+
+    ${d.report ? `
+    <div class="glass rounded-2xl p-3.5 border border-amber-500/40 bg-amber-950/10 flex flex-wrap items-center justify-between gap-2 text-xs">
+      <div class="flex items-center gap-2"><span class="text-xl">📊</span><div><b class="text-amber-300">Wirtschafts-Bericht:</b> ${d.report.company_count} Firmen · ${Number(d.report.total_tasks||0).toLocaleString('de-DE')} Schichten · <b class="text-emerald-300">${Number(d.report.total_wages||0).toLocaleString('de-DE')} FC</b> Lohn ausgezahlt</div></div>
+      ${d.report.top_employer && d.report.top_employer.name ? `<div class="px-3 py-1 rounded-xl bg-yellow-500/15 border border-yellow-400/50 text-yellow-200 font-bold">🏆 Unternehmer des Tages: ${esc(d.report.top_employer.icon||'🏢')} ${esc(d.report.top_employer.name)} (${esc(d.report.top_employer.owner_name)})</div>` : ''}
+    </div>` : ''}
 
     <!-- NEUE FIRMA GRÜNDEN -->
     <div class="glass rounded-2xl p-4 border border-yellow-500/40 bg-yellow-950/10">
@@ -5400,13 +5412,14 @@ async function loadCompanies() {
                 </button>
                 <button onclick="buyCompShare(${c.id}, 1)" class="btn bg-cyan-900/60 hover:bg-cyan-800 text-cyan-200 text-xs font-bold px-3 py-2" style="width:auto">📈 +1 Aktie</button>
                 ${c.my_shares > 0 ? `<button onclick="sellCompShare(${c.id}, 1)" class="btn bg-zinc-800 hover:bg-zinc-700 text-xs font-bold px-3 py-2" style="width:auto">📉 -1</button>` : ''}
+                ${!isMine && c.shares_issued >= 5 && (c.my_shares * 2 > c.shares_issued) ? `<button onclick="takeoverCompany(${c.id})" class="btn bg-gradient-to-r from-yellow-500 to-amber-500 text-black text-xs font-black px-3 py-2" style="width:auto">👑 Übernahme</button>` : ''}
               </div>
 
               ${isMine ? `
               <div class="pt-2 border-t border-zinc-800/80 space-y-1.5 bg-black/25 p-2.5 rounded-xl">
-                <div class="text-[11px] font-bold text-yellow-300 flex justify-between">
-                  <span>🏭 Chef-Verwaltung · Waren: <b>${c.prod_points} Pkt</b></span>
-                  <span>Dividenden-Pool: <b>${Number(c.dividend_pool||0).toLocaleString('de-DE')} FC</b></span>
+                <div class="text-[11px] font-bold text-yellow-300 flex flex-wrap justify-between gap-1">
+                  <span>🏭 Chef · Waren: <b>${c.prod_points} Pkt</b> · B2B-Boost: <b class="text-cyan-300">${c.b2b_boost_charges||0}×</b></span>
+                  <span>Dividenden: <b>${Number(c.dividend_pool||0).toLocaleString('de-DE')} FC</b></span>
                 </div>
                 <div class="flex flex-wrap gap-1.5">
                   <button onclick="manageComp(${c.id},'deposit',prompt('Wie viel FC ins Firmenkonto einzahlen?','10000'))" class="btn bg-emerald-800 text-[11px] py-1 px-2" style="width:auto">+ Einzahlen</button>
@@ -5414,6 +5427,7 @@ async function loadCompanies() {
                   <button onclick="manageComp(${c.id},'set_wage',prompt('Neuer Lohn pro Auftrag (200-50.000 FC):','${c.wage_per_task}'))" class="btn bg-cyan-800 text-[11px] py-1 px-2" style="width:auto">💶 Lohn</button>
                   <button onclick="manageComp(${c.id},'sell_prod')" class="btn bg-amber-600 text-black font-black text-[11px] py-1 px-2" style="width:auto">💰 Waren verkaufen</button>
                   <button onclick="manageComp(${c.id},'craft_product')" class="btn bg-purple-700 text-[11px] py-1 px-2" style="width:auto">🎁 Produkt (3 Pkt)</button>
+                  <button onclick="offerB2b(${c.id})" class="btn bg-indigo-700 text-[11px] py-1 px-2" style="width:auto">🤝 B2B-Paket (2 Pkt)</button>
                   ${c.dividend_pool >= 100 && c.shares_issued > 0 ? `<button onclick="manageComp(${c.id},'pay_dividends')" class="btn bg-pink-700 text-[11px] py-1 px-2" style="width:auto">💸 Dividende</button>` : ''}
                 </div>
               </div>` : ''}
@@ -5451,6 +5465,24 @@ async function sellCompShare(cid, qty) {
   sfx.click()
   const d = await call('company_sell_share', { cid, qty })
   if (d) { sfx.claim(); setBalance(d.balance); toast('📉 Anteil verkauft (+' + Number(d.payout).toLocaleString('de-DE') + ' FC)!'); loadCompanies() }
+}
+async function useProduct(pkey) {
+  sfx.click()
+  const d = await call('use_product', { pkey })
+  if (d) { sfx.win(); toast('⚡ Produkt-Buff aktiviert!'); loadCompanies() }
+}
+async function takeoverCompany(cid) {
+  if (!confirm('Mit >50% Aktienmehrheit diese Firma übernehmen?')) return
+  sfx.click()
+  const d = await call('company_takeover', { cid })
+  if (d) { sfx.jackpot(); toast('👑 Übernahme erfolgreich! Du bist jetzt Chef!'); loadCompanies() }
+}
+async function offerB2b(cid) {
+  const pr = Number(prompt('Preis für dein 5× B2B-Lieferpaket (mind. 500 FC):', '5000'))
+  if (!(pr >= 500)) return
+  sfx.click()
+  const d = await call('b2b_offer_create', { cid, price_in: pr })
+  if (d) { sfx.claim(); toast('🤝 B2B-Lieferpaket im Marktplatz eingestellt!'); loadCompanies() }
 }
 
 function startMiniTask(cid) {
@@ -5513,6 +5545,7 @@ VIEWS.market = () => `
   <div class="space-y-4">
     <div class="flex gap-2 flex-wrap">
       <button onclick="sfx.click();mktTab='market';loadMarketPage()" id="mtab_market" class="px-3.5 py-2 rounded-xl text-xs font-black bg-cyan-600 text-white">🛒 P2P Marktplatz &amp; Auktionen</button>
+      <button onclick="sfx.click();mktTab='b2b';loadMarketPage()" id="mtab_b2b" class="px-3.5 py-2 rounded-xl text-xs font-black bg-zinc-800 text-zinc-300">🤝 B2B-Lieferketten</button>
       <button onclick="sfx.click();mktTab='bounties';loadMarketPage()" id="mtab_bounties" class="px-3.5 py-2 rounded-xl text-xs font-black bg-zinc-800 text-zinc-300">📋 Auftragsbrett (Escrow)</button>
       <button onclick="sfx.click();mktTab='sell';loadMarketPage()" id="mtab_sell" class="px-3.5 py-2 rounded-xl text-xs font-black bg-zinc-800 text-zinc-300">📦 Item / Kiste verkaufen</button>
     </div>
@@ -5521,7 +5554,7 @@ VIEWS.market = () => `
 PAGEINIT.market = () => loadMarketPage()
 
 async function loadMarketPage() {
-  ['market', 'bounties', 'sell'].forEach(t => {
+  ['market', 'b2b', 'bounties', 'sell'].forEach(t => {
     const b = $('mtab_' + t)
     if (b) b.className = 'px-3.5 py-2 rounded-xl text-xs font-black ' + (mktTab === t ? 'bg-cyan-600 text-white' : 'bg-zinc-800 text-zinc-300')
   })
@@ -5544,6 +5577,22 @@ async function loadMarketPage() {
           ${m.is_auction ? `<button onclick="bidMarketItem(${m.id}, ${Number(m.current_bid) + 100})" class="btn bg-purple-600 hover:bg-purple-500 text-xs font-bold px-3 py-1.5" style="width:auto">🔨 Bieten</button>` : ''}
         </div>
       </div>`).join('') : '<div class="col-span-full glass rounded-2xl p-8 text-center text-sm text-zinc-400">Aktuell keine Angebote auf dem Marktplatz.</div>'}</div>`
+  } else if (mktTab === 'b2b') {
+    const [rows, comp] = await Promise.all([call('b2b_list', {}), call('company_list', {}, true)])
+    const list = Array.isArray(rows) ? rows : [], myComps = ((comp && comp.companies) || []).filter(c => ME && c.owner_id === ME.id)
+    box.innerHTML = `<div class="space-y-3">
+      <div class="glass rounded-2xl p-3.5 border border-indigo-500/40 text-xs text-indigo-200">🤝 <b>B2B-Lieferketten:</b> Firmen einer anderen Branche können Lieferpakete kaufen (über ihr Firmenkonto), um <b>5× doppelten Verkaufswert (2×)</b> für ihre Waren zu erhalten!</div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">${list.length ? list.map(b => {
+        const ind = INDUSTRIES[b.seller_industry] || INDUSTRIES.cases
+        const validBuyers = myComps.filter(mc => mc.id !== b.seller_company_id && mc.industry !== b.seller_industry)
+        return `<div class="glass rounded-2xl p-4 border border-indigo-500/30 flex flex-col justify-between gap-2.5">
+          <div class="flex justify-between items-start">
+            <div><div class="font-black text-white text-sm">${ind.icon} ${esc(b.seller_name)} (${ind.name})</div><div class="text-[11px] text-zinc-400">Lieferung: <b>${b.charges}× Ertrags-Boost (2×)</b></div></div>
+            <b class="text-yellow-300 font-mono text-sm">${Number(b.price).toLocaleString('de-DE')} FC</b>
+          </div>
+          ${validBuyers.length ? `<div class="flex gap-2"><select id="b2b_sel_${b.id}" class="inp text-xs flex-1">${validBuyers.map(mc => `<option value="${mc.id}">${esc(mc.name)} (${Number(mc.treasury).toLocaleString('de-DE')} FC)</option>`).join('')}</select><button onclick="buyB2b(${b.id})" class="btn bg-indigo-600 hover:bg-indigo-500 text-xs font-black px-3" style="width:auto">🤝 Kaufen</button></div>` : '<div class="text-[11px] text-zinc-500">Du brauchst eine eigene Firma einer anderen Branche.</div>'}
+        </div>`
+      }).join('') : '<div class="col-span-full glass rounded-2xl p-8 text-center text-sm text-zinc-400">Aktuell keine B2B-Lieferpakete im Angebot.</div>'}</div></div>`
   } else if (mktTab === 'bounties') {
     const [rows, comp] = await Promise.all([call('bounty_list', {}), call('company_list', {}, true)])
     const list = Array.isArray(rows) ? rows : [], comps = (comp && comp.companies) || []
@@ -5590,6 +5639,12 @@ async function loadMarketPage() {
   }
 }
 async function buyMarketItem(lid) { sfx.click(); const d = await call('market_buy', { lid }); if (d) { sfx.claim(); setBalance(d.balance); toast('🛒 Gekauft!'); loadMarketPage() } }
+async function buyB2b(contractId) {
+  const buyerCid = Number(($('b2b_sel_' + contractId) || {}).value)
+  if (!buyerCid) return
+  sfx.click(); const d = await call('b2b_offer_buy', { contract_id: contractId, buyer_cid: buyerCid })
+  if (d) { sfx.win(); toast('🤝 B2B-Liefervertrag abgeschlossen! +' + d.charges + '× 2× Boost!'); loadMarketPage() }
+}
 async function bidMarketItem(lid, minBid) {
   const v = Number(prompt('Dein Gebot in FC (mind. ' + minBid + '):', minBid))
   if (!(v > 0)) return
