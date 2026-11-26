@@ -4971,7 +4971,10 @@ async function loadLiveWheelState() {
 
   if (d.status === 'betting') {
     $('lw-status').innerHTML = `<span class="text-emerald-400">🟢 RUNDE #${d.round_id} OFFEN! (${d.secs_left}s · ${entries.length} Spieler)</span>`
-    lwLastRound = 0
+    if (lwLastRound !== 0) {
+      lwLastRound = 0
+      const cv = $('lw-canvas'); if (cv) { cv.style.transition = 'none'; cv.style.transform = 'rotate(0deg)'; void cv.offsetWidth; cv.style.transition = '' }
+    }
   } else if (d.status === 'result' && d.result_segment !== null) {
     const winIdx = Number(d.result_segment || 0)
     const wName = d.winner_name || (entries[winIdx] ? entries[winIdx].username : 'Niemand')
@@ -5470,7 +5473,8 @@ VIEWS.companies = () => `
 PAGEINIT.companies = () => { loadCompanies(); if (!localStorage.getItem('fg_tut_comp_done')) setTimeout(() => startCompanyTutorial(), 350) }
 
 async function loadCompanies() {
-  const d = await call('company_list', {}), box = $('comp_box')
+  const [d, mine] = await Promise.all([call('company_list', {}), call('mining_state', {}, true)])
+  const box = $('comp_box')
   if (!d || !box) return
   compData = d
   const isBroke = Number(d.balance || 0) < 100
@@ -5493,6 +5497,7 @@ async function loadCompanies() {
     <div class="flex flex-wrap items-center justify-between gap-2">
       <div class="flex gap-1.5 flex-wrap">
         <button onclick="sfx.click();compTab='jobs';loadCompanies()" class="px-3.5 py-2 rounded-xl text-xs font-black transition ${compTab==='jobs'?'bg-emerald-600 text-white shadow':'bg-zinc-800 text-zinc-300 hover:text-white'}">💼 Jobs &amp; Börse (${comps.length})</button>
+        <button onclick="sfx.click();compTab='mining';loadCompanies()" class="px-3.5 py-2 rounded-xl text-xs font-black transition ${compTab==='mining'?'bg-cyan-500 text-black shadow':'bg-zinc-800 text-zinc-300 hover:text-white'}">⛏️ Mining &amp; Strom</button>
         <button onclick="sfx.click();compTab='capital';loadCompanies()" class="px-3.5 py-2 rounded-xl text-xs font-black transition ${compTab==='capital'?'bg-amber-500 text-black shadow':'bg-zinc-800 text-zinc-300 hover:text-white'}">🏙️ Immobilien, Anleihen &amp; Forbes</button>
         ${myComps.length ? `<button onclick="sfx.click();activeHqCid=${myComps[0].id};show('company_hq')" class="px-3.5 py-2 rounded-xl text-xs font-black bg-gradient-to-r from-yellow-500 to-amber-500 text-black shadow">🏛️ Konzern-HQ (${myComps.length}/5)</button>` : ''}
         ${myComps.length < 5 ? `<button onclick="sfx.click();compTab='found';loadCompanies()" class="px-3.5 py-2 rounded-xl text-xs font-black transition ${compTab==='found'?'bg-yellow-500 text-black shadow':'bg-zinc-800 text-zinc-300 hover:text-white'}">🏗️ Firma gründen (${myComps.length}/5)</button>` : ''}
@@ -5607,6 +5612,78 @@ async function loadCompanies() {
           <input id="cmp_wage" type="number" min="200" max="500000" value="500" class="inp text-xs w-28">
         </div>
         <button onclick="createCompany()" class="btn bg-yellow-500 hover:bg-yellow-400 text-black text-xs font-black px-4 py-2" style="width:auto">🏢 Business gründen</button>
+      </div>
+      <div class="pt-2 border-t border-zinc-800/80 space-y-2">
+        <div class="text-xs font-black text-cyan-300">📘 Was jede Business-Art tut &amp; welches Boost-Produkt sie herstellt:</div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+          ${Object.entries(INDUSTRIES).map(([ik, iv]) => {
+            const pm = PRODUCT_META[iv.pKey] || { desc: '' }
+            return `<div class="p-2 rounded-xl bg-black/35 border border-zinc-800 text-[11px]">
+              <div class="font-black text-white">${iv.icon} ${iv.name}</div>
+              <div class="text-amber-300 font-bold">Produkt: ${iv.prod}</div>
+              <div class="text-zinc-400">${esc(pm.desc)}</div>
+            </div>`
+          }).join('')}
+        </div>
+      </div>
+    </div>` : '') + (compTab === 'mining' ? `
+    <div class="space-y-4">
+      <!-- PERSÖNLICHE KRYPTO-MINING-RIGS -->
+      <div class="glass rounded-2xl p-4 border-2 border-cyan-500/50 bg-gradient-to-br from-cyan-950/25 via-zinc-900 to-zinc-950 space-y-3">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <div class="font-black text-cyan-300 text-sm">⛏️ Deine persönliche Krypto-Mining-Farm</div>
+            <div class="text-[11px] text-zinc-400">Rigs minen passiv jede Stunde Coins — solange genug Strom (kWh) im Tank ist!</div>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="px-3 py-1 rounded-xl bg-black/40 border border-zinc-700 text-xs font-mono">⚡ Strom: <b class="${Number((mine||{}).kwh_balance||0)>0?'text-emerald-300':'text-red-400'}">${Number((mine||{}).kwh_balance||0)} kWh</b></span>
+            <button onclick="miningAct('claim')" class="btn bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black px-3 py-1.5" style="width:auto">💰 Abholen (+${Number((mine||{}).pending_fc||0).toLocaleString('de-DE')} FC)</button>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-xs">
+          <div class="p-2 rounded-xl bg-black/40 border border-zinc-800"><div class="text-[10px] text-zinc-400">Ertrag / Stunde</div><div class="font-black text-emerald-300 font-mono">+${Number((mine||{}).fc_per_hour||0).toLocaleString('de-DE')} FC/h</div></div>
+          <div class="p-2 rounded-xl bg-black/40 border border-zinc-800"><div class="text-[10px] text-zinc-400">Verbrauch / Stunde</div><div class="font-black text-amber-300 font-mono">${Number((mine||{}).kwh_per_hour||0)} kWh/h</div></div>
+          <div class="p-2 rounded-xl bg-black/40 border border-zinc-800"><div class="text-[10px] text-zinc-400">Bereit zum Abholen</div><div class="font-black text-cyan-300 font-mono">${Number((mine||{}).pending_fc||0).toLocaleString('de-DE')} FC</div></div>
+          <div class="p-2 rounded-xl bg-black/40 border border-zinc-800"><div class="text-[10px] text-zinc-400">Laufzeit-Rest</div><div class="font-black text-white font-mono">${Number((mine||{}).kwh_per_hour||0)>0 ? (Number((mine||{}).kwh_balance||0)/Number((mine||{}).kwh_per_hour||1)).toFixed(1)+'h' : '∞'}</div></div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+          <div class="p-3 rounded-xl bg-black/40 border border-zinc-800 space-y-1.5 text-xs">
+            <div class="font-black text-white">🖥️ GPU-Rig (Lv.${(mine||{}).gpu_lvl||0})</div>
+            <div class="text-[11px] text-zinc-400">+800 FC/h · verbraucht 1 kWh/h</div>
+            <button onclick="miningAct('buy_gpu')" class="w-full btn bg-cyan-700 hover:bg-cyan-600 text-xs font-black py-1.5">⬆️ Kaufen (${((((mine||{}).gpu_lvl||0)+1)*15000).toLocaleString('de-DE')} FC)</button>
+          </div>
+          <div class="p-3 rounded-xl bg-black/40 border border-zinc-800 space-y-1.5 text-xs">
+            <div class="font-black text-white">⚙️ ASIC-Miner (Lv.${(mine||{}).asic_lvl||0})</div>
+            <div class="text-[11px] text-zinc-400">+3.500 FC/h · verbraucht 4 kWh/h</div>
+            <button onclick="miningAct('buy_asic')" class="w-full btn bg-indigo-700 hover:bg-indigo-600 text-xs font-black py-1.5">⬆️ Kaufen (${((((mine||{}).asic_lvl||0)+1)*75000).toLocaleString('de-DE')} FC)</button>
+          </div>
+          <div class="p-3 rounded-xl bg-black/40 border border-zinc-800 space-y-1.5 text-xs">
+            <div class="font-black text-white">⚛️ Quantum-Miner (Lv.${(mine||{}).quantum_lvl||0})</div>
+            <div class="text-[11px] text-zinc-400">+15.000 FC/h · verbraucht 15 kWh/h</div>
+            <button onclick="miningAct('buy_quantum')" class="w-full btn bg-purple-700 hover:bg-purple-600 text-xs font-black py-1.5">⬆️ Kaufen (${((((mine||{}).quantum_lvl||0)+1)*400000).toLocaleString('de-DE')} FC)</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- STROM-IMPERIUM (SPIELER-STROMMARKT) -->
+      <div class="glass rounded-2xl p-4 border border-amber-500/40 space-y-3">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <div class="font-black text-amber-300 text-sm">⚡ Strom-Börse (von Energie-Versorger-Firmen)</div>
+            <div class="text-[11px] text-zinc-400">Spieler mit ⚡ Energie-Versorger-Firmen verkaufen hier Strom günstig an Miner! Staats-Netz kostet 120 FC/kWh.</div>
+          </div>
+          <button onclick="miningAct('buy_grid_power', 50)" class="btn bg-zinc-800 hover:bg-zinc-700 text-xs font-bold px-3 py-1.5" style="width:auto">🏛️ Staats-Netz: 50 kWh (6.000 FC)</button>
+        </div>
+        ${((mine||{}).my_energy_comps||[]).length ? `<div class="p-2.5 rounded-xl bg-emerald-950/25 border border-emerald-500/40 flex flex-wrap items-center justify-between gap-2 text-xs">
+          <span>⚡ Du besitzt eine <b>Energie-Versorger-Firma</b>! Verkaufe 50 kWh (kostet 2 Waren-Punkte):</span>
+          <div class="flex gap-1.5">${((mine||{}).my_energy_comps||[]).map(ec => `<button onclick="sellEnergyOffer(${ec.id}, '${esc(ec.name)}')" class="btn bg-emerald-600 text-xs font-black px-3 py-1" style="width:auto">⚡ 50 kWh anbieten (${ec.name}: ${ec.prod_points} Pkt)</button>`).join('')}</div>
+        </div>` : ''}
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          ${((mine||{}).offers||[]).length ? ((mine||{}).offers||[]).map(o => `<div class="p-2.5 rounded-xl bg-black/40 border border-zinc-800 flex items-center justify-between gap-2 text-xs">
+            <div><b class="text-white">${esc(o.company_name)}</b><div class="text-[11px] text-zinc-400">${o.kwh_amount} kWh @ <b>${o.price_per_kwh} FC/kWh</b></div></div>
+            <button onclick="miningAct('buy_offer', ${o.id})" class="btn bg-amber-500 text-black text-xs font-black px-2.5 py-1" style="width:auto">⚡ ${(Number(o.kwh_amount)*Number(o.price_per_kwh)).toLocaleString('de-DE')}</button>
+          </div>`).join('') : '<div class="col-span-full text-xs text-zinc-500">Aktuell keine privaten Strom-Pakete im Angebot (nutze das Staats-Netz oder gründe einen Energie-Versorger!).</div>'}
+        </div>
       </div>
     </div>` : '') + (compTab === 'jobs' ? `
 
@@ -5872,6 +5949,16 @@ async function closeCompanyDeriv(did) {
   sfx.click()
   const d = await call('company_derivative', { cid: did, act: 'close', side: 'long', val: 0 })
   if (d) { sfx.win(); setBalance(d.balance); toast('💰 Zertifikat geschlossen (' + d.mult + '×): +' + Number(d.payout).toLocaleString('de-DE') + ' FC!'); loadCompanies() }
+}
+async function miningAct(act, val = 0, val2 = 0) {
+  sfx.click()
+  const d = await call('mining_action', { act, val: Number(val) || 0, val2: Number(val2) || 0 })
+  if (d) { sfx.win(); if (d.balance !== undefined) setBalance(d.balance); toast(d.claimed ? '⛏️ +' + Number(d.claimed).toLocaleString('de-DE') + ' FC gemint!' : '✔ Mining-Aktion ausgeführt!'); loadCompanies() }
+}
+async function sellEnergyOffer(cid, cname) {
+  const raw = prompt(`⚡ 50 kWh Strom von „${cname}“ anbieten (Preis pro kWh: 20 – 115 FC, Staats-Netz = 120 FC):`, '80')
+  if (raw === null) return
+  miningAct('sell_energy', cid, Number(raw) || 80)
 }
 async function takeCompanyLoan(cid, maxLoan) {
   const raw = prompt(`🏛️ B2B-Investitionskredit (5.000 bis ${maxLoan.toLocaleString('de-DE')} FC, 15% Festzins, auto-Tilgung 25% bei Verkäufen):`, String(Math.min(maxLoan, 50000)))
@@ -6311,10 +6398,12 @@ VIEWS.inventory = () => '<div id="inv_box" class="space-y-4 text-zinc-400">Lade 
 PAGEINIT.inventory = () => loadInventoryPage()
 
 async function loadInventoryPage() {
-  const d = await call('my_inventory', {}), box = $('inv_box')
+  const [d, cat] = await Promise.all([call('my_inventory', {}), call('shop_catalog', {}, true)]), box = $('inv_box')
   if (!d || !box) return
   const b = d.buffs || {}, prods = d.products || [], cases = d.cases || []
+  const catList = Array.isArray(cat) ? cat : []
   const ownedLux = (d.owned || []).filter(x => x.startsWith('lux:')).map(x => LUXURY_ITEMS.find(i => 'lux:' + i.id === x)).filter(Boolean)
+  const ownedShop = (d.owned || []).filter(x => !x.startsWith('lux:')).map(id => catList.find(i => i.id === id) || { id, icon: '🛍️', name: id, desc: 'Gekauftes Shop-Item' })
 
   box.innerHTML = `
     <div class="glass rounded-2xl p-4 border border-purple-500/40 bg-purple-950/10">
@@ -6354,6 +6443,8 @@ async function loadInventoryPage() {
         return `<button onclick="sfx.click();show('cases')" class="px-3 py-2 rounded-xl bg-zinc-900 border border-yellow-500/40 text-xs font-bold text-white hover:border-yellow-400">${co.icon} ${co.name}: <b class="text-yellow-300">${c.qty}×</b></button>`
       }).join('') : '<div class="text-xs text-zinc-500">Keine Kisten im Inventar.</div>'}</div>
     </div>
+
+    ${ownedShop.length ? `<div class="glass rounded-2xl p-4 border border-cyan-500/30"><div class="font-black text-cyan-300 text-sm mb-2">🛍️ Deine gekauften Shop-Items, Titel &amp; Avatare (${ownedShop.length})</div><div class="grid grid-cols-1 sm:grid-cols-3 gap-2">${ownedShop.map(s => `<div class="p-2.5 rounded-xl bg-black/40 border border-cyan-500/30 text-xs flex items-center gap-2"><span class="text-xl">${esc(s.icon||'🛍️')}</span><div><div class="font-black text-white">${esc(s.name||s.id)}</div><div class="text-[10px] text-zinc-400">${esc(s.desc||'Im Shop gekauft')}</div></div></div>`).join('')}</div></div>` : ''}
 
     ${ownedLux.length ? `<div class="glass rounded-2xl p-4 border border-amber-500/30"><div class="font-black text-amber-300 text-sm mb-2">🏎️ Deine VIP Luxusgüter (${ownedLux.length})</div><div class="flex flex-wrap gap-2">${ownedLux.map(l => `<span class="px-3 py-1.5 rounded-xl bg-black/40 border border-amber-500/30 text-xs text-white">${l.icon} ${l.name}</span>`).join('')}</div></div>` : ''}
   `
