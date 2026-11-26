@@ -5592,8 +5592,8 @@ async function loadCompanyHq() {
         <div class="font-black text-white text-sm">💰 Finanzen, Rohstoffe &amp; Verkauf</div>
         <div class="text-xs text-zinc-400">Aktueller Stücklohn: <b class="text-white">${Number(myComp.wage_per_task).toLocaleString('de-DE')} FC</b> · Fixkosten (6h): <b class="text-rose-300">${t.upk.toLocaleString('de-DE')} FC</b></div>
         <div class="grid grid-cols-2 gap-2">
-          <button onclick="manageComp(${myComp.id},'deposit',prompt('Einzahlen ins Firmenkonto:','25000'))" class="btn bg-emerald-700 hover:bg-emerald-600 text-xs font-bold">+ Einzahlen</button>
-          <button onclick="manageComp(${myComp.id},'withdraw',prompt('Abheben (10% Steuer):','25000'))" class="btn bg-zinc-800 hover:bg-zinc-700 text-xs font-bold">- Abheben (10% Steuer)</button>
+          <button onclick="manageComp(${myComp.id},'deposit',prompt('Einzahlen ins Firmenkonto (0% Steuer):','25000'))" class="btn bg-emerald-700 hover:bg-emerald-600 text-xs font-bold">+ Einzahlen (100%)</button>
+          <button onclick="manageComp(${myComp.id},'withdraw',prompt('Abheben aufs Privatkonto (0% Steuer):','${myComp.treasury}'))" class="btn bg-zinc-800 hover:bg-zinc-700 text-xs font-bold">- Abheben (100%)</button>
           <button onclick="manageComp(${myComp.id},'buy_materials')" class="btn bg-cyan-800 hover:bg-cyan-700 text-xs font-bold">📦 +10 Rohstoffe (${t.matCost.toLocaleString('de-DE')})</button>
           <button onclick="manageComp(${myComp.id},'repair')" class="btn bg-rose-800 hover:bg-rose-700 text-xs font-bold">🔧 Wartung (${t.repCost.toLocaleString('de-DE')})</button>
           <button onclick="manageComp(${myComp.id},'set_wage',prompt('Neuer Stücklohn pro Schicht:','${myComp.wage_per_task}'))" class="btn bg-zinc-800 hover:bg-zinc-700 text-xs font-bold">💶 Stücklohn ändern</button>
@@ -5611,7 +5611,7 @@ async function loadCompanyHq() {
             <span>Aktienverkauf (IPO): <b class="${myComp.ipo_open?'text-emerald-400':'text-red-400'}">${myComp.ipo_open?'🟢 OFFEN (Aktien kaufbar)':'🔒 GESCHLOSSEN'}</b></span>
             <button onclick="manageComp(${myComp.id},'toggle_ipo')" class="btn ${myComp.ipo_open?'bg-red-700':'bg-emerald-600'} text-xs font-black px-3 py-1" style="width:auto">${myComp.ipo_open?'🔒 Schließen':'📈 IPO Öffnen'}</button>
           </div>
-          <div class="text-[11px] text-zinc-400">Ausgegeben: <b>${myComp.shares_issued} / ${myComp.max_shares||100}</b> · Kurs: <b class="text-yellow-300">${Number(myComp.share_price).toLocaleString('de-DE')} FC</b> · <b class="text-emerald-300">70% jedes Aktienkaufs gehen direkt auf dein Privatkonto!</b></div>
+          <div class="text-[11px] text-zinc-400">Ausgegeben: <b>${myComp.shares_issued} / ${myComp.max_shares||100}</b> · Kurs: <b class="text-yellow-300">${Number(myComp.share_price).toLocaleString('de-DE')} FC</b> · <b class="text-emerald-300">100% jedes Aktienkaufs fließen direkt ins Firmenkonto!</b></div>
           <div class="flex gap-2">
             <button onclick="manageComp(${myComp.id},'set_share_price',prompt('Neuer Aktienkurs (100 - 1.000.000 FC):','${myComp.share_price}'))" class="flex-1 btn bg-zinc-800 text-xs font-bold py-1.5">🏷️ Aktienkurs setzen</button>
             ${myComp.dividend_pool >= 100 && myComp.shares_issued > 0 ? `<button onclick="manageComp(${myComp.id},'pay_dividends')" class="flex-1 btn bg-pink-700 text-xs font-bold py-1.5">💸 Dividende (${Number(myComp.dividend_pool).toLocaleString('de-DE')})</button>` : ''}
