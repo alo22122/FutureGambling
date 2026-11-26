@@ -5452,6 +5452,15 @@ function renderTickerBar(ticker) {
     <div class="econ-ticker-wrap flex-1"><div class="econ-ticker-track">${html}</div></div>
   </div>`
 }
+function renderCycleBanner(cycle) {
+  if (!cycle) return ''
+  const col = cycle.phase === 'boom' ? 'border-emerald-500/50 bg-emerald-950/25 text-emerald-300' : cycle.phase === 'crash' ? 'border-rose-500/60 bg-rose-950/25 text-rose-300' : 'border-zinc-700 bg-zinc-900/50 text-zinc-300'
+  const secs = Number(cycle.secs_left || 0), h = Math.floor(secs / 3600), m = Math.floor((secs % 3600) / 60)
+  return `<div class="rounded-xl px-3 py-1.5 border ${col} text-[11px] font-black flex flex-wrap items-center justify-between gap-2">
+    <span>${esc(cycle.label)}</span>
+    <span class="font-mono text-[10px] opacity-80">Nächster Zyklus in ${h}h ${m}m</span>
+  </div>`
+}
 
 VIEWS.companies = () => `
   <div id="comp_box" class="space-y-4 text-zinc-400">Lade Firmen &amp; Arbeitsmarkt...</div>
@@ -5471,6 +5480,8 @@ async function loadCompanies() {
   const myComp = myComps[0] || null
   const tender = d.active_tender || null
   const shorts = d.my_shorts || []
+  const derivs = d.my_derivatives || []
+  const laws = d.laws || []
   const tenderInd = tender && tender.industry !== 'any' ? (INDUSTRIES[tender.industry] || null) : null
   const tenderSecsLeft = tender ? Math.max(0, Math.floor((new Date(tender.ends_at) - Date.now()) / 1000)) : 0
   const tenderTimeStr = tenderSecsLeft > 0 ? `${Math.floor(tenderSecsLeft/3600)}h ${Math.floor((tenderSecsLeft%3600)/60)}m` : 'Läuft ab...'
@@ -5478,6 +5489,7 @@ async function loadCompanies() {
 
   const tabBar = `
     ${renderTickerBar(d.ticker)}
+    ${renderCycleBanner(d.cycle)}
     <div class="flex flex-wrap items-center justify-between gap-2">
       <div class="flex gap-1.5 flex-wrap">
         <button onclick="sfx.click();compTab='jobs';loadCompanies()" class="px-3.5 py-2 rounded-xl text-xs font-black transition ${compTab==='jobs'?'bg-emerald-600 text-white shadow':'bg-zinc-800 text-zinc-300 hover:text-white'}">💼 Jobs &amp; Börse (${comps.length})</button>
@@ -5639,6 +5651,27 @@ async function loadCompanies() {
         </div>
       </div>` : ''}
 
+      ${derivs.length ? `<div class="glass rounded-2xl p-4 border border-cyan-500/50 bg-cyan-950/15 space-y-2">
+        <div class="font-black text-cyan-300 text-sm">🚀 Deine 5× Hebel-Zertifikate (IPO-Derivate · ${derivs.length})</div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          ${derivs.map(v => {
+            const pct = (Number(v.current_price) - Number(v.entry_price)) / Math.max(1, Number(v.entry_price))
+            const mult = Math.max(0, Math.min(6, v.side === 'long' ? 1 + 5 * pct : 1 - 5 * pct))
+            const pnl = Math.floor(Number(v.stake) * mult) - Number(v.stake)
+            return `<div class="p-2.5 rounded-xl bg-black/40 border border-zinc-800 flex items-center justify-between gap-2 text-xs">
+              <div>
+                <div class="font-black text-white">${esc(v.company_icon||'🏢')} ${esc(v.company_name)} <span class="${v.side==='long'?'text-emerald-400':'text-rose-400'}">5× ${v.side.toUpperCase()}</span></div>
+                <div class="text-[11px] text-zinc-400">Einsatz: <b>${Number(v.stake).toLocaleString('de-DE')}</b> · ${Number(v.entry_price).toLocaleString('de-DE')} → ${Number(v.current_price).toLocaleString('de-DE')}</div>
+              </div>
+              <div class="text-right">
+                <div class="font-mono font-black ${pnl>=0?'text-emerald-400':'text-rose-400'}">${mult.toFixed(2)}× (${pnl>=0?'+':''}${pnl.toLocaleString('de-DE')})</div>
+                <button onclick="closeCompanyDeriv(${v.id})" class="btn bg-cyan-600 hover:bg-cyan-500 text-white text-[11px] font-black px-2.5 py-1 mt-1" style="width:auto">💰 Schließen</button>
+              </div>
+            </div>`
+          }).join('')}
+        </div>
+      </div>` : ''}
+
       <div class="flex items-center justify-between mb-2">
         <div class="font-black text-white text-sm">💼 Freier Arbeitsmarkt (${comps.length} Firmen · 0 FC Einsatz zum Arbeiten!)</div>
         <button onclick="loadCompanies()" class="btn bg-zinc-800 text-xs px-3 py-1" style="width:auto">↻ Aktualisieren</button>
@@ -5693,7 +5726,7 @@ async function loadCompanies() {
                   : `<button onclick="joinCompany(${c.id})" class="btn bg-indigo-700 hover:bg-indigo-600 text-white text-xs font-bold px-2.5 py-2" style="width:auto">🤝 Beitreten</button>`) : ''}
                 ${isMine ? `<button onclick="sfx.click();activeHqCid=${c.id};show('company_hq')" class="btn bg-yellow-500 text-black text-xs font-black px-3 py-2" style="width:auto">🏛️ CEO-HQ</button>` : (c.ipo_open ? `<button onclick="buyCompShare(${c.id}, 1)" class="btn bg-cyan-900/60 hover:bg-cyan-800 text-cyan-200 text-xs font-bold px-3 py-2" style="width:auto">📈 +1 Aktie</button>` : `<span class="px-2.5 py-2 rounded-xl bg-zinc-900 text-zinc-500 text-[11px] border border-zinc-800">🔒 IPO zu</span>`)}
                 ${c.my_shares > 0 ? `<button onclick="sellCompShare(${c.id}, 1)" class="btn bg-zinc-800 hover:bg-zinc-700 text-xs font-bold px-3 py-2" style="width:auto">📉 -1</button><button onclick="sellCompShare(${c.id}, ${c.my_shares})" class="btn bg-rose-800 hover:bg-rose-700 text-xs font-bold px-2.5 py-2" style="width:auto">Alles vk</button>` : ''}
-                ${!isMine ? `<button onclick="openCompanyShort(${c.id}, '${esc(c.name)}')" class="btn bg-rose-900/70 hover:bg-rose-800 text-rose-200 text-xs font-bold px-2.5 py-2" style="width:auto">📉 Shorten</button><button onclick="triggerScandal(${c.id}, '${esc(c.name)}')" class="btn bg-purple-900/70 hover:bg-purple-800 text-purple-200 text-xs font-bold px-2.5 py-2" style="width:auto">🕵️ Skandal</button>` : ''}
+                ${!isMine ? `<button onclick="openCompanyShort(${c.id}, '${esc(c.name)}')" class="btn bg-rose-900/70 hover:bg-rose-800 text-rose-200 text-xs font-bold px-2.5 py-2" style="width:auto">📉 Shorten</button><button onclick="openCompanyDeriv(${c.id}, 'long', '${esc(c.name)}')" class="btn bg-emerald-900/70 hover:bg-emerald-800 text-emerald-200 text-xs font-bold px-2.5 py-2" style="width:auto">🚀 5× Long</button><button onclick="openCompanyDeriv(${c.id}, 'short', '${esc(c.name)}')" class="btn bg-orange-900/70 hover:bg-orange-800 text-orange-200 text-xs font-bold px-2.5 py-2" style="width:auto">⚡ 5× Short</button><button onclick="triggerScandal(${c.id}, '${esc(c.name)}')" class="btn bg-purple-900/70 hover:bg-purple-800 text-purple-200 text-xs font-bold px-2.5 py-2" style="width:auto">🕵️ Skandal</button>` : ''}
                 ${myComps.length < 5 && !isMine ? `<button onclick="sendMaOffer(${c.id}, '${esc(c.name)}')" class="btn bg-amber-700/80 hover:bg-amber-600 text-xs font-bold px-2.5 py-2" style="width:auto">🤝 M&amp;A</button>` : ''}
                 ${!isMine && c.shares_issued >= 5 && (c.my_shares * 2 > c.shares_issued) ? `<button onclick="takeoverCompany(${c.id})" class="btn bg-gradient-to-r from-yellow-500 to-amber-500 text-black text-xs font-black px-3 py-2" style="width:auto">👑 Übernahme</button>` : ''}
               </div>
@@ -5703,6 +5736,17 @@ async function loadCompanies() {
       </div>
     </div>` : '') + (compTab === 'capital' ? `
     <div class="space-y-4">
+      <!-- WIRTSCHAFTS-SENAT (LOBBYISMUS & GESETZE KAUFEN) -->
+      <div class="glass rounded-2xl p-4 border-2 border-purple-500/50 bg-gradient-to-br from-purple-950/20 via-zinc-900 to-zinc-950 space-y-2.5">
+        <div class="font-black text-purple-300 text-sm">🗳️ Wirtschafts-Senat (Lobbyismus &amp; 24h-Gesetze kaufen)</div>
+        <div class="text-[11px] text-zinc-400">Aktive Gesetze: ${laws.length ? laws.map(l => `<b class="text-emerald-300 mr-2">${esc(l.title)} (Sponsor: ${esc(l.sponsor_name)})</b>`).join('') : '<span class="text-zinc-500">Keine aktiven Sondergesetze</span>'}</div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <button onclick="passEconomyLaw('tax_cut', 1000000)" class="btn bg-emerald-800 hover:bg-emerald-700 text-xs font-black py-2">💸 Steuer-Senkung 24h (1 Mio.)</button>
+          <button onclick="passEconomyLaw('min_wage_hike', 750000)" class="btn bg-amber-800 hover:bg-amber-700 text-xs font-black py-2">💶 Mindestlohn-Gesetz 24h (750k)</button>
+          <button onclick="passEconomyLaw('boom_stimulus', 1500000)" class="btn bg-cyan-800 hover:bg-cyan-700 text-xs font-black py-2">🚀 Konjunktur-Spritze 24h (1,5 Mio.)</button>
+        </div>
+      </div>
+
       <!-- FORBES MILLIARDÄRS-RANKING -->
       <div class="glass rounded-2xl p-4 border-2 border-yellow-500/50 bg-gradient-to-br from-yellow-950/20 via-zinc-900 to-zinc-950 space-y-2.5">
         <div class="font-black text-yellow-300 text-sm">🏆 Forbes-Milliardärs-Ranking (Netto-Kapitalisten-Vermögen)</div>
@@ -5810,6 +5854,24 @@ async function repayCompanyBond(bid) {
   sfx.click()
   const d = await call('company_bond', { act: 'repay', cid: bid, val: 0 })
   if (d) { sfx.claim(); toast('✅ Anleihe inkl. +20% Zins getilgt!'); loadCompanyHq() }
+}
+async function passEconomyLaw(lkey, cost) {
+  if (!confirm(`🗳️ Gesetz im Wirtschafts-Senat für ${Number(cost).toLocaleString('de-DE')} FC (24h) verabschieden?`)) return
+  sfx.click()
+  const d = await call('pass_economy_law', { lkey })
+  if (d) { sfx.jackpot(); setBalance(d.balance); toast('🗳️ Gesetz im Senat verabschiedet (24h aktiv)!'); loadCompanies() }
+}
+async function openCompanyDeriv(cid, side, cname) {
+  const raw = prompt(`🚀 5× ${side.toUpperCase()}-Zertifikat auf „${cname}“ (500 – 500.000 FC):`, '10000')
+  if (raw === null) return
+  sfx.click()
+  const d = await call('company_derivative', { cid, act: 'open', side, val: Number(raw) || 0 })
+  if (d) { sfx.claim(); setBalance(d.balance); toast(`🚀 5× ${side.toUpperCase()}-Zertifikat eröffnet!`); loadCompanies() }
+}
+async function closeCompanyDeriv(did) {
+  sfx.click()
+  const d = await call('company_derivative', { cid: did, act: 'close', side: 'long', val: 0 })
+  if (d) { sfx.win(); setBalance(d.balance); toast('💰 Zertifikat geschlossen (' + d.mult + '×): +' + Number(d.payout).toLocaleString('de-DE') + ' FC!'); loadCompanies() }
 }
 async function takeCompanyLoan(cid, maxLoan) {
   const raw = prompt(`🏛️ B2B-Investitionskredit (5.000 bis ${maxLoan.toLocaleString('de-DE')} FC, 15% Festzins, auto-Tilgung 25% bei Verkäufen):`, String(Math.min(maxLoan, 50000)))
@@ -5977,6 +6039,7 @@ async function loadCompanyHq() {
 
   box.innerHTML = `
     ${renderTickerBar(d.ticker)}
+    ${renderCycleBanner(d.cycle)}
     ${myComps.length >= 1 ? `<div class="glass rounded-2xl p-3 border border-yellow-500/30 bg-yellow-950/10 flex flex-wrap items-center justify-between gap-2">
       <div class="flex items-center gap-1.5 flex-wrap">
         <span class="text-[11px] font-black text-yellow-300 mr-1">🏢 Konzern (${myComps.length}/5 · Σ ${konzernCash.toLocaleString('de-DE')} FC ${hasSynergy?'· 🏭 Synergie +15%!':''}):</span>
