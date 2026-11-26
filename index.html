@@ -5405,16 +5405,32 @@ async function admDecideBankLoan(id, approve) {
 
 /* ================= SPIELER-FIRMEN, ARBEITSMARKT & ANTI-BROKE-SYSTEM ================= */
 const INDUSTRIES = {
-  cases:    { icon: '📦', name: 'Kisten-Manufaktur', prod: '🎟️ Kisten-Rabatt-Coupon', pKey: 'case_coupon' },
-  crypto:   { icon: '⛏️', name: 'Krypto-Farm', prod: '⚡ Krypto-Boost-Modul', pKey: 'crypto_boost' },
-  security: { icon: '🛡️', name: 'Sicherheitsdienst', prod: '🛡️ Tresor-Schild', pKey: 'vault_shield' },
-  trading:  { icon: '💼', name: 'Trading-Büro', prod: '📈 Quoten-Token', pKey: 'quote_token' }
+  cases:       { icon: '📦', name: 'Kisten-Manufaktur', prod: '🎟️ Kisten-Rabatt-Coupon', pKey: 'case_coupon' },
+  crypto:      { icon: '⛏️', name: 'Krypto-Farm', prod: '⚡ Krypto-Boost-Modul', pKey: 'crypto_boost' },
+  security:    { icon: '🛡️', name: 'Sicherheitsdienst', prod: '🛡️ Tresor-Schild', pKey: 'vault_shield' },
+  trading:     { icon: '💼', name: 'Trading-Büro', prod: '📈 Quoten-Token', pKey: 'quote_token' },
+  casino_tech: { icon: '🎰', name: 'Automaten-Werk', prod: '🎰 Slot-Turbo-Chip', pKey: 'slot_chip' },
+  luxury_corp: { icon: '💎', name: 'Luxus-Konzern', prod: '💎 VIP-Tisch-Siegel', pKey: 'table_seal' },
+  ad_agency:   { icon: '📣', name: 'Werbe-Agentur', prod: '🚀 Raketen-Boost', pKey: 'rocket_boost' },
+  fintech:     { icon: '🏦', name: 'FinTech-Bank', prod: '🏦 Cashback-Boost', pKey: 'cashback_boost' },
+  realestate:  { icon: '🏘️', name: 'Immobilien-Konzern', prod: '🏘️ Miet-Zertifikat', pKey: 'rent_voucher' },
+  ai_lab:      { icon: '🤖', name: 'KI-Forschungslabor', prod: '🤖 KI-Prognose-Chip', pKey: 'ai_algo' },
+  energy:      { icon: '⚡', name: 'Energie-Versorger', prod: '⚡ Überlast-Zelle', pKey: 'power_cell' },
+  media:       { icon: '📺', name: 'Medien-Imperium', prod: '📺 Hype-Verstärker', pKey: 'hype_pass' }
 }
 const PRODUCT_META = {
-  case_coupon:  { icon: '🎟️', name: 'Kisten-Rabatt-Coupon', desc: 'Spart 20 % beim nächsten Kistenkauf (1× oder 5× Paket)!' },
-  crypto_boost: { icon: '⚡', name: 'Krypto-Boost-Modul', desc: 'Gibt +15 % Extra-Profit bei deinem nächsten Krypto-Hebel-Cashout!' },
-  vault_shield: { icon: '🛡️', name: 'Tresor-Schild', desc: 'Erstattet automatisch 35 % deines Einsatzes bei der nächsten verlorenen Runde!' },
-  quote_token:  { icon: '📈', name: 'Quoten-Token', desc: 'Erhöht deine nächste gewonnene Casino-Auszahlung automatisch um +10 %!' }
+  case_coupon:   { icon: '🎟️', name: 'Kisten-Rabatt-Coupon', desc: 'Spart 20 % beim nächsten Kistenkauf (1× oder 5× Paket)!' },
+  crypto_boost:  { icon: '⚡', name: 'Krypto-Boost-Modul', desc: 'Gibt +15 % Extra-Profit bei deinem nächsten Krypto-Hebel-Cashout!' },
+  vault_shield:  { icon: '🛡️', name: 'Tresor-Schild', desc: 'Erstattet automatisch 35 % deines Einsatzes bei der nächsten verlorenen Runde!' },
+  quote_token:   { icon: '📈', name: 'Quoten-Token', desc: 'Erhöht deine nächste gewonnene Casino-Auszahlung automatisch um +10 %!' },
+  slot_chip:     { icon: '🎰', name: 'Slot-Turbo-Chip', desc: 'Erhöht die nächste Slot-Auszahlung spürbar!' },
+  table_seal:    { icon: '💎', name: 'VIP-Tisch-Siegel', desc: 'Luxus-Multiplikator für Tischspiele!' },
+  rocket_boost:  { icon: '🚀', name: 'Raketen-Boost', desc: 'Push für Crash & High-Risk Runden!' },
+  cashback_boost:{ icon: '🏦', name: 'Cashback-Boost', desc: 'Erhöht den Rettungsschirm-Cashback!' },
+  rent_voucher:  { icon: '🏘️', name: 'Miet-Zertifikat', desc: 'Immobilien-Rendite-Zertifikat für Großinvestoren!' },
+  ai_algo:       { icon: '🤖', name: 'KI-Prognose-Chip', desc: 'Algorithmischer Trading- & Markt-Vorteil!' },
+  power_cell:    { icon: '⚡', name: 'Überlast-Zelle', desc: 'Treibt Fabriken & Roboter auf Hochleistung!' },
+  hype_pass:     { icon: '📺', name: 'Hype-Verstärker', desc: 'Steigert Markenwert & Nachfrage!' }
 }
 const BIZ_TIERS = {
   1: { name: 'Kiosk / Start-up', icon: '🏪', fee: 10000, minTr: 5000, reqWag: 0, baseVal: 1100, matCost: 4000, repCost: 3000, upk: 1000, maxSt: 25, upgCost: 90000 },
@@ -5465,6 +5481,7 @@ async function loadCompanies() {
     <div class="flex flex-wrap items-center justify-between gap-2">
       <div class="flex gap-1.5 flex-wrap">
         <button onclick="sfx.click();compTab='jobs';loadCompanies()" class="px-3.5 py-2 rounded-xl text-xs font-black transition ${compTab==='jobs'?'bg-emerald-600 text-white shadow':'bg-zinc-800 text-zinc-300 hover:text-white'}">💼 Jobs &amp; Börse (${comps.length})</button>
+        <button onclick="sfx.click();compTab='capital';loadCompanies()" class="px-3.5 py-2 rounded-xl text-xs font-black transition ${compTab==='capital'?'bg-amber-500 text-black shadow':'bg-zinc-800 text-zinc-300 hover:text-white'}">🏙️ Immobilien, Anleihen &amp; Forbes</button>
         ${myComps.length ? `<button onclick="sfx.click();activeHqCid=${myComps[0].id};show('company_hq')" class="px-3.5 py-2 rounded-xl text-xs font-black bg-gradient-to-r from-yellow-500 to-amber-500 text-black shadow">🏛️ Konzern-HQ (${myComps.length}/5)</button>` : ''}
         ${myComps.length < 5 ? `<button onclick="sfx.click();compTab='found';loadCompanies()" class="px-3.5 py-2 rounded-xl text-xs font-black transition ${compTab==='found'?'bg-yellow-500 text-black shadow':'bg-zinc-800 text-zinc-300 hover:text-white'}">🏗️ Firma gründen (${myComps.length}/5)</button>` : ''}
         <button onclick="sfx.click();compTab='safety';loadCompanies()" class="px-3.5 py-2 rounded-xl text-xs font-black transition ${compTab==='safety'?'bg-cyan-600 text-white shadow':'bg-zinc-800 text-zinc-300 hover:text-white'}">🛡️ Rettungsschirm &amp; Info</button>
@@ -5568,10 +5585,7 @@ async function loadCompanies() {
         </select>
         <input id="cmp_name" placeholder="Firmenname..." maxlength="32" class="inp text-xs sm:col-span-2">
         <select id="cmp_ind" class="inp text-xs">
-          <option value="cases">📦 Kisten-Manufaktur</option>
-          <option value="crypto">⛏️ Krypto-Farm</option>
-          <option value="security">🛡️ Sicherheitsdienst</option>
-          <option value="trading">💼 Trading-Büro</option>
+          ${Object.entries(INDUSTRIES).map(([ik, iv]) => `<option value="${ik}">${iv.icon} ${iv.name}</option>`).join('')}
         </select>
         <input id="cmp_treas" type="number" min="5000" value="5000" placeholder="Start-Konto FC" class="inp text-xs">
       </div>
@@ -5679,13 +5693,72 @@ async function loadCompanies() {
                   : `<button onclick="joinCompany(${c.id})" class="btn bg-indigo-700 hover:bg-indigo-600 text-white text-xs font-bold px-2.5 py-2" style="width:auto">🤝 Beitreten</button>`) : ''}
                 ${isMine ? `<button onclick="sfx.click();activeHqCid=${c.id};show('company_hq')" class="btn bg-yellow-500 text-black text-xs font-black px-3 py-2" style="width:auto">🏛️ CEO-HQ</button>` : (c.ipo_open ? `<button onclick="buyCompShare(${c.id}, 1)" class="btn bg-cyan-900/60 hover:bg-cyan-800 text-cyan-200 text-xs font-bold px-3 py-2" style="width:auto">📈 +1 Aktie</button>` : `<span class="px-2.5 py-2 rounded-xl bg-zinc-900 text-zinc-500 text-[11px] border border-zinc-800">🔒 IPO zu</span>`)}
                 ${c.my_shares > 0 ? `<button onclick="sellCompShare(${c.id}, 1)" class="btn bg-zinc-800 hover:bg-zinc-700 text-xs font-bold px-3 py-2" style="width:auto">📉 -1</button><button onclick="sellCompShare(${c.id}, ${c.my_shares})" class="btn bg-rose-800 hover:bg-rose-700 text-xs font-bold px-2.5 py-2" style="width:auto">Alles vk</button>` : ''}
-                ${!isMine ? `<button onclick="openCompanyShort(${c.id}, '${esc(c.name)}')" class="btn bg-rose-900/70 hover:bg-rose-800 text-rose-200 text-xs font-bold px-2.5 py-2" style="width:auto">📉 Shorten</button>` : ''}
+                ${!isMine ? `<button onclick="openCompanyShort(${c.id}, '${esc(c.name)}')" class="btn bg-rose-900/70 hover:bg-rose-800 text-rose-200 text-xs font-bold px-2.5 py-2" style="width:auto">📉 Shorten</button><button onclick="triggerScandal(${c.id}, '${esc(c.name)}')" class="btn bg-purple-900/70 hover:bg-purple-800 text-purple-200 text-xs font-bold px-2.5 py-2" style="width:auto">🕵️ Skandal</button>` : ''}
                 ${myComps.length < 5 && !isMine ? `<button onclick="sendMaOffer(${c.id}, '${esc(c.name)}')" class="btn bg-amber-700/80 hover:bg-amber-600 text-xs font-bold px-2.5 py-2" style="width:auto">🤝 M&amp;A</button>` : ''}
                 ${!isMine && c.shares_issued >= 5 && (c.my_shares * 2 > c.shares_issued) ? `<button onclick="takeoverCompany(${c.id})" class="btn bg-gradient-to-r from-yellow-500 to-amber-500 text-black text-xs font-black px-3 py-2" style="width:auto">👑 Übernahme</button>` : ''}
               </div>
             </div>
           </div>`
         }).join('') : '<div class="col-span-full glass rounded-2xl p-8 text-center text-sm text-zinc-400">Noch keine Firmen gegründet. Sei der erste Gründer!</div>'}
+      </div>
+    </div>` : '') + (compTab === 'capital' ? `
+    <div class="space-y-4">
+      <!-- FORBES MILLIARDÄRS-RANKING -->
+      <div class="glass rounded-2xl p-4 border-2 border-yellow-500/50 bg-gradient-to-br from-yellow-950/20 via-zinc-900 to-zinc-950 space-y-2.5">
+        <div class="font-black text-yellow-300 text-sm">🏆 Forbes-Milliardärs-Ranking (Netto-Kapitalisten-Vermögen)</div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          ${(d.forbes || []).map((f, idx) => {
+            const title = idx === 0 ? '👑 Über-Kapitalist' : idx <= 2 ? '💎 Oligarch' : '🏦 Tycoon'
+            return `<div class="p-2.5 rounded-xl bg-black/40 border ${idx===0?'border-yellow-400/70':'border-zinc-800'} flex items-center justify-between text-xs">
+              <div><b class="text-yellow-300">#${idx+1}</b> <b class="text-white">${esc(f.username)}</b> <span class="text-[10px] text-zinc-400">(${title} · ${f.company_cnt} Firmen)</span></div>
+              <b class="font-mono text-emerald-400">${Number(f.net_worth).toLocaleString('de-DE')} FC</b>
+            </div>`
+          }).join('')}
+        </div>
+      </div>
+
+      <!-- GEWERBE-IMMOBILIEN & MIETEN -->
+      <div class="glass rounded-2xl p-4 border border-emerald-500/40 space-y-2.5">
+        <div>
+          <div class="font-black text-emerald-300 text-sm">🏘️ Gewerbe-Immobilien &amp; Mieten</div>
+          <div class="text-[11px] text-zinc-400">Eigene Immobilie = <b>−50 % Fixkosten</b> für alle deine Firmen! Firmen ohne Gebäude zahlen alle 6h Miete an Immobilien-Besitzer.</div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+          ${(d.properties || []).map(pr => `<div class="p-3 rounded-xl bg-black/40 border ${pr.owner_id?'border-zinc-700':'border-emerald-500/40'} flex flex-col justify-between gap-2 text-xs">
+            <div>
+              <div class="font-black text-white text-sm">${esc(pr.icon)} ${esc(pr.name)}</div>
+              <div class="text-[11px] text-zinc-400">Typ: ${esc(pr.prop_type)} · Kaufpreis: <b class="text-yellow-300 font-mono">${Number(pr.price).toLocaleString('de-DE')} FC</b></div>
+            </div>
+            ${pr.owner_id
+              ? `<div class="px-2 py-1 rounded bg-zinc-900 text-zinc-300 text-[11px] text-center">🏢 Besitzer: <b>${esc(pr.owner_name)}</b></div>`
+              : `<button onclick="buyProperty(${pr.id}, ${pr.price})" class="btn bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black py-1.5">🏘️ Kaufen (${Number(pr.price).toLocaleString('de-DE')} FC)</button>`}
+          </div>`).join('')}
+        </div>
+      </div>
+
+      <!-- FIRMEN-ANLEIHEN (CORPORATE BONDS) & PATENTE -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div class="glass rounded-2xl p-4 border border-cyan-500/40 space-y-2">
+          <div class="font-black text-cyan-300 text-sm">💳 Firmen-Anleihen (Corporate Bonds · +20 % Zins)</div>
+          <div class="space-y-1.5 max-h-52 overflow-y-auto">
+            ${(d.bonds || []).length ? (d.bonds || []).map(b => `<div class="p-2.5 rounded-xl bg-black/35 border border-zinc-800 flex items-center justify-between gap-2 text-xs">
+              <div><b class="text-white">${esc(b.company_name)}</b> · <b class="text-yellow-300 font-mono">${Number(b.face_value).toLocaleString('de-DE')} FC</b> (+20%)<div class="text-[10px] text-zinc-400">${b.status==='open'?'🟢 Zeichnung offen':'🔒 Gezeichnet von '+esc(b.investor_name)}</div></div>
+              ${b.status==='open' && ME && b.issuer_id !== ME.id ? `<button onclick="buyCompanyBond(${b.id}, ${b.face_value})" class="btn bg-cyan-600 text-xs font-black px-2.5 py-1" style="width:auto">💳 Kaufen</button>` : ''}
+            </div>`).join('') : '<div class="text-xs text-zinc-500">Keine offenen Anleihen am Markt.</div>'}
+          </div>
+        </div>
+        <div class="glass rounded-2xl p-4 border border-purple-500/40 space-y-2">
+          <div class="font-black text-purple-300 text-sm">📜 Aktive Branchen-Patente (6h +25 % Monopol-Preis)</div>
+          <div class="space-y-1.5 max-h-52 overflow-y-auto">
+            ${(d.patents || []).length ? (d.patents || []).map(pt => {
+              const pi = INDUSTRIES[pt.industry] || { icon: '📦', name: pt.industry }
+              return `<div class="p-2.5 rounded-xl bg-black/35 border border-purple-500/30 flex items-center justify-between text-xs">
+                <span>${pi.icon} <b>${pi.name}</b></span>
+                <span class="text-purple-300"><b>${esc(pt.company_name)}</b> (${esc(pt.holder_name)})</span>
+              </div>`
+            }).join('') : '<div class="text-xs text-zinc-500">Aktuell keine aktiven Monopol-Patente.</div>'}
+          </div>
+        </div>
       </div>
     </div>` : '')
 }
@@ -5701,6 +5774,42 @@ async function deliverTender(cid) {
   sfx.click()
   const d = await call('tender_deliver', { cid })
   if (d) { sfx.jackpot(); toast('🏆 Staatsauftrag gewonnen! +' + Number(d.reward).toLocaleString('de-DE') + ' FC aufs Firmenkonto!'); loadCompanies() }
+}
+async function buyProperty(pid, price) {
+  if (!confirm(`Immobilie für ${Number(price).toLocaleString('de-DE')} FC kaufen? (Spart 50% Fixkosten & bringt Mieten!)`)) return
+  sfx.click()
+  const d = await call('buy_property', { pid })
+  if (d) { sfx.win(); setBalance(d.balance); toast('🏘️ Gewerbe-Immobilie gekauft!'); loadCompanies() }
+}
+async function claimPatent(cid) {
+  if (!confirm('6h-Branchen-Patent für 50.000 FC (vom Firmenkonto) anmelden? Bringt +25% Verkaufspreis!')) return
+  sfx.click()
+  const d = await call('company_espionage', { cid, act: 'patent', target_cid: 0 })
+  if (d) { sfx.win(); toast('📜 6h-Monopol-Patent aktiv (+25% Verkaufspreis)!'); loadCompanyHq() }
+}
+async function triggerScandal(targetCid, cname) {
+  if (!confirm(`🕵️ Für 40.000 FC einen PR-Skandal bei „${cname}“ auslösen? (-15% Moral & -10% Zustand)`)) return
+  sfx.click()
+  const d = await call('company_espionage', { cid: 0, act: 'scandal', target_cid: targetCid })
+  if (d) { sfx.claim(); setBalance(d.balance); toast('🕵️ PR-Skandal bei ' + cname + ' ausgelöst!'); loadCompanies() }
+}
+async function issueCompanyBond(cid) {
+  const raw = prompt('💳 Firmen-Anleihe ausgeben (10.000 – 2.000.000 FC, +20% Zins für Anleger):', '100000')
+  if (raw === null) return
+  sfx.click()
+  const d = await call('company_bond', { act: 'issue', cid, val: Number(raw) || 0 })
+  if (d) { sfx.claim(); toast('💳 Anleihe am Kapitalmarkt platziert!'); loadCompanyHq() }
+}
+async function buyCompanyBond(bid, val) {
+  if (!confirm(`Anleihe für ${Number(val).toLocaleString('de-DE')} FC zeichnen? (+20% Zins bei Tilgung)`)) return
+  sfx.click()
+  const d = await call('company_bond', { act: 'buy', cid: bid, val: 0 })
+  if (d) { sfx.claim(); setBalance(d.balance); toast('💳 Anleihe gezeichnet!'); loadCompanies() }
+}
+async function repayCompanyBond(bid) {
+  sfx.click()
+  const d = await call('company_bond', { act: 'repay', cid: bid, val: 0 })
+  if (d) { sfx.claim(); toast('✅ Anleihe inkl. +20% Zins getilgt!'); loadCompanyHq() }
 }
 async function takeCompanyLoan(cid, maxLoan) {
   const raw = prompt(`🏛️ B2B-Investitionskredit (5.000 bis ${maxLoan.toLocaleString('de-DE')} FC, 15% Festzins, auto-Tilgung 25% bei Verkäufen):`, String(Math.min(maxLoan, 50000)))
@@ -5862,12 +5971,15 @@ async function loadCompanyHq() {
   const maxLoan = ({ 1: 50000, 2: 250000, 3: 1000000, 4: 5000000, 5: 15000000 })[myComp.tier || 1] || 50000
   const loanRem = Number(myComp.loan_remaining || 0)
   const konzernCash = myComps.reduce((s, c) => s + Number(c.treasury || 0), 0)
+  const distinctInds = new Set(myComps.map(c => c.industry)).size
+  const hasSynergy = distinctInds >= 2
+  const myBonds = (d.bonds || []).filter(b => b.company_id === myComp.id)
 
   box.innerHTML = `
     ${renderTickerBar(d.ticker)}
     ${myComps.length >= 1 ? `<div class="glass rounded-2xl p-3 border border-yellow-500/30 bg-yellow-950/10 flex flex-wrap items-center justify-between gap-2">
       <div class="flex items-center gap-1.5 flex-wrap">
-        <span class="text-[11px] font-black text-yellow-300 mr-1">🏢 Konzern (${myComps.length}/5 · Σ ${konzernCash.toLocaleString('de-DE')} FC):</span>
+        <span class="text-[11px] font-black text-yellow-300 mr-1">🏢 Konzern (${myComps.length}/5 · Σ ${konzernCash.toLocaleString('de-DE')} FC ${hasSynergy?'· 🏭 Synergie +15%!':''}):</span>
         ${myComps.map(c => `<button onclick="sfx.click();activeHqCid=${c.id};loadCompanyHq()" class="px-2.5 py-1 rounded-xl text-xs font-black transition ${c.id===myComp.id?'bg-yellow-500 text-black shadow':'bg-zinc-800 text-zinc-300 hover:text-white'}">${esc(c.icon||'🏢')} ${esc(c.name)}</button>`).join('')}
       </div>
       ${myComps.length < 5 ? `<button onclick="sfx.click();compTab='found';show('companies')" class="btn bg-emerald-700 hover:bg-emerald-600 text-xs font-black px-3 py-1" style="width:auto">+ Weitere Firma</button>` : ''}
@@ -5924,7 +6036,11 @@ async function loadCompanyHq() {
           ${isKmu ? `<button onclick="manageComp(${myComp.id},'sell_rush')" class="btn bg-gradient-to-r from-amber-500 to-orange-500 text-black text-xs font-black">⚡ Eil-Auftrag +50% (2h)</button>` : ''}
           ${isKmu && Number(myComp.treasury) < 25000 ? `<button onclick="claimKmuSubsidy(${myComp.id})" class="btn bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black">🛡️ Start-up-Förderung (+5k)</button>` : ''}
           <button onclick="manageComp(${myComp.id},'craft_product')" class="btn bg-purple-700 hover:bg-purple-600 text-xs font-bold">🎁 ${ind.prod} ${isKmu && !(myComp.robot_level>0) ? '(2× Handarbeit!)' : '(3 Pkt)'}</button>
+          <button onclick="manageComp(${myComp.id},'craft_batch')" class="btn bg-purple-900 hover:bg-purple-800 text-xs font-bold">📦 5× Großserie (12 Pkt)</button>
+          <button onclick="manageComp(${myComp.id},'overtime_prod')" class="btn bg-cyan-700 hover:bg-cyan-600 text-xs font-bold">⚡ Überstunden (+5 Pkt / 10k)</button>
           <button onclick="offerB2b(${myComp.id})" class="btn bg-indigo-700 hover:bg-indigo-600 text-xs font-bold">🤝 B2B-Paket anbieten (2 Pkt)</button>
+          <button onclick="claimPatent(${myComp.id})" class="btn bg-amber-700 hover:bg-amber-600 text-xs font-bold">📜 6h-Patent (50k → +25%)</button>
+          ${!myComp.tax_haven ? `<button onclick="if(confirm('Für 500.000 FC Offshore-Steuerparadies aktivieren? (Halbiert Verkaufssteuer!)'))manageComp(${myComp.id},'tax_haven')" class="btn bg-teal-800 hover:bg-teal-700 text-xs font-bold">🏝️ Steuerparadies (500k)</button>` : '<div class="btn bg-teal-950/60 text-teal-300 text-xs font-black text-center">🏝️ Steuerparadies AKTIV (-50%)</div>'}
         </div>
         <div class="text-[11px] text-purple-200 bg-purple-950/30 border border-purple-500/30 rounded-xl p-2">
           <b>🎁 Dein Firmen-Boost:</b> ${esc(pMeta.desc)}
@@ -5963,8 +6079,13 @@ async function loadCompanyHq() {
           <button onclick="manageComp(${myComp.id},'upgrade_robot')" class="btn bg-indigo-800 hover:bg-indigo-700 text-xs font-bold py-2">🤖 Roboter Lv.${myComp.robot_level||0}/3 (${(myComp.robot_level||0)>=3?'MAX':robCost.toLocaleString('de-DE')})</button>
           <button onclick="manageComp(${myComp.id},'morale_bonus')" class="btn ${onStrike?'bg-red-600 animate-pulse':'bg-emerald-800 hover:bg-emerald-700'} text-xs font-bold py-2">🎉 Moral-Bonus (5k · ${myComp.morale_pct??100}%)</button>
           <button onclick="manageComp(${myComp.id},'marketing')" class="btn bg-pink-700 hover:bg-pink-600 text-xs font-bold py-2 sm:col-span-2">📣 24h Top-Job Marketing (25.000 FC)</button>
+          ${(myComp.tier||1) >= 3 ? `<button onclick="issueCompanyBond(${myComp.id})" class="btn bg-cyan-700 hover:bg-cyan-600 text-xs font-black py-2 sm:col-span-2">💳 Firmen-Anleihe ausgeben (+20% Zins)</button>` : ''}
           <button onclick="sellCompanyToBank(${myComp.id}, ${bankSellVal})" class="btn bg-red-900/70 hover:bg-red-800 text-red-100 text-xs font-black py-2 sm:col-span-2 border border-red-500/40">🏦 Firma an Bank verkaufen (+${bankSellVal.toLocaleString('de-DE')} FC)</button>
         </div>
+        ${myBonds.length ? `<div class="p-2.5 rounded-xl bg-black/35 border border-cyan-500/30 space-y-1.5 text-xs">
+          <div class="font-bold text-cyan-300">💳 Aktive Firmen-Anleihen:</div>
+          ${myBonds.map(b => `<div class="flex justify-between items-center"><span>${Number(b.face_value).toLocaleString('de-DE')} FC (${b.status==='open'?'offen':'von '+esc(b.investor_name)})</span>${b.status==='bought'?`<button onclick="repayCompanyBond(${b.id})" class="btn bg-emerald-600 text-[11px] font-black px-2 py-0.5" style="width:auto">Tilgen</button>`:''}</div>`).join('')}
+        </div>` : ''}
       </div>
 
     ${isKmu ? `
