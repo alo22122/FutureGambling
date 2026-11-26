@@ -5511,19 +5511,20 @@ async function loadCompanies() {
           const hasMat = Number(c.raw_materials ?? 15) > 0
           const isHealthy = Number(c.health_pct ?? 100) >= 30
           const canWork = hasBudget && hasMat && isHealthy
-  const mt = Number(c.my_tasks || 0), rLbl = mt >= 15 ? '👔 Manager (+25%)' : mt >= 5 ? '👷 Facharbeiter (+10%)' : '🧑‍🔧 Praktikant'
-  return `<div class="glass rounded-2xl p-4 border ${isMine ? 'border-yellow-400/70 bg-yellow-950/10' : canWork ? 'border-emerald-500/40' : 'border-zinc-800 opacity-85'} flex flex-col justify-between gap-3">
+          const mt = Number(c.my_tasks || 0), rLbl = mt >= 15 ? '👔 Manager (+25%)' : mt >= 5 ? '👷 Facharbeiter (+10%)' : '🧑‍🔧 Praktikant'
+          const effWage = Number(c.my_custom_wage || c.wage_per_task)
+          return `<div class="glass rounded-2xl p-4 border ${isMine ? 'border-yellow-400/70 bg-yellow-950/10' : c.my_joined ? 'border-cyan-400/70 bg-cyan-950/10' : canWork ? 'border-emerald-500/40' : 'border-zinc-800 opacity-85'} flex flex-col justify-between gap-3">
             <div>
               <div class="flex items-start justify-between gap-2">
                 <div class="flex items-center gap-2.5">
                   <span class="text-3xl">${ind.icon}</span>
                   <div>
-                    <div class="font-black text-white text-base">${esc(c.name)} ${isMine ? '<span class="text-[10px] text-yellow-300">(Deine Firma)</span>' : ''}</div>
-                    <div class="text-[11px] text-zinc-400">${ind.name} · Chef: <b class="text-zinc-200">${esc(c.owner_name)}</b> · ⭐ ${c.rating} · <span class="text-cyan-300">${rLbl}</span></div>
+                    <div class="font-black text-white text-base">${esc(c.name)} ${isMine ? '<span class="text-[10px] text-yellow-300">(Deine Firma)</span>' : c.my_joined ? '<span class="text-[10px] text-cyan-300">(✅ Angestellt)</span>' : ''}</div>
+                    <div class="text-[11px] text-zinc-400">${ind.name} · Chef: <b class="text-zinc-200">${esc(c.owner_name)}</b> · 👥 ${c.staff_count||0} · ⭐ ${c.rating} · <span class="text-cyan-300">${rLbl}</span></div>
                   </div>
                 </div>
                 <span class="px-2.5 py-1 rounded-xl text-xs font-black ${hasBudget ? 'bg-emerald-950/70 text-emerald-300 border border-emerald-500/40' : 'bg-red-950/60 text-red-300 border border-red-500/40'}">
-                  ${Number(c.wage_per_task).toLocaleString('de-DE')} FC / Auftrag
+                  ${effWage.toLocaleString('de-DE')} FC${c.my_custom_wage ? ' ⭐' : ''} / Auftrag
                 </span>
               </div>
 
@@ -5539,8 +5540,11 @@ async function loadCompanies() {
             <div class="space-y-2">
               <div class="flex flex-wrap gap-1.5">
                 <button onclick="startMiniTask(${c.id})" ${canWork ? '' : 'disabled'} class="flex-1 btn ${canWork ? 'bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white' : 'bg-zinc-800 text-zinc-500'} text-xs font-black py-2">
-                  ${canWork ? `🛠️ Auftrag (+${Number(c.wage_per_task).toLocaleString('de-DE')} FC)` : !hasMat ? '⏳ Keine Rohstoffe' : !isHealthy ? '🔧 Defekt (<30%)' : '⏳ Konto leer'}
+                  ${canWork ? `🛠️ Auftrag (+${effWage.toLocaleString('de-DE')} FC)` : !hasMat ? '⏳ Keine Rohstoffe' : !isHealthy ? '🔧 Defekt (<30%)' : '⏳ Konto leer'}
                 </button>
+                ${!isMine ? (c.my_joined
+                  ? `<button onclick="leaveCompany(${c.id})" class="btn bg-zinc-800 hover:bg-red-900/60 text-zinc-300 text-xs font-bold px-2.5 py-2" style="width:auto">🚪 Austreten</button>`
+                  : `<button onclick="joinCompany(${c.id})" class="btn bg-indigo-700 hover:bg-indigo-600 text-white text-xs font-bold px-2.5 py-2" style="width:auto">🤝 Beitreten</button>`) : ''}
                 ${isMine ? `<button onclick="sfx.click();show('company_hq')" class="btn bg-yellow-500 text-black text-xs font-black px-3 py-2" style="width:auto">🏛️ CEO-HQ</button>` : (c.ipo_open ? `<button onclick="buyCompShare(${c.id}, 1)" class="btn bg-cyan-900/60 hover:bg-cyan-800 text-cyan-200 text-xs font-bold px-3 py-2" style="width:auto">📈 +1 Aktie</button>` : `<span class="px-2.5 py-2 rounded-xl bg-zinc-900 text-zinc-500 text-[11px] border border-zinc-800">🔒 IPO zu</span>`)}
                 ${c.my_shares > 0 ? `<button onclick="sellCompShare(${c.id}, 1)" class="btn bg-zinc-800 hover:bg-zinc-700 text-xs font-bold px-3 py-2" style="width:auto">📉 -1</button>` : ''}
                 ${!isMine && c.shares_issued >= 5 && (c.my_shares * 2 > c.shares_issued) ? `<button onclick="takeoverCompany(${c.id})" class="btn bg-gradient-to-r from-yellow-500 to-amber-500 text-black text-xs font-black px-3 py-2" style="width:auto">👑 Übernahme</button>` : ''}
@@ -5598,6 +5602,25 @@ async function offerB2b(cid) {
   const d = await call('b2b_offer_create', { cid, price_in: pr })
   if (d) { sfx.claim(); toast('🤝 B2B-Lieferpaket im Marktplatz eingestellt!'); if (current === 'company_hq') loadCompanyHq(); else loadCompanies() }
 }
+async function joinCompany(cid) {
+  sfx.click(); const d = await call('company_join', { cid })
+  if (d) { sfx.claim(); toast('✅ Du bist der Firma beigetreten!'); loadCompanies() }
+}
+async function leaveCompany(cid) {
+  sfx.click(); const d = await call('company_leave', { cid })
+  if (d) { toast('🚪 Firma verlassen.'); loadCompanies() }
+}
+async function setWorkerWage(cid, uid, uname, curW) {
+  const v = prompt(`Individueller Stücklohn für ${uname} (200 - 500.000 FC, oder 0 für Firmen-Standard):`, curW)
+  if (v === null) return
+  sfx.click(); const d = await call('company_set_worker_wage', { cid, target_uid: uid, new_wage: Number(v) })
+  if (d) { sfx.claim(); toast('💶 Individueller Lohn für ' + uname + ' gespeichert!'); loadCompanyHq() }
+}
+async function fireWorker(cid, uid, uname) {
+  if (!confirm(`${uname} wirklich kündigen?`)) return
+  sfx.click(); const d = await call('company_fire_worker', { cid, target_uid: uid })
+  if (d) { toast('🚫 ' + uname + ' wurde gekündigt.'); loadCompanyHq() }
+}
 
 /* ================= DEDICATED SCREEN: MEIN CEO-HQ ================= */
 VIEWS.company_hq = () => '<div id="hq_box" class="space-y-4 text-zinc-400">Lade CEO-Kommandozentrale...</div>'
@@ -5626,6 +5649,8 @@ async function loadCompanyHq() {
   const effCost = ((myComp.eff_level || 0) + 1) * (t.matCost * 2)
   const bankSellVal = Math.floor(t.fee * 0.65) + Number(myComp.treasury || 0)
   const pMeta = PRODUCT_META[ind.pKey] || { desc: ind.perk }
+  const emps = await call('company_employees', { cid: myComp.id }, true)
+  const empList = Array.isArray(emps) ? emps : []
 
   box.innerHTML = `
     <div class="glass rounded-2xl p-5 border-2 border-yellow-400/60 bg-gradient-to-br from-yellow-950/20 via-zinc-900 to-zinc-950">
@@ -5693,6 +5718,30 @@ async function loadCompanyHq() {
           <button onclick="manageComp(${myComp.id},'marketing')" class="btn bg-pink-700 hover:bg-pink-600 text-xs font-bold py-2 sm:col-span-2">📣 24h Top-Job Marketing (25.000 FC)</button>
           <button onclick="sellCompanyToBank(${myComp.id}, ${bankSellVal})" class="btn bg-red-900/70 hover:bg-red-800 text-red-100 text-xs font-black py-2 sm:col-span-2 border border-red-500/40">🏦 Firma an Bank verkaufen (+${bankSellVal.toLocaleString('de-DE')} FC)</button>
         </div>
+      </div>
+    </div>
+
+    <!-- BELEGSCHAFT & INDIVIDUELLE LÖHNE -->
+    <div class="glass rounded-2xl p-4 border border-cyan-500/30 space-y-3">
+      <div class="flex items-center justify-between">
+        <div class="font-black text-cyan-300 text-sm">👥 Deine Belegschaft &amp; Individuelle Löhne (${empList.length})</div>
+        <span class="text-[11px] text-zinc-400">Standard-Lohn: <b>${Number(myComp.wage_per_task).toLocaleString('de-DE')} FC</b></span>
+      </div>
+      <div class="space-y-2">
+        ${empList.length ? empList.map(w => {
+          const rBadge = w.tasks_done >= 15 ? '👔 Manager (+25%)' : w.tasks_done >= 5 ? '👷 Facharbeiter (+10%)' : '🧑‍🔧 Praktikant'
+          const curW = w.custom_wage ? Number(w.custom_wage) : Number(myComp.wage_per_task)
+          return `<div class="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl bg-black/35 border ${w.joined ? 'border-cyan-500/40' : 'border-zinc-800'} text-xs">
+            <div>
+              <b class="text-white">${esc(w.username)}</b> ${w.joined ? '<span class="text-[10px] text-emerald-400">● Angestellt</span>' : '<span class="text-[10px] text-zinc-500">Gelegenheitsarbeiter</span>'}
+              <div class="text-[11px] text-zinc-400">${rBadge} · ${w.tasks_done} Schichten · Basis-Lohn: <b class="${w.custom_wage?'text-yellow-300':'text-zinc-200'}">${curW.toLocaleString('de-DE')} FC</b>${w.custom_wage?' (Individuell)':''}</div>
+            </div>
+            <div class="flex gap-1.5">
+              <button onclick="setWorkerWage(${myComp.id}, '${w.user_id}', '${esc(w.username)}', ${curW})" class="btn bg-cyan-800 hover:bg-cyan-700 text-[11px] font-bold px-2.5 py-1" style="width:auto">💶 Lohn setzen</button>
+              ${w.joined ? `<button onclick="fireWorker(${myComp.id}, '${w.user_id}', '${esc(w.username)}')" class="btn bg-red-900/70 hover:bg-red-800 text-[11px] font-bold px-2.5 py-1" style="width:auto">🚫 Kündigen</button>` : ''}
+            </div>
+          </div>`
+        }).join('') : '<div class="text-xs text-zinc-500">Noch keine Mitarbeiter. Spieler können deiner Firma im Arbeitsmarkt beitreten!</div>'}
       </div>
     </div>`
 }
