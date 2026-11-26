@@ -542,6 +542,7 @@ async function loadProfile() {
   ACCOUNT_FAVS = Array.isArray(data.favorites) ? data.favorites : []
   ME = data; $('welcome').innerHTML = nm(data) + (data.role === 'admin' ? ' <span class="text-purple-400 font-bold text-[10px] bg-purple-900/50 px-1.5 py-0.5 rounded border border-purple-500/40">ADMIN</span>' : data.role === 'vip' ? ' <span class="text-yellow-400 font-bold text-[10px] bg-yellow-900/50 px-1.5 py-0.5 rounded border border-yellow-500/40">VIP</span>' : '') + (data.is_hidden_test ? ' <span class="text-cyan-300 font-bold text-[10px] bg-cyan-900/50 px-1.5 py-0.5 rounded border border-cyan-500/40">🧪 TEST</span>' : '')
   if (current === 'lobby') renderLobbyGrid()
+  if (!localStorage.getItem('fg_tut_site_done')) setTimeout(() => startSiteTutorial(), 800)
   if ($('testRefillBtn')) $('testRefillBtn').classList.toggle('hidden', !(data.is_hidden_test || data.role === 'admin'))
   if (!hb) {
     let wasOffline = false
@@ -867,6 +868,7 @@ VIEWS.lobby = () => `
     <div class="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center justify-between">
       <div id="lobby_tabs" class="flex gap-1.5 overflow-x-auto pb-1" style="scrollbar-width:none"></div>
       <div class="flex gap-2 items-center">
+        <button onclick="sfx.click();startSiteTutorial()" class="px-3 py-2 rounded-xl bg-purple-600/20 hover:bg-purple-600/35 border border-purple-500/40 text-purple-300 text-xs font-bold whitespace-nowrap transition">🎓 Tutorial</button>
         <button onclick="sfx.click();show('odds')" class="px-3 py-2 rounded-xl bg-cyan-600/20 hover:bg-cyan-600/35 border border-cyan-500/40 text-cyan-300 text-xs font-bold whitespace-nowrap transition">📊 Chancen &amp; Quoten</button>
         <input id="lobby_search" value="${esc(lobbySearch)}" oninput="lobbySearch=this.value;renderLobbyGrid()" placeholder="🔍 Spiel suchen (z.B. Crash, Kisten, Poker)..." class="inp text-xs py-2 px-3 sm:w-56">
       </div>
@@ -4320,29 +4322,44 @@ function drawCryptoChart(isMkt = false) {
   const midY = h * 0.5
   ctx.beginPath(); ctx.moveTo(0, midY); ctx.lineTo(w, midY); ctx.stroke()
   if (crHist.length < 2) return
-  const minV = isMkt ? Math.min(...crHist) * 0.995 : Math.min(0.2, ...crHist)
-  const maxV = isMkt ? Math.max(...crHist) * 1.005 : Math.max(1.8, ...crHist)
-  const last = crHist[crHist.length - 1], baseRef = isMkt ? crHist[0] : 1.0
-  if (!isMkt) {
-    const entryY = h - 15 - ((1.0 - minV) / Math.max(0.00001, maxV - minV)) * (h - 30)
-    ctx.save(); ctx.setLineDash([6, 4]); ctx.strokeStyle = '#facc15'; ctx.lineWidth = 1.5
-    ctx.beginPath(); ctx.moveTo(0, entryY); ctx.lineTo(w, entryY); ctx.stroke()
-    ctx.fillStyle = '#facc15'; ctx.font = 'bold 11px monospace'; ctx.fillText('EINSTIEG 1.00×', 10, Math.max(14, entryY - 5))
+  const minV = Math.min(...crHist, crPos ? Math.min(crPos.entryPrice, crPos.liqPrice) : crHist[0]) * 0.996
+  const maxV = Math.max(...crHist, crPos ? Math.max(crPos.entryPrice, crPos.liqPrice) : crHist[0]) * 1.004
+  const fmtP = v => v < 1 ? v.toFixed(5) : v.toLocaleString('de-DE', { maximumFractionDigits: 2 })
+  const toY = v => h - 18 - ((v - minV) / Math.max(0.00001, maxV - minV)) * (h - 36)
+
+  // Subtle horizontal grid + right price labels
+  ctx.font = '10px monospace'; ctx.fillStyle = '#71717a'
+  ;[0.2, 0.5, 0.8].forEach(r => {
+    const gy = h * r, gv = minV + (1 - r) * (maxV - minV)
+    ctx.strokeStyle = '#18181b'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(w - 65, gy); ctx.stroke()
+    ctx.fillText(fmtP(gv), w - 62, gy + 3)
+  })
+
+  if (crPos) {
+    const ey = toY(crPos.entryPrice), ly = toY(crPos.liqPrice)
+    ctx.save(); ctx.setLineDash([6, 4])
+    ctx.strokeStyle = '#facc15'; ctx.lineWidth = 1.8; ctx.beginPath(); ctx.moveTo(0, ey); ctx.lineTo(w - 65, ey); ctx.stroke()
+    ctx.fillStyle = '#facc15'; ctx.font = 'bold 10px monospace'; ctx.fillText('KAUF ' + fmtP(crPos.entryPrice), 8, Math.max(12, ey - 5))
+    ctx.strokeStyle = '#ef4444'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(0, ly); ctx.lineTo(w - 65, ly); ctx.stroke()
+    ctx.fillStyle = '#f87171'; ctx.fillText('LIQ ' + fmtP(crPos.liqPrice), 8, Math.min(h - 6, ly + 12))
     ctx.restore()
   }
-  ctx.strokeStyle = last >= baseRef ? '#34d399' : '#f87171'
-  ctx.lineWidth = 3; ctx.beginPath()
+
+  const last = crHist[crHist.length - 1], baseRef = crPos ? crPos.entryPrice : crHist[0]
+  const isUp = crPos ? (crPos.mult >= 1.0) : (last >= baseRef)
+  ctx.strokeStyle = isUp ? '#34d399' : '#f87171'
+  ctx.lineWidth = 2.8; ctx.beginPath()
   crHist.forEach((v, i) => {
-    const x = (i / Math.max(1, crHist.length - 1)) * (w - 20) + 10
-    const y = h - 15 - ((v - minV) / Math.max(0.00001, maxV - minV)) * (h - 30)
+    const x = (i / Math.max(1, crHist.length - 1)) * (w - 78) + 8
+    const y = toY(v)
     if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y)
   })
   ctx.stroke()
-  if (!isMkt) {
-    const lx = w - 10, ly = h - 15 - ((last - minV) / Math.max(0.00001, maxV - minV)) * (h - 30)
-    ctx.fillStyle = last >= 1.0 ? '#34d399' : '#f87171'
-    ctx.beginPath(); ctx.arc(lx, ly, 5, 0, Math.PI * 2); ctx.fill()
-  }
+  const lx = w - 70, ly = toY(last)
+  ctx.fillStyle = isUp ? '#34d399' : '#f87171'
+  ctx.beginPath(); ctx.arc(lx, ly, 4.5, 0, Math.PI * 2); ctx.fill()
+  ctx.fillRect(w - 64, Math.max(4, Math.min(h - 18, ly - 8)), 62, 16)
+  ctx.fillStyle = '#09090b'; ctx.font = 'bold 10px monospace'; ctx.fillText(fmtP(last), w - 62, Math.max(15, Math.min(h - 6, ly + 3)))
 }
 
 async function openCryptoPos(side) {
@@ -4354,36 +4371,41 @@ async function openCryptoPos(side) {
   const d = await call('crypto_trade_open', { bet_amount: bet, coin_name: coin, trade_side: side, lev })
   if (!d) return
   setBalance(d.balance)
-  crPos = { id: d.pos_id, bet: d.bet, coin, side, lev, mult: d.cur_mult || 0.98 }
-  crHist = [1.0, crPos.mult]
+  crSelCoin = coin
+  const sc = CR_COINS[coin] || CR_COINS.BTC
+  const entryP = sc.hist[sc.hist.length - 1] || sc.base
+  const liqP = side === 'long' ? entryP * Math.max(0.05, 1 - 0.95 / lev) : entryP * (1 + 0.95 / lev)
+  crPos = { id: d.pos_id, bet: d.bet, coin, side, lev, mult: d.cur_mult || 0.98, entryPrice: entryP, liqPrice: liqP }
+  crHist = sc.hist.slice()
   if ($('cr_open_controls')) $('cr_open_controls').classList.add('hidden')
   if ($('cr_close_controls')) $('cr_close_controls').classList.remove('hidden')
-  if ($('cr_status_badge')) $('cr_status_badge').textContent = `${side.toUpperCase()} ${coin} · ${lev}× Hebel`
+  if ($('cr_status_badge')) $('cr_status_badge').textContent = `${side.toUpperCase()} ${coin} · ${lev}× · Kauf @ ${entryP < 1 ? entryP.toFixed(4) : entryP.toLocaleString('de-DE', { maximumFractionDigits: 2 })}`
   updateCryptoUi()
-  stopCryptoLoop()
+  if (crLoop) clearInterval(crLoop)
   crLoop = setInterval(tickCryptoPos, 1500)
 }
 
 function updateCryptoUi() {
   if (!crPos) return
-  const est = Math.floor(crPos.bet * crPos.mult)
+  const est = Math.floor(crPos.bet * crPos.mult), pnl = est - crPos.bet
+  const curP = crHist[crHist.length - 1] || crPos.entryPrice
+  const fmtP = v => v < 1 ? v.toFixed(4) : v.toLocaleString('de-DE', { maximumFractionDigits: 2 })
   if ($('cr_mult_disp')) {
-    $('cr_mult_disp').textContent = crPos.mult.toFixed(2).replace('.', ',') + '×'
-    $('cr_mult_disp').className = 'text-3xl font-black font-mono ' + (crPos.mult >= 1 ? 'text-emerald-400' : 'text-red-400')
+    $('cr_mult_disp').innerHTML = `${fmtP(curP)} FC <span class="text-base ${pnl >= 0 ? 'text-emerald-400' : 'text-red-400'}">(${crPos.mult.toFixed(2).replace('.', ',')}× · ${pnl >= 0 ? '+' : ''}${pnl.toLocaleString('de-DE')} FC)</span>`
   }
-  if ($('cr_live_pnl')) $('cr_live_pnl').textContent = `Auszahlwert: ${est.toLocaleString('de-DE')} FC (${est - crPos.bet >= 0 ? '+' : ''}${(est - crPos.bet).toLocaleString('de-DE')} FC)`
-  drawCryptoChart()
+  if ($('cr_live_pnl')) $('cr_live_pnl').innerHTML = `Kauf: <b>${fmtP(crPos.entryPrice)}</b> → Jetzt: <b class="${pnl>=0?'text-emerald-400':'text-red-400'}">${fmtP(curP)}</b> · Auszahlwert: <b class="text-yellow-300">${est.toLocaleString('de-DE')} FC</b>`
+  drawCryptoChart(false)
 }
 
 async function tickCryptoPos() {
   if (!crPos || current !== 'crypto') return
   const d = await call('crypto_trade_tick', { pos_id: crPos.id })
-  if (!d) { stopCryptoLoop(); return }
+  if (!d) { if (crLoop) { clearInterval(crLoop); crLoop = null } return }
   if (d.status === 'liquidated') {
-    stopCryptoLoop()
-    crHist.push(0); drawCryptoChart()
+    if (crLoop) { clearInterval(crLoop); crLoop = null }
+    crHist.push(crPos.liqPrice); drawCryptoChart(false)
     sfx.lose()
-    toast('💥 LIQUIDIERT! Kurs hat die Liquidationsschwelle erreicht (0 FC).')
+    toast('💥 LIQUIDIERT! Kurs hat deine Liquidations-Linie berührt (0 FC).')
     setBalance(d.balance)
     crPos = null
     if ($('cr_open_controls')) $('cr_open_controls').classList.remove('hidden')
@@ -4392,8 +4414,11 @@ async function tickCryptoPos() {
     return
   }
   crPos.mult = Number(d.cur_mult || 1)
-  crHist.push(crPos.mult)
-  if (crHist.length > 40) crHist.shift()
+  const sc = CR_COINS[crPos.coin] || CR_COINS.BTC
+  const deltaRatio = (crPos.mult - 1.0) / Math.max(1, crPos.lev)
+  const nextP = Math.max(sc.base * 0.1, crPos.entryPrice * (1 + (crPos.side === 'long' ? deltaRatio : -deltaRatio)))
+  sc.hist.push(nextP); if (sc.hist.length > 36) sc.hist.shift()
+  crHist = sc.hist.slice()
   updateCryptoUi()
 }
 
@@ -5375,14 +5400,14 @@ const BIZ_TIERS = {
   4: { name: 'Mega-Syndikat', icon: '🏦', fee: 2500000, minTr: 500000, reqWag: 500000, baseVal: 65000, matCost: 150000, repCost: 120000, upk: 60000, maxSt: 350, upgCost: 7500000 },
   5: { name: 'Kapitalisten-Imperium', icon: '👑', fee: 10000000, minTr: 2000000, reqWag: 2000000, baseVal: 280000, matCost: 500000, repCost: 400000, upk: 250000, maxSt: 1000, upgCost: 0 }
 }
-let compData = null, activeTaskModal = null
+let compData = null, activeTaskModal = null, compTab = 'jobs', hqTab = 'ops'
 
 VIEWS.companies = () => `
   <div id="comp_box" class="space-y-4 text-zinc-400">Lade Firmen &amp; Arbeitsmarkt...</div>
   <div id="task_modal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
     <div id="task_modal_body" class="glass rounded-2xl p-6 max-w-md w-full border-2 border-cyan-500/60 shadow-2xl space-y-4"></div>
   </div>`
-PAGEINIT.companies = () => loadCompanies()
+PAGEINIT.companies = () => { loadCompanies(); if (!localStorage.getItem('fg_tut_comp_done')) setTimeout(() => startCompanyTutorial(), 350) }
 
 async function loadCompanies() {
   const d = await call('company_list', {}), box = $('comp_box')
@@ -5393,14 +5418,23 @@ async function loadCompanies() {
   const prods = d.products || []
   const myComp = comps.find(c => ME && c.owner_id === ME.id)
 
-  box.innerHTML = `
+  const tabBar = `
     <div class="flex flex-wrap items-center justify-between gap-2">
-      <div class="flex gap-2 flex-wrap">
-        ${myComp ? `<button onclick="sfx.click();show('company_hq')" class="btn bg-gradient-to-r from-yellow-500 to-amber-500 text-black text-xs font-black px-4 py-2" style="width:auto">🏛️ Mein CEO-HQ öffnen (${esc(myComp.name)})</button>` : ''}
-        <button onclick="sfx.click();show('inventory')" class="btn bg-purple-700 hover:bg-purple-600 text-xs font-black px-4 py-2" style="width:auto">🎒 Mein Inventar &amp; Buffs</button>
+      <div class="flex gap-1.5 flex-wrap">
+        <button onclick="sfx.click();compTab='jobs';loadCompanies()" class="px-3.5 py-2 rounded-xl text-xs font-black transition ${compTab==='jobs'?'bg-emerald-600 text-white shadow':'bg-zinc-800 text-zinc-300 hover:text-white'}">💼 Jobs (${comps.length})</button>
+        ${myComp
+          ? `<button onclick="sfx.click();show('company_hq')" class="px-3.5 py-2 rounded-xl text-xs font-black bg-gradient-to-r from-yellow-500 to-amber-500 text-black shadow">🏛️ Mein CEO-HQ (${esc(myComp.name)})</button>`
+          : `<button onclick="sfx.click();compTab='found';loadCompanies()" class="px-3.5 py-2 rounded-xl text-xs font-black transition ${compTab==='found'?'bg-yellow-500 text-black shadow':'bg-zinc-800 text-zinc-300 hover:text-white'}">🏗️ Firma gründen</button>`}
+        <button onclick="sfx.click();compTab='safety';loadCompanies()" class="px-3.5 py-2 rounded-xl text-xs font-black transition ${compTab==='safety'?'bg-cyan-600 text-white shadow':'bg-zinc-800 text-zinc-300 hover:text-white'}">🛡️ Rettungsschirm &amp; Info</button>
       </div>
-      <button onclick="loadCompanies()" class="btn bg-zinc-800 text-xs px-3 py-1.5" style="width:auto">↻ Aktualisieren</button>
-    </div>
+      <div class="flex gap-1.5">
+        <button onclick="sfx.click();startCompanyTutorial()" class="btn bg-purple-700/80 hover:bg-purple-600 text-xs font-bold px-3 py-1.5" style="width:auto">🎓 Firmen-Tutorial</button>
+        <button onclick="sfx.click();show('inventory')" class="btn bg-zinc-800 hover:bg-zinc-700 text-xs font-bold px-3 py-1.5" style="width:auto">🎒 Inventar</button>
+        <button onclick="loadCompanies()" class="btn bg-zinc-800 text-xs px-2.5 py-1.5" style="width:auto">↻</button>
+      </div>
+    </div>`
+
+  box.innerHTML = tabBar + (compTab === 'safety' ? `
     <!-- ANTI-BROKE RETTUNGSSCHIRM & NOTFALL-SCHICHT -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
       <div class="glass rounded-2xl p-4 border ${isBroke ? 'border-emerald-400 bg-emerald-950/25' : 'border-zinc-800'}">
@@ -5470,10 +5504,9 @@ async function loadCompanies() {
         const col = dp >= 115 ? 'text-emerald-400 border-emerald-500/40' : dp <= 75 ? 'text-red-400 border-red-500/40' : 'text-amber-300 border-zinc-700'
         return `<div class="glass rounded-xl p-2.5 border ${col} text-center"><div class="text-[11px] text-zinc-400">${iv.icon} ${iv.name}</div><div class="text-sm font-black font-mono">${dp} % Nachfrage</div></div>`
       }).join('')}
-    </div>` : ''}
+    </div>` : ''}` : '') + (compTab === 'found' && !myComp ? `
 
     <!-- NEUE FIRMA GRÜNDEN (5 BUSINESS TIERS) -->
-    ${myComp ? '' : `
     <div class="glass rounded-2xl p-4 border border-yellow-500/40 bg-yellow-950/10 space-y-3">
       <div class="flex flex-wrap items-center justify-between gap-2">
         <div class="font-black text-yellow-300 text-sm">🏗️ Neues Business gründen (5 Größen — von Kiosk bis Imperium!)</div>
@@ -5507,7 +5540,7 @@ async function loadCompanies() {
         </div>
         <button onclick="createCompany()" class="btn bg-yellow-500 hover:bg-yellow-400 text-black text-xs font-black px-4 py-2" style="width:auto">🏢 Business gründen</button>
       </div>
-    </div>`}
+    </div>` : '') + (compTab === 'jobs' ? `
 
     <!-- FREIER ARBEITSMARKT -->
     <div>
@@ -5572,7 +5605,7 @@ async function loadCompanies() {
           </div>`
         }).join('') : '<div class="col-span-full glass rounded-2xl p-8 text-center text-sm text-zinc-400">Noch keine Firmen gegründet. Sei der erste Gründer!</div>'}
       </div>
-    </div>`
+    </div>` : '')
 }
 
 async function createCompany() {
@@ -5740,7 +5773,14 @@ async function loadCompanyHq() {
       </div>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div class="flex gap-1.5 flex-wrap">
+      <button onclick="sfx.click();hqTab='ops';loadCompanyHq()" class="px-3.5 py-2 rounded-xl text-xs font-black transition ${hqTab==='ops'?'bg-amber-500 text-black shadow':'bg-zinc-800 text-zinc-300 hover:text-white'}">📊 Betrieb &amp; Verkauf</button>
+      <button onclick="sfx.click();hqTab='staff';loadCompanyHq()" class="px-3.5 py-2 rounded-xl text-xs font-black transition ${hqTab==='staff'?'bg-cyan-600 text-white shadow':'bg-zinc-800 text-zinc-300 hover:text-white'}">👥 Belegschaft (${empList.length})</button>
+      <button onclick="sfx.click();hqTab='ipo';loadCompanyHq()" class="px-3.5 py-2 rounded-xl text-xs font-black transition ${hqTab==='ipo'?'bg-purple-600 text-white shadow':'bg-zinc-800 text-zinc-300 hover:text-white'}">📈 Börse &amp; Upgrades</button>
+      <button onclick="sfx.click();hqTab='ledger';loadCompanyHq()" class="px-3.5 py-2 rounded-xl text-xs font-black transition ${hqTab==='ledger'?'bg-emerald-600 text-white shadow':'bg-zinc-800 text-zinc-300 hover:text-white'}">📒 Kassenbuch &amp; M&amp;A ${offerList.length?`(${offerList.length})`:''}</button>
+    </div>
+
+    ${hqTab === 'ops' ? `
       <!-- FINANZEN, LOHN & BETRIEB -->
       <div class="glass rounded-2xl p-4 border border-zinc-800 space-y-3">
         <div class="font-black text-white text-sm flex items-center justify-between">
@@ -5763,8 +5803,9 @@ async function loadCompanyHq() {
         <div class="text-[11px] text-purple-200 bg-purple-950/30 border border-purple-500/30 rounded-xl p-2">
           <b>🎁 Dein Firmen-Boost:</b> ${esc(pMeta.desc)}
         </div>
-      </div>
+      </div>` : ''}
 
+    ${hqTab === 'ipo' ? `
       <!-- BÖRSENGANG (IPO), AKTIEN & UPGRADES -->
       <div class="glass rounded-2xl p-4 border border-cyan-500/40 space-y-3">
         <div class="font-black text-cyan-300 text-sm">📈 Börsengang (IPO) &amp; Firmen-Upgrades</div>
@@ -5786,19 +5827,6 @@ async function loadCompanyHq() {
           <button onclick="sellCompanyToBank(${myComp.id}, ${bankSellVal})" class="btn bg-red-900/70 hover:bg-red-800 text-red-100 text-xs font-black py-2 sm:col-span-2 border border-red-500/40">🏦 Firma an Bank verkaufen (+${bankSellVal.toLocaleString('de-DE')} FC)</button>
         </div>
       </div>
-    </div>
-
-    ${offerList.length ? `
-    <div class="glass rounded-2xl p-4 border-2 border-amber-400/70 bg-amber-950/20 space-y-2">
-      <div class="font-black text-amber-300 text-sm">🤝 Eingehende M&amp;A Übernahme-Angebote (${offerList.length})</div>
-      ${offerList.map(o => `<div class="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl bg-black/40 border border-zinc-800 text-xs">
-        <div>Käufer: <b class="text-white">${esc(o.buyer_name)}</b> bietet <b class="text-emerald-400 font-mono">${Number(o.offer_amount).toLocaleString('de-DE')} FC</b> für deine komplette Firma!</div>
-        <div class="flex gap-1.5">
-          <button onclick="decideMaOffer(${o.id}, true)" class="btn bg-emerald-600 text-xs font-black px-3 py-1" style="width:auto">✅ Verkaufen</button>
-          <button onclick="decideMaOffer(${o.id}, false)" class="btn bg-red-800 text-xs font-bold px-3 py-1" style="width:auto">❌ Ablehnen</button>
-        </div>
-      </div>`).join('')}
-    </div>` : ''}
 
     ${isKmu ? `
     <div class="glass rounded-2xl p-4 border border-emerald-500/40 bg-emerald-950/10 space-y-2.5">
@@ -5817,6 +5845,19 @@ async function loadCompanyHq() {
           ${!myComp.alliance_id && a.member_count < 3 ? `<button onclick="joinAlliance(${myComp.id}, ${a.id})" class="btn bg-cyan-800 text-[11px] font-bold py-1">🤝 Beitreten</button>` : ''}
         </div>`).join('') : '<div class="text-xs text-zinc-500">Noch keine Allianzen gegründet.</div>'}
       </div>
+    </div>` : ''}` : ''}
+
+    ${hqTab === 'ledger' ? `
+    ${offerList.length ? `
+    <div class="glass rounded-2xl p-4 border-2 border-amber-400/70 bg-amber-950/20 space-y-2">
+      <div class="font-black text-amber-300 text-sm">🤝 Eingehende M&amp;A Übernahme-Angebote (${offerList.length})</div>
+      ${offerList.map(o => `<div class="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl bg-black/40 border border-zinc-800 text-xs">
+        <div>Käufer: <b class="text-white">${esc(o.buyer_name)}</b> bietet <b class="text-emerald-400 font-mono">${Number(o.offer_amount).toLocaleString('de-DE')} FC</b> für deine komplette Firma!</div>
+        <div class="flex gap-1.5">
+          <button onclick="decideMaOffer(${o.id}, true)" class="btn bg-emerald-600 text-xs font-black px-3 py-1" style="width:auto">✅ Verkaufen</button>
+          <button onclick="decideMaOffer(${o.id}, false)" class="btn bg-red-800 text-xs font-bold px-3 py-1" style="width:auto">❌ Ablehnen</button>
+        </div>
+      </div>`).join('')}
     </div>` : ''}
 
     <!-- KASSENBUCH / BUCHHALTUNG -->
@@ -5828,8 +5869,9 @@ async function loadCompanyHq() {
           <b class="font-mono ${Number(tx.amount)>=0?'text-emerald-400':'text-red-400'}">${Number(tx.amount)>=0?'+':''}${Number(tx.amount).toLocaleString('de-DE')} FC</b>
         </div>`).join('') : '<div class="text-xs text-zinc-500">Noch keine Buchungen im Kassenbuch.</div>'}
       </div>
-    </div>
+    </div>` : ''}
 
+    ${hqTab === 'staff' ? `
     <!-- BELEGSCHAFT & INDIVIDUELLE LÖHNE -->
     <div class="glass rounded-2xl p-4 border border-cyan-500/30 space-y-3">
       <div class="flex items-center justify-between">
@@ -5852,13 +5894,93 @@ async function loadCompanyHq() {
           </div>`
         }).join('') : '<div class="text-xs text-zinc-500">Noch keine Mitarbeiter. Spieler können deiner Firma im Arbeitsmarkt beitreten!</div>'}
       </div>
-    </div>`
+    </div>` : ''}`
 }
 async function sellCompanyToBank(cid, val) {
   if (!confirm(`Firma wirklich für ${Number(val).toLocaleString('de-DE')} FC (65% Gründungswert + 100% Firmenkonto) an die Bank verkaufen? Dies ist unwiderruflich!`)) return
   sfx.click()
   const d = await call('company_sell_to_bank', { cid })
   if (d) { sfx.claim(); setBalance(d.balance); toast('🏦 Firma an Bank verkauft! +' + Number(d.payout).toLocaleString('de-DE') + ' FC!'); show('companies') }
+}
+
+/* ================= INTERAKTIVE STEP-BY-STEP TUTORIALS (WEBSEITE & FIRMEN) ================= */
+let tutState = null
+function ensureTutBox() {
+  if (!$('tut_overlay')) {
+    const d = document.createElement('div')
+    d.id = 'tut_overlay'
+    d.className = 'hidden fixed bottom-4 right-4 z-50 max-w-md w-[calc(100%-2rem)] glass rounded-2xl p-4 border-2 border-purple-400/80 bg-zinc-950/95 shadow-2xl space-y-3'
+    document.body.appendChild(d)
+  }
+  return $('tut_overlay')
+}
+function skipTutorial() {
+  if (tutState && tutState.lsKey) localStorage.setItem(tutState.lsKey, '1')
+  tutState = null
+  const b = $('tut_overlay'); if (b) b.classList.add('hidden')
+}
+function startSiteTutorial() {
+  tutState = {
+    lsKey: 'fg_tut_site_done',
+    step: 0,
+    demoCoins: 10000,
+    demoLog: '',
+    steps: [
+      { title: '👋 Willkommen bei Future Gambling!', text: 'Hier bekommst du <b>10.000 Demo-Fake-Coins</b> zum risikofreien Testen. Du kannst das Tutorial jederzeit überspringen.', actionLabel: '🎰 Demo-Slot testen (-500 Demo-FC)', onAction: () => {
+        if (tutState.demoCoins < 500) return
+        tutState.demoCoins -= 500
+        const win = Math.random() < 0.5 ? 1200 : 0
+        tutState.demoCoins += win
+        tutState.demoLog = win > 0 ? '🎉 Treffer! +1.200 Demo-FC gewonnen!' : '😅 Knapp daneben! Versuch es nochmal!'
+        renderTutBox()
+      }, nav: 'lobby' },
+      { title: '📊 Chancen & Historie', text: 'Unter <b>📊 Chancen &amp; Quoten</b> siehst du exakte Wahrscheinlichkeiten für alle 69+ Spiele &amp; 14 Slots. Unter <b>📜 Meine Wetten</b> liegt deine persönliche Gewinnkurve.', nav: 'odds' },
+      { title: '📈 Echtes Krypto-Trading', text: 'Im <b>Krypto-Hebel</b> siehst du 6 Live-Coins mit Kauf-Linie &amp; Liquidations-Linie. Setze Long oder Short und verkaufe zum perfekten Zeitpunkt!', nav: 'crypto' },
+      { title: '💼 Nie pleite dank Firmen-Jobs', text: 'Geht dein Guthaben aus, starte im <b>Arbeitsmarkt</b> eine 0-FC-Schicht bei anderen Spielern oder hol deinen <b>Rettungsschirm</b> ab!', nav: 'companies' }
+    ]
+  }
+  renderTutBox()
+}
+function startCompanyTutorial() {
+  tutState = {
+    lsKey: 'fg_tut_comp_done',
+    step: 0,
+    demoCoins: 50000,
+    demoLog: '',
+    steps: [
+      { title: '💼 Schritt 1: Als Arbeiter starten (0 FC)', text: 'Klicke bei einer Firma auf <b>🤝 Beitreten</b> und dann auf <b>🛠️ Auftrag</b>. Du löst ein 5-Sekunden-Minigame und bekommst sofort Lohn!', nav: 'companies' },
+      { title: '🏗️ Schritt 2: Business-Größen (Tier 1–5)', text: 'Im Tab <b>🏗️ Firma gründen</b> wählst du von <b>Tier 1 Kiosk (10k)</b> bis <b>Tier 5 Imperium (10 Mio.)</b>. Kleine Firmen zahlen nur <b>2 % Steuer</b>!', actionLabel: '🧪 Demo-Verkauf simulieren (Boom +50%)', onAction: () => {
+        tutState.demoCoins += 18500
+        tutState.demoLog = '💰 Demo-Waren im Boom verkauft: +18.500 Demo-FC Profit!'
+        renderTutBox()
+      }, nav: 'companies' },
+      { title: '🏛️ Schritt 3: Dein CEO-HQ', text: 'In <b>🏛️ Mein CEO-HQ</b> kaufst du Rohstoffe, wartest Maschinen, stellst Roboter ein, steuerst Arbeiter-Löhne und siehst dein Kassenbuch.', nav: 'company_hq' },
+      { title: '📈 Schritt 4: Börse (IPO) & Bank-Verkauf', text: 'Öffne im CEO-HQ deinen <b>Börsengang</b> (100 % gehen ins Firmenkonto!) oder verkaufe die Firma später jederzeit für <b>65 % + Konto</b> an die Bank.', nav: 'company_hq' }
+    ]
+  }
+  renderTutBox()
+}
+function renderTutBox() {
+  const b = ensureTutBox()
+  if (!tutState) { b.classList.add('hidden'); return }
+  const st = tutState.steps[tutState.step]
+  if (st.nav && current !== st.nav) show(st.nav)
+  b.classList.remove('hidden')
+  b.innerHTML = `
+    <div class="flex items-center justify-between gap-2">
+      <span class="text-[11px] font-black uppercase text-purple-300">🎓 Schritt ${tutState.step + 1} / ${tutState.steps.length} · 🧪 ${tutState.demoCoins.toLocaleString('de-DE')} Demo-FC</span>
+      <button onclick="skipTutorial()" class="text-[11px] text-zinc-400 hover:text-white px-2 py-0.5 rounded bg-zinc-800">⏭️ Überspringen</button>
+    </div>
+    <div class="font-black text-white text-sm">${st.title}</div>
+    <div class="text-xs text-zinc-300 leading-relaxed">${st.text}</div>
+    ${st.actionLabel ? `<button onclick="tutState.steps[tutState.step].onAction()" class="w-full btn bg-gradient-to-r from-amber-500 to-yellow-500 text-black text-xs font-black py-1.5">${st.actionLabel}</button>` : ''}
+    ${tutState.demoLog ? `<div class="text-[11px] text-emerald-300 bg-emerald-950/40 border border-emerald-500/40 rounded-lg px-2.5 py-1.5">${tutState.demoLog}</div>` : ''}
+    <div class="flex justify-between gap-2 pt-1">
+      <button onclick="if(tutState.step>0){tutState.step--;tutState.demoLog='';renderTutBox()}" ${tutState.step===0?'disabled':''} class="btn bg-zinc-800 text-xs py-1.5 ${tutState.step===0?'opacity-40':''}">← Zurück</button>
+      ${tutState.step < tutState.steps.length - 1
+        ? `<button onclick="tutState.step++;tutState.demoLog='';renderTutBox()" class="btn bg-purple-600 hover:bg-purple-500 text-xs font-black py-1.5">Weiter →</button>`
+        : `<button onclick="skipTutorial()" class="btn bg-emerald-600 hover:bg-emerald-500 text-xs font-black py-1.5">✅ Fertig!</button>`}
+    </div>`
 }
 
 /* ================= DEDICATED SCREEN: MEIN INVENTAR & BUFFS ================= */
