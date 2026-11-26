@@ -5651,6 +5651,24 @@ async function decideMaOffer(oid, accept) {
   sfx.click(); const d = await call('company_offer_decide', { oid, accept })
   if (d) { sfx.claim(); setBalance(d.balance); toast(accept ? '🤝 Firma verkauft!' : '❌ Angebot abgelehnt'); show(accept ? 'companies' : 'company_hq') }
 }
+async function claimKmuSubsidy(cid) {
+  sfx.click(); const d = await call('company_kmu_subsidy', { cid })
+  if (d) { sfx.claim(); toast('🛡️ +' + Number(d.amt).toLocaleString('de-DE') + ' FC KMU-Förderung erhalten!'); loadCompanyHq() }
+}
+async function createAlliance(cid) {
+  const n = prompt('Name der Mittelstands-Allianz:', 'Mittelstand Power')
+  if (!n || n.trim().length < 3) return
+  sfx.click(); const d = await call('alliance_create', { cid, aname: n.trim() })
+  if (d) { sfx.claim(); toast('🤝 Allianz gegründet (-30% Rohstoffe aktiv)!'); loadCompanyHq() }
+}
+async function joinAlliance(cid, aid) {
+  sfx.click(); const d = await call('alliance_join', { cid, aid })
+  if (d) { sfx.claim(); toast('🤝 Allianz beigetreten (-30% Rohstoffe aktiv)!'); loadCompanyHq() }
+}
+async function leaveAlliance(cid) {
+  sfx.click(); const d = await call('alliance_leave', { cid })
+  if (d) { toast('🚪 Allianz verlassen.'); loadCompanyHq() }
+}
 
 /* ================= DEDICATED SCREEN: MEIN CEO-HQ ================= */
 VIEWS.company_hq = () => '<div id="hq_box" class="space-y-4 text-zinc-400">Lade CEO-Kommandozentrale...</div>'
@@ -5679,13 +5697,18 @@ async function loadCompanyHq() {
   const effCost = ((myComp.eff_level || 0) + 1) * (t.matCost * 2)
   const bankSellVal = Math.floor(t.fee * 0.65) + Number(myComp.treasury || 0)
   const pMeta = PRODUCT_META[ind.pKey] || { desc: ind.perk }
-  const [emps, extras] = await Promise.all([
+  const [emps, extras, alList] = await Promise.all([
     call('company_employees', { cid: myComp.id }, true),
-    call('company_hq_extras', { cid: myComp.id }, true)
+    call('company_hq_extras', { cid: myComp.id }, true),
+    call('alliance_list', {}, true)
   ])
   const empList = Array.isArray(emps) ? emps : []
   const ledgerList = (extras && Array.isArray(extras.ledger)) ? extras.ledger : []
   const offerList = (extras && Array.isArray(extras.offers)) ? extras.offers : []
+  const alliances = Array.isArray(alList) ? alList : []
+  const isKmu = (myComp.tier || 1) <= 2
+  const taxPct = isKmu ? 2 : (myComp.tier === 3 ? 8 : 14)
+  const matPrice = (isKmu && myComp.alliance_id) ? Math.floor(t.matCost * 0.70) : t.matCost
   const robCost = ((myComp.robot_level || 0) + 1) * 250000
   const onStrike = myComp.strike_until && new Date(myComp.strike_until) > new Date()
 
@@ -5720,16 +5743,21 @@ async function loadCompanyHq() {
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
       <!-- FINANZEN, LOHN & BETRIEB -->
       <div class="glass rounded-2xl p-4 border border-zinc-800 space-y-3">
-        <div class="font-black text-white text-sm">💰 Finanzen, Rohstoffe &amp; Verkauf</div>
+        <div class="font-black text-white text-sm flex items-center justify-between">
+          <span>💰 Finanzen, Rohstoffe &amp; Verkauf</span>
+          <span class="text-[10px] px-2 py-0.5 rounded-full font-bold ${isKmu ? 'bg-emerald-950/70 text-emerald-300 border border-emerald-500/40' : taxPct > 8 ? 'bg-red-950/70 text-red-300 border border-red-500/40' : 'bg-zinc-800 text-zinc-300'}">${isKmu ? '🛡️ KMU 2% Steuer' : taxPct > 8 ? '💣 Kartellamt 14% Steuer' : '🏢 8% Steuer'}</span>
+        </div>
         <div class="text-xs text-zinc-400">Aktueller Stücklohn: <b class="text-white">${Number(myComp.wage_per_task).toLocaleString('de-DE')} FC</b> · Fixkosten (6h): <b class="text-rose-300">${t.upk.toLocaleString('de-DE')} FC</b></div>
         <div class="grid grid-cols-2 gap-2">
           <button onclick="manageComp(${myComp.id},'deposit',prompt('Einzahlen ins Firmenkonto (0% Steuer):','25000'))" class="btn bg-emerald-700 hover:bg-emerald-600 text-xs font-bold">+ Einzahlen (100%)</button>
           <button onclick="manageComp(${myComp.id},'withdraw',prompt('Abheben aufs Privatkonto (0% Steuer):','${myComp.treasury}'))" class="btn bg-zinc-800 hover:bg-zinc-700 text-xs font-bold">- Abheben (100%)</button>
-          <button onclick="manageComp(${myComp.id},'buy_materials')" class="btn bg-cyan-800 hover:bg-cyan-700 text-xs font-bold">📦 +10 Rohstoffe (${t.matCost.toLocaleString('de-DE')})</button>
+          <button onclick="manageComp(${myComp.id},'buy_materials')" class="btn bg-cyan-800 hover:bg-cyan-700 text-xs font-bold">📦 +10 Rohstoffe (${matPrice.toLocaleString('de-DE')}${isKmu && myComp.alliance_id ? ' -30%' : ''})</button>
           <button onclick="manageComp(${myComp.id},'repair')" class="btn bg-rose-800 hover:bg-rose-700 text-xs font-bold">🔧 Wartung (${t.repCost.toLocaleString('de-DE')})</button>
           <button onclick="manageComp(${myComp.id},'set_wage',prompt('Neuer Stücklohn pro Schicht:','${myComp.wage_per_task}'))" class="btn bg-zinc-800 hover:bg-zinc-700 text-xs font-bold">💶 Stücklohn ändern</button>
           <button onclick="manageComp(${myComp.id},'sell_prod')" class="btn bg-amber-500 hover:bg-amber-400 text-black text-xs font-black">💰 Lager verkaufen (${(myComp.prod_points*grossPerPt).toLocaleString('de-DE')} FC)</button>
-          <button onclick="manageComp(${myComp.id},'craft_product')" class="btn bg-purple-700 hover:bg-purple-600 text-xs font-bold">🎁 ${ind.prod} (3 Pkt)</button>
+          ${isKmu ? `<button onclick="manageComp(${myComp.id},'sell_rush')" class="btn bg-gradient-to-r from-amber-500 to-orange-500 text-black text-xs font-black">⚡ Eil-Auftrag +50% (2h)</button>` : ''}
+          ${isKmu && Number(myComp.treasury) < 25000 ? `<button onclick="claimKmuSubsidy(${myComp.id})" class="btn bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black">🛡️ Start-up-Förderung (+5k)</button>` : ''}
+          <button onclick="manageComp(${myComp.id},'craft_product')" class="btn bg-purple-700 hover:bg-purple-600 text-xs font-bold">🎁 ${ind.prod} ${isKmu && !(myComp.robot_level>0) ? '(2× Handarbeit!)' : '(3 Pkt)'}</button>
           <button onclick="offerB2b(${myComp.id})" class="btn bg-indigo-700 hover:bg-indigo-600 text-xs font-bold">🤝 B2B-Paket anbieten (2 Pkt)</button>
         </div>
         <div class="text-[11px] text-purple-200 bg-purple-950/30 border border-purple-500/30 rounded-xl p-2">
@@ -5770,6 +5798,25 @@ async function loadCompanyHq() {
           <button onclick="decideMaOffer(${o.id}, false)" class="btn bg-red-800 text-xs font-bold px-3 py-1" style="width:auto">❌ Ablehnen</button>
         </div>
       </div>`).join('')}
+    </div>` : ''}
+
+    ${isKmu ? `
+    <div class="glass rounded-2xl p-4 border border-emerald-500/40 bg-emerald-950/10 space-y-2.5">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <div class="font-black text-emerald-300 text-sm">🤝 Mittelstands-Allianz (Max. 3 Tier 1–2 Firmen = −30 % Rohstoffkosten!)</div>
+          <div class="text-[11px] text-zinc-400">Plus: Stamm-Mitarbeiter haben bei dir nur 2s Cooldown statt 10s, und Handarbeit ohne Roboter bringt 2× Produkte!</div>
+        </div>
+        ${myComp.alliance_id
+          ? `<button onclick="leaveAlliance(${myComp.id})" class="btn bg-red-900/70 text-xs font-bold px-3 py-1" style="width:auto">🚪 Allianz verlassen</button>`
+          : `<button onclick="createAlliance(${myComp.id})" class="btn bg-emerald-600 text-xs font-black px-3 py-1" style="width:auto">➕ Allianz gründen</button>`}
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+        ${alliances.length ? alliances.map(a => `<div class="p-2.5 rounded-xl bg-black/35 border ${myComp.alliance_id===a.id?'border-emerald-400':'border-zinc-800'} text-xs flex flex-col justify-between gap-1.5">
+          <div><b class="text-white">${esc(a.name)}</b> <span class="text-zinc-400">(${a.member_count}/3)</span><div class="text-[10px] text-zinc-400">${(a.members||[]).map(esc).join(', ')}</div></div>
+          ${!myComp.alliance_id && a.member_count < 3 ? `<button onclick="joinAlliance(${myComp.id}, ${a.id})" class="btn bg-cyan-800 text-[11px] font-bold py-1">🤝 Beitreten</button>` : ''}
+        </div>`).join('') : '<div class="text-xs text-zinc-500">Noch keine Allianzen gegründet.</div>'}
+      </div>
     </div>` : ''}
 
     <!-- KASSENBUCH / BUCHHALTUNG -->
