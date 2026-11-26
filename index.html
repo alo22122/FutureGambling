@@ -4074,7 +4074,10 @@ VIEWS.cases = () => `
   <div class="space-y-4">
     <!-- 1. OBEN: ANIMIERTER CASE-SPINNER + INVENTAR ZUM ÖFFNEN -->
     <div id="case_stage" class="glass rounded-2xl p-5 border-2 border-cyan-500/40 text-center">
-      <div class="text-xs text-zinc-400 uppercase font-bold mb-2">🎰 Mystery-Kisten Spinner</div>
+      <div class="flex items-center justify-between mb-2">
+        <div class="text-xs text-zinc-400 uppercase font-bold">🎰 Mystery-Kisten Spinner</div>
+        <button id="case_turbo_btn" onclick="sfx.click();caseTurbo=!caseTurbo;this.className='px-3 py-1 rounded-xl text-xs font-black transition '+(caseTurbo?'bg-amber-400 text-black shadow':'bg-zinc-800 text-zinc-300');this.textContent=caseTurbo?'⚡ Turbo: AN':'🐢 Turbo: AUS'" class="px-3 py-1 rounded-xl text-xs font-black transition bg-zinc-800 text-zinc-300">🐢 Turbo: AUS</button>
+      </div>
       <div class="relative h-28 rounded-xl bg-zinc-950/90 border border-zinc-800 overflow-hidden my-2 flex items-center">
         <div class="absolute inset-y-0 left-1/2 -translate-x-1/2 w-1 bg-yellow-400 z-20 shadow-[0_0_12px_#facc15]"></div>
         <div id="case_roller" class="flex items-center gap-2 px-2 w-full justify-center">
@@ -4083,12 +4086,12 @@ VIEWS.cases = () => `
       </div>
       <div id="case_res_txt" class="text-sm font-bold text-zinc-300 min-h-[1.5rem]">Kaufe unten Kisten (1× oder 5×) und öffne sie hier oben in deinem Inventar!</div>
       <div class="mt-3 flex flex-wrap justify-center gap-2 text-[11px]">
-        <span class="px-2 py-0.5 rounded bg-zinc-800 text-zinc-400">🧦 Grau 0,1× (30%)</span>
-        <span class="px-2 py-0.5 rounded bg-sky-950 text-sky-300">🪙 Blau 0,4× (32%)</span>
-        <span class="px-2 py-0.5 rounded bg-purple-950 text-purple-300">🔮 Lila 1,1× (26%)</span>
-        <span class="px-2 py-0.5 rounded bg-pink-950 text-pink-300">⚡ Pink 2,1× (9,5%)</span>
-        <span class="px-2 py-0.5 rounded bg-red-950 text-red-300">💎 Rot 4,8× (2,2%)</span>
-        <span class="px-2 py-0.5 rounded bg-yellow-950 text-yellow-300 font-black">👑 Gold bis 35× (0,3%)</span>
+        <span class="px-2 py-0.5 rounded bg-zinc-800 text-zinc-400">🧦 Grau 0,2× (22%)</span>
+        <span class="px-2 py-0.5 rounded bg-sky-950 text-sky-300">🪙 Blau 0,55× (33%)</span>
+        <span class="px-2 py-0.5 rounded bg-purple-950 text-purple-300">🔮 Lila 1,25× (30%)</span>
+        <span class="px-2 py-0.5 rounded bg-pink-950 text-pink-300">⚡ Pink 2,4× (11,5%)</span>
+        <span class="px-2 py-0.5 rounded bg-red-950 text-red-300">💎 Rot 5,5× (3%)</span>
+        <span class="px-2 py-0.5 rounded bg-yellow-950 text-yellow-300 font-black">👑 Gold bis 38× (0,5%)</span>
       </div>
     </div>
 
@@ -4130,15 +4133,22 @@ async function loadCaseInventory() {
     box.innerHTML = '<div class="text-zinc-500">Dein Inventar ist leer. Kaufe unten eine Kiste!</div>'
     return
   }
-  box.innerHTML = owned.map(c => `
-    <div class="flex items-center gap-2 px-3 py-2 rounded-xl bg-zinc-900 border border-yellow-500/40">
+  box.innerHTML = owned.map(c => {
+    const q = CASE_INV[c.id] || 0
+    return `<div class="flex flex-wrap items-center gap-2 px-3 py-2 rounded-xl bg-zinc-900 border border-yellow-500/40">
       <span class="text-2xl">${c.icon}</span>
       <div>
         <div class="font-black text-white text-xs">${c.name}</div>
-        <div class="text-[11px] text-yellow-300 font-mono font-bold">${CASE_INV[c.id]}× bereit</div>
+        <div class="text-[11px] text-yellow-300 font-mono font-bold">${q}× bereit</div>
       </div>
-      <button onclick="openMysteryCase('${c.id}')" class="btn play bg-gradient-to-r from-yellow-500 to-amber-500 text-black text-xs font-black px-3 py-1.5 ml-1" style="width:auto">🔓 Öffnen</button>
-    </div>`).join('')
+      <div class="flex gap-1 ml-1">
+        <button onclick="openMysteryCase('${c.id}')" class="btn play bg-gradient-to-r from-yellow-500 to-amber-500 text-black text-xs font-black px-2.5 py-1.5" style="width:auto">🔓 1×</button>
+        ${q >= 3 ? `<button onclick="openMultiCases('${c.id}', 3)" class="btn play bg-amber-600 text-black text-xs font-black px-2 py-1.5" style="width:auto">3×</button>` : ''}
+        ${q >= 5 ? `<button onclick="openMultiCases('${c.id}', 5)" class="btn play bg-orange-500 text-black text-xs font-black px-2 py-1.5" style="width:auto">5×</button>` : ''}
+        ${q >= 10 ? `<button onclick="openMultiCases('${c.id}', 10)" class="btn play bg-rose-500 text-white text-xs font-black px-2 py-1.5" style="width:auto">10×</button>` : ''}
+      </div>
+    </div>`
+  }).join('')
 }
 
 async function buyMysteryCase(cid, cnt = 1) {
@@ -4150,6 +4160,44 @@ async function buyMysteryCase(cid, cnt = 1) {
   setBalance(d.balance)
   sfx.claim()
   toast(`🛒 ${cnt}× ${cObj.name} gekauft!${d.discounted ? ' (🎟️ 20% Rabatt eingelöst!)' : ''} (Jetzt ${d.qty}× oben im Inventar)`)
+  loadCaseInventory()
+}
+
+let caseTurbo = false
+async function openMultiCases(cid, cnt) {
+  if (busy) return
+  const cObj = CASE_LIST.find(x => x.id === cid); if (!cObj) return
+  busy = true; setBtns(true); sfx.click()
+  const roller = $('case_roller'), rtxt = $('case_res_txt')
+  if (rtxt) rtxt.textContent = `🔓 Öffne ${cnt}× ${cObj.name}...`
+  const d = await call('case_open_multi', { case_type: cid, cnt })
+  if (!d) { busy = false; setBtns(false); return }
+  const rCols = { gray: '#a1a1aa', blue: '#38bdf8', purple: '#c084fc', pink: '#f472b6', red: '#f87171', gold: '#facc15' }
+  const items = d.items || []
+  if (!caseTurbo) {
+    if (roller) {
+      roller.className = 'flex items-center justify-center gap-2 flex-wrap py-1'
+      roller.style.transition = 'none'; roller.style.transform = 'none'
+      roller.innerHTML = items.map(it => {
+        const col = rCols[it.rarity] || '#fff'
+        return `<div class="w-16 h-16 rounded-xl flex flex-col items-center justify-center border-2" style="border-color:${col};background:${col}18"><div class="text-2xl leading-none">${it.icon}</div><div class="text-[10px] font-mono font-black mt-0.5" style="color:${col}">${it.mult}×</div></div>`
+      }).join('')
+    }
+    sfx.spin(); await sleep(1200)
+  } else if (roller) {
+    roller.className = 'flex items-center justify-center gap-2 flex-wrap py-1'
+    roller.style.transition = 'none'; roller.style.transform = 'none'
+    roller.innerHTML = items.map(it => {
+      const col = rCols[it.rarity] || '#fff'
+      return `<div class="w-16 h-16 rounded-xl flex flex-col items-center justify-center border-2" style="border-color:${col};background:${col}18"><div class="text-2xl leading-none">${it.icon}</div><div class="text-[10px] font-mono font-black mt-0.5" style="color:${col}">${it.mult}×</div></div>`
+    }).join('')
+  }
+  busy = false; setBtns(false)
+  setBalance(d.balance)
+  const net = Number(d.total_payout) - Number(d.total_cost)
+  if (rtxt) rtxt.innerHTML = `${cnt}× ${cObj.name} → <b class="${net >= 0 ? 'text-emerald-400' : 'text-red-400'}">${Number(d.total_payout).toLocaleString('de-DE')} FC (${net >= 0 ? '+' : ''}${net.toLocaleString('de-DE')})</b>`
+  if (items.some(i => i.rarity === 'gold')) { sfx.jackpot(); bigWin(`👑 GOLDENES RELIKT!<br>+${Number(d.total_payout).toLocaleString('de-DE')} FC`, true) }
+  else if (net > 0) sfx.win(); else sfx.lose()
   loadCaseInventory()
 }
 
@@ -4166,17 +4214,18 @@ async function openMysteryCase(cid) {
 
   const rCols = { gray: '#a1a1aa', blue: '#38bdf8', purple: '#c084fc', pink: '#f472b6', red: '#f87171', gold: '#facc15' }
   const pool = [
-    { icon: '🧦', mult: '0,1×', col: rCols.gray },
-    { icon: '🪙', mult: '0,4×', col: rCols.blue },
-    { icon: '🔮', mult: '1,1×', col: rCols.purple },
-    { icon: '⚡', mult: '2,1×', col: rCols.pink },
-    { icon: '💎', mult: '4,8×', col: rCols.red },
+    { icon: '🧦', mult: '0,2×', col: rCols.gray },
+    { icon: '🪙', mult: '0,55×', col: rCols.blue },
+    { icon: '🔮', mult: '1,25×', col: rCols.purple },
+    { icon: '⚡', mult: '2,4×', col: rCols.pink },
+    { icon: '💎', mult: '5,5×', col: rCols.red },
     { icon: '👑', mult: cObj.maxM + '×', col: rCols.gold }
   ]
   const winTile = { icon: d.icon, mult: d.mult + '×', col: rCols[d.rarity] || '#fff' }
   const winIdx = 24
   const items = Array.from({ length: 32 }, (_, i) => i === winIdx ? winTile : pool[Math.floor(Math.random() * (pool.length - 0.85))])
 
+  const spinSec = caseTurbo ? 0.55 : 4.8
   if (roller) {
     roller.className = 'flex items-center gap-2 w-max'
     roller.style.transition = 'none'
@@ -4191,13 +4240,14 @@ async function openMysteryCase(cid) {
     const jitter = Math.floor((Math.random() - 0.5) * 32)
     const targetX = (winIdx * tileStride + 40) - (parentW / 2) + jitter
     roller.offsetHeight // force reflow
-    roller.style.transition = 'transform 3.6s cubic-bezier(0.08, 0.86, 0.16, 1)'
+    roller.style.transition = `transform ${spinSec}s cubic-bezier(0.06, 0.88, 0.14, 1)`
     roller.style.transform = `translateX(-${Math.max(0, targetX)}px)`
   }
 
-  // Slowing down tick sounds over 3.6s
-  ;[120, 260, 420, 600, 820, 1080, 1380, 1740, 2150, 2620, 3120].forEach(ms => setTimeout(() => { if (current === 'cases') sfx.spin() }, ms))
-  await sleep(3750)
+  // Slowing down tick sounds (4.8s normal or 0.55s turbo)
+  const ticks = caseTurbo ? [120, 300] : [120, 280, 460, 680, 940, 1250, 1620, 2050, 2550, 3120, 3760, 4350]
+  ticks.forEach(ms => setTimeout(() => { if (current === 'cases') sfx.spin() }, ms))
+  await sleep(caseTurbo ? 600 : 4950)
 
   busy = false; setBtns(false)
   setBalance(d.balance)
