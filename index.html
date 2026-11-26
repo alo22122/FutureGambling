@@ -485,8 +485,10 @@ const GAMES = {
   leagues:   { icon: '🏆', name: 'Season-Ligen', desc: 'Bronze bis Titan! Wöchentliche Ranglisten-Belohnungen & Abzeichen.', page: true },
   bank:      { icon: '💳', name: 'Pfandhaus & Kredite', desc: 'Verpfände Luxusgüter für Sofort-Cash oder vergib Kredite mit Zinsen.', page: true },
   vault:     { icon: '💎', name: 'VIP Tresor', desc: 'Sicheres Sparkonto mit 12h Verlust-Schutz und 1% täglichen Zinsen!', page: true },
-  companies: { icon: '🏢', name: 'Firmen & Jobs', desc: 'Gründe deine eigene Firma, arbeite für Stücklohn (0 FC Einsatz!) & nutze den Rettungsschirm.', page: true },
-  market:    { icon: '🛒', name: 'Marktplatz & Bounties', desc: 'P2P-Marktplatz, Auktionen & öffentliches Auftragsbrett (Escrow).', page: true },
+  companies:  { icon: '💼', name: 'Jobs & Arbeitsmarkt', desc: 'Arbeite in Spieler-Firmen (0 FC Einsatz!), nutze den Rettungsschirm oder gründe ein Business.', page: true },
+  company_hq: { icon: '🏛️', name: 'Mein CEO-HQ', desc: 'Dein eigener Firmen-Screen: Bilanz, Marge, Rohstoffe, Wartung, Tier-Upgrades & Börsengang (IPO).', page: true },
+  market:     { icon: '🛒', name: 'Marktplatz & Bounties', desc: 'P2P-Marktplatz, B2B-Lieferketten, Auktionen & öffentliches Auftragsbrett.', page: true },
+  inventory:  { icon: '🎒', name: 'Mein Inventar', desc: 'Alle deine Firmen-Produkte, aktive Buffs, Mystery-Kisten & Luxusgüter verwalten & einlösen.', page: true },
   history:   { icon: '📜', name: 'Meine Wetten', desc: 'Dein persönliches Spiel-Historien-Buch: letzte 50 Runden, Gewinnkurve & bester Treffer.', page: true },
   odds:      { icon: '📊', name: 'Chancen & Quoten', desc: 'Alle Gewinnchancen, Multiplikatoren, Jackpot-Quoten & RTPs für jedes Spiel & jeden Slot.', page: true },
   court:     { icon: '⚖️', name: 'Casino-Gericht', desc: 'Öffentliches Tribunal! Stimme über Verdächtige ab (Schuldig vs. Unschuldig).', page: true },
@@ -655,10 +657,10 @@ const NAVGROUPS = [
   ['🃏', 'Tisch & Karten', ['blackjack', 'roulette', 'poker', 'baccarat', 'dragon', 'war', 'sicbo', 'hilo']],
   ['⚡', 'Schnellspiele', ['penalty', 'coinflip', 'dice', 'cyberrace', 'horses', 'bomb', 'darts', 'wheel', 'keno', 'lucky7', 'doors', 'number', 'rps', 'double', 'allin']],
   ['⚔️', 'PvP & Arcade', ['duel', 'chess', 'versus', 'snake', 'typing', 'trivia', 'tetris']],
-  ['🏢', 'Firmen & Wirtschaft', ['companies', 'market']],
+  ['🏢', 'Firmen & Wirtschaft', ['companies', 'company_hq', 'market']],
   ['💎', 'Bank & Wirtschaft', ['vault', 'stocks', 'bank', 'luxury', 'forbes']],
   ['🌍', 'Community & Ruhm', ['chat', 'hof', 'board', 'leagues', 'clanhq', 'community', 'court', 'votes', 'friends', 'players', 'feed']],
-  ['👤', 'Konto & Boni', ['earn', 'bp', 'ach', 'shop', 'stats', 'history', 'odds', 'admin']]
+  ['👤', 'Konto & Boni', ['inventory', 'earn', 'bp', 'ach', 'shop', 'stats', 'history', 'odds', 'admin']]
 ]
 const navOpen = {}
 const grpOpen = (name, keys) => name in navOpen ? navOpen[name] : (name === 'Casino Hits' || keys.includes(current))
@@ -772,7 +774,7 @@ const LOBBY_MAP = {
   table: ['blackjack', 'roulette', 'poker', 'baccarat', 'dragon', 'war', 'sicbo', 'hilo'],
   fast: ['penalty', 'coinflip', 'dice', 'cyberrace', 'horses', 'bomb', 'darts', 'wheel', 'keno', 'lucky7', 'doors', 'number', 'rps', 'double', 'allin'],
   pvp: ['duel', 'chess', 'versus', 'snake', 'typing', 'trivia', 'tetris'],
-  eco: ['companies', 'market', 'vault', 'stocks', 'bank', 'luxury', 'forbes', 'hof', 'leagues', 'history', 'earn', 'bp']
+  eco: ['companies', 'company_hq', 'market', 'inventory', 'vault', 'stocks', 'bank', 'luxury', 'forbes', 'hof', 'leagues', 'history', 'earn', 'bp']
 }
 const GAME_BADGES = {
   slots: ['🏆 Global Pot', 'text-yellow-300 border-yellow-500/40 bg-yellow-950/30'],
@@ -5296,10 +5298,17 @@ const INDUSTRIES = {
   trading:  { icon: '💼', name: 'Trading-Büro', prod: '📈 Quoten-Token', pKey: 'quote_token' }
 }
 const PRODUCT_META = {
-  case_coupon:  { icon: '🎟️', name: 'Kisten-Rabatt-Coupon' },
-  crypto_boost: { icon: '⚡', name: 'Krypto-Boost-Modul' },
-  vault_shield: { icon: '🛡️', name: 'Tresor-Schild' },
-  quote_token:  { icon: '📈', name: 'Quoten-Token' }
+  case_coupon:  { icon: '🎟️', name: 'Kisten-Rabatt-Coupon', desc: 'Spart 20 % beim nächsten Kistenkauf (1× oder 5× Paket)!' },
+  crypto_boost: { icon: '⚡', name: 'Krypto-Boost-Modul', desc: 'Gibt +15 % Extra-Profit bei deinem nächsten Krypto-Hebel-Cashout!' },
+  vault_shield: { icon: '🛡️', name: 'Tresor-Schild', desc: 'Erstattet automatisch 35 % deines Einsatzes bei der nächsten verlorenen Runde!' },
+  quote_token:  { icon: '📈', name: 'Quoten-Token', desc: 'Erhöht deine nächste gewonnene Casino-Auszahlung automatisch um +10 %!' }
+}
+const BIZ_TIERS = {
+  1: { name: 'Kiosk / Start-up', icon: '🏪', fee: 10000, minTr: 5000, reqWag: 0, baseVal: 1100, matCost: 4000, repCost: 3000, upk: 1000, maxSt: 25, upgCost: 90000 },
+  2: { name: 'Mittelstands-Betrieb', icon: '🏭', fee: 100000, minTr: 25000, reqWag: 25000, baseVal: 3500, matCost: 12000, repCost: 10000, upk: 4000, maxSt: 60, upgCost: 400000 },
+  3: { name: 'Großkonzern (AG)', icon: '🏢', fee: 500000, minTr: 150000, reqWag: 100000, baseVal: 14000, matCost: 40000, repCost: 35000, upk: 15000, maxSt: 150, upgCost: 2000000 },
+  4: { name: 'Mega-Syndikat', icon: '🏦', fee: 2500000, minTr: 500000, reqWag: 500000, baseVal: 65000, matCost: 150000, repCost: 120000, upk: 60000, maxSt: 350, upgCost: 7500000 },
+  5: { name: 'Kapitalisten-Imperium', icon: '👑', fee: 10000000, minTr: 2000000, reqWag: 2000000, baseVal: 280000, matCost: 500000, repCost: 400000, upk: 250000, maxSt: 1000, upgCost: 0 }
 }
 let compData = null, activeTaskModal = null
 
@@ -5317,8 +5326,16 @@ async function loadCompanies() {
   const isBroke = Number(d.balance || 0) < 100
   const comps = d.companies || []
   const prods = d.products || []
+  const myComp = comps.find(c => ME && c.owner_id === ME.id)
 
   box.innerHTML = `
+    <div class="flex flex-wrap items-center justify-between gap-2">
+      <div class="flex gap-2 flex-wrap">
+        ${myComp ? `<button onclick="sfx.click();show('company_hq')" class="btn bg-gradient-to-r from-yellow-500 to-amber-500 text-black text-xs font-black px-4 py-2" style="width:auto">🏛️ Mein CEO-HQ öffnen (${esc(myComp.name)})</button>` : ''}
+        <button onclick="sfx.click();show('inventory')" class="btn bg-purple-700 hover:bg-purple-600 text-xs font-black px-4 py-2" style="width:auto">🎒 Mein Inventar &amp; Buffs</button>
+      </div>
+      <button onclick="loadCompanies()" class="btn bg-zinc-800 text-xs px-3 py-1.5" style="width:auto">↻ Aktualisieren</button>
+    </div>
     <!-- ANTI-BROKE RETTUNGSSCHIRM & NOTFALL-SCHICHT -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
       <div class="glass rounded-2xl p-4 border ${isBroke ? 'border-emerald-400 bg-emerald-950/25' : 'border-zinc-800'}">
@@ -5377,26 +5394,42 @@ async function loadCompanies() {
       }).join('')}
     </div>` : ''}
 
-    <!-- NEUE FIRMA GRÜNDEN -->
-    <div class="glass rounded-2xl p-4 border border-yellow-500/40 bg-yellow-950/10">
-      <div class="font-black text-yellow-300 text-sm mb-1">🏗️ Eigene Firma gründen (250.000 FC Gründung + min. 50.000 FC Start-Konto · ab 50.000 FC Umsatz)</div>
-      <div class="text-[11px] text-zinc-400 mb-2">Dein aktueller Spielumsatz: <b class="text-white">${Number(d.wagered||0).toLocaleString('de-DE')} FC</b></div>
+    <!-- NEUE FIRMA GRÜNDEN (5 BUSINESS TIERS) -->
+    ${myComp ? '' : `
+    <div class="glass rounded-2xl p-4 border border-yellow-500/40 bg-yellow-950/10 space-y-3">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <div class="font-black text-yellow-300 text-sm">🏗️ Neues Business gründen (5 Größen — von Kiosk bis Imperium!)</div>
+        <div class="text-[11px] text-zinc-400">Dein Umsatz: <b class="text-white">${Number(d.wagered||0).toLocaleString('de-DE')} FC</b></div>
+      </div>
       <div class="grid grid-cols-1 sm:grid-cols-5 gap-2">
-        <input id="cmp_name" placeholder="Firmenname (z.B. Apex Crypto)" maxlength="32" class="inp text-xs sm:col-span-2">
+        ${Object.entries(BIZ_TIERS).map(([tk, tv]) => `<div class="p-2 rounded-xl bg-black/35 border border-zinc-800 text-[11px]">
+          <div class="font-black text-white">${tv.icon} T${tk}: ${tv.name}</div>
+          <div class="text-yellow-300 font-mono">Gründung: ${tv.fee.toLocaleString('de-DE')}</div>
+          <div class="text-zinc-400">Min-Konto: ${tv.minTr.toLocaleString('de-DE')}</div>
+          <div class="text-emerald-400 font-bold">Ertrag/Pkt: ${tv.baseVal.toLocaleString('de-DE')} FC</div>
+        </div>`).join('')}
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-6 gap-2">
+        <select id="cmp_tier" onchange="const t=BIZ_TIERS[this.value];if($('cmp_treas')){$('cmp_treas').value=t.minTr;$('cmp_treas').min=t.minTr;}" class="inp text-xs sm:col-span-2">
+          ${Object.entries(BIZ_TIERS).map(([tk, tv]) => `<option value="${tk}">${tv.icon} Tier ${tk}: ${tv.name} (${tv.fee.toLocaleString('de-DE')} FC)</option>`).join('')}
+        </select>
+        <input id="cmp_name" placeholder="Firmenname..." maxlength="32" class="inp text-xs sm:col-span-2">
         <select id="cmp_ind" class="inp text-xs">
           <option value="cases">📦 Kisten-Manufaktur</option>
           <option value="crypto">⛏️ Krypto-Farm</option>
           <option value="security">🛡️ Sicherheitsdienst</option>
           <option value="trading">💼 Trading-Büro</option>
         </select>
-        <input id="cmp_treas" type="number" min="50000" value="50000" placeholder="Start-Konto (min. 50k)" class="inp text-xs">
-        <input id="cmp_wage" type="number" min="200" max="50000" value="600" placeholder="Lohn/Auftrag" class="inp text-xs">
+        <input id="cmp_treas" type="number" min="5000" value="5000" placeholder="Start-Konto FC" class="inp text-xs">
       </div>
-      <div class="flex justify-between items-center mt-2.5 flex-wrap gap-2">
-        <span class="text-[11px] text-zinc-400">Tipp: Kalkuliere Rohstoffe (~400 FC/Schicht) + Wartung (~375 FC/Schicht) + Lohn in deinen Stückpreis ein!</span>
-        <button onclick="createCompany()" class="btn bg-yellow-500 hover:bg-yellow-400 text-black text-xs font-black px-4 py-2" style="width:auto">🏢 Firma gründen (300k+ FC)</button>
+      <div class="flex flex-wrap justify-between items-center gap-2">
+        <div class="flex items-center gap-2 text-xs text-zinc-300">
+          <span>Stücklohn/Auftrag:</span>
+          <input id="cmp_wage" type="number" min="200" max="500000" value="500" class="inp text-xs w-28">
+        </div>
+        <button onclick="createCompany()" class="btn bg-yellow-500 hover:bg-yellow-400 text-black text-xs font-black px-4 py-2" style="width:auto">🏢 Business gründen</button>
       </div>
-    </div>
+    </div>`}
 
     <!-- FREIER ARBEITSMARKT -->
     <div>
@@ -5441,29 +5474,10 @@ async function loadCompanies() {
                 <button onclick="startMiniTask(${c.id})" ${canWork ? '' : 'disabled'} class="flex-1 btn ${canWork ? 'bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white' : 'bg-zinc-800 text-zinc-500'} text-xs font-black py-2">
                   ${canWork ? `🛠️ Auftrag (+${Number(c.wage_per_task).toLocaleString('de-DE')} FC)` : !hasMat ? '⏳ Keine Rohstoffe' : !isHealthy ? '🔧 Defekt (<30%)' : '⏳ Konto leer'}
                 </button>
-                <button onclick="buyCompShare(${c.id}, 1)" class="btn bg-cyan-900/60 hover:bg-cyan-800 text-cyan-200 text-xs font-bold px-3 py-2" style="width:auto">📈 +1 Aktie</button>
+                ${isMine ? `<button onclick="sfx.click();show('company_hq')" class="btn bg-yellow-500 text-black text-xs font-black px-3 py-2" style="width:auto">🏛️ CEO-HQ</button>` : (c.ipo_open ? `<button onclick="buyCompShare(${c.id}, 1)" class="btn bg-cyan-900/60 hover:bg-cyan-800 text-cyan-200 text-xs font-bold px-3 py-2" style="width:auto">📈 +1 Aktie</button>` : `<span class="px-2.5 py-2 rounded-xl bg-zinc-900 text-zinc-500 text-[11px] border border-zinc-800">🔒 IPO zu</span>`)}
                 ${c.my_shares > 0 ? `<button onclick="sellCompShare(${c.id}, 1)" class="btn bg-zinc-800 hover:bg-zinc-700 text-xs font-bold px-3 py-2" style="width:auto">📉 -1</button>` : ''}
                 ${!isMine && c.shares_issued >= 5 && (c.my_shares * 2 > c.shares_issued) ? `<button onclick="takeoverCompany(${c.id})" class="btn bg-gradient-to-r from-yellow-500 to-amber-500 text-black text-xs font-black px-3 py-2" style="width:auto">👑 Übernahme</button>` : ''}
               </div>
-
-              ${isMine ? `
-              <div class="pt-2 border-t border-zinc-800/80 space-y-1.5 bg-black/25 p-2.5 rounded-xl">
-                <div class="text-[11px] font-bold text-yellow-300 flex flex-wrap justify-between gap-1">
-                  <span>🏭 Chef · Waren: <b>${c.prod_points} Pkt</b> · B2B-Boost: <b class="text-cyan-300">${c.b2b_boost_charges||0}×</b></span>
-                  <span>Dividenden: <b>${Number(c.dividend_pool||0).toLocaleString('de-DE')} FC</b></span>
-                </div>
-                <div class="flex flex-wrap gap-1.5">
-                  <button onclick="manageComp(${c.id},'deposit',prompt('Wie viel FC ins Firmenkonto einzahlen?','10000'))" class="btn bg-emerald-800 text-[11px] py-1 px-2" style="width:auto">+ Einzahlen</button>
-                  <button onclick="manageComp(${c.id},'withdraw',prompt('Wie viel FC abheben? (10% Steuer)','5000'))" class="btn bg-zinc-800 text-[11px] py-1 px-2" style="width:auto">- Abheben</button>
-                  <button onclick="manageComp(${c.id},'buy_materials')" class="btn bg-cyan-900 text-[11px] py-1 px-2" style="width:auto">📦 +10 Rohstoffe (4k)</button>
-                  <button onclick="manageComp(${c.id},'repair')" class="btn bg-rose-800 text-[11px] py-1 px-2" style="width:auto">🔧 Wartung (7,5k)</button>
-                  <button onclick="manageComp(${c.id},'set_wage',prompt('Neuer Lohn pro Auftrag (200-50.000 FC):','${c.wage_per_task}'))" class="btn bg-cyan-800 text-[11px] py-1 px-2" style="width:auto">💶 Lohn</button>
-                  <button onclick="manageComp(${c.id},'sell_prod')" class="btn bg-amber-600 text-black font-black text-[11px] py-1 px-2" style="width:auto">💰 Waren verkaufen</button>
-                  <button onclick="manageComp(${c.id},'craft_product')" class="btn bg-purple-700 text-[11px] py-1 px-2" style="width:auto">🎁 Produkt (3 Pkt)</button>
-                  <button onclick="offerB2b(${c.id})" class="btn bg-indigo-700 text-[11px] py-1 px-2" style="width:auto">🤝 B2B-Paket (2 Pkt)</button>
-                  ${c.dividend_pool >= 100 && c.shares_issued > 0 ? `<button onclick="manageComp(${c.id},'pay_dividends')" class="btn bg-pink-700 text-[11px] py-1 px-2" style="width:auto">💸 Dividende</button>` : ''}
-                </div>
-              </div>` : ''}
             </div>
           </div>`
         }).join('') : '<div class="col-span-full glass rounded-2xl p-8 text-center text-sm text-zinc-400">Noch keine Firmen gegründet. Sei der erste Gründer!</div>'}
@@ -5472,17 +5486,17 @@ async function loadCompanies() {
 }
 
 async function createCompany() {
-  const name = ($('cmp_name')||{}).value||'', ind = ($('cmp_ind')||{}).value||'cases'
-  const tr = Number(($('cmp_treas')||{}).value||0), wg = Number(($('cmp_wage')||{}).value||1000)
+  const name = ($('cmp_name')||{}).value||'', ind = ($('cmp_ind')||{}).value||'cases', ctier = Number(($('cmp_tier')||{}).value||1)
+  const tr = Number(($('cmp_treas')||{}).value||0), wg = Number(($('cmp_wage')||{}).value||500)
   sfx.click()
-  const d = await call('company_create', { cname: name, cicon: INDUSTRIES[ind].icon, cindustry: ind, init_treasury: tr, wage: wg })
-  if (d) { sfx.claim(); setBalance(d.balance); toast('🏢 Firma gegründet!'); loadCompanies() }
+  const d = await call('company_create', { cname: name, cicon: INDUSTRIES[ind].icon, cindustry: ind, init_treasury: tr, wage: wg, ctier })
+  if (d) { sfx.claim(); setBalance(d.balance); toast('🏢 Business gegründet! Willkommen im CEO-HQ!'); show('company_hq') }
 }
 async function manageComp(cid, act, val = 0) {
   if (val === null) return
   sfx.click()
   const d = await call('company_manage', { cid, act, val: Number(val)||0 })
-  if (d) { sfx.claim(); if (d.balance !== undefined) setBalance(d.balance); toast('✔ Firmen-Aktion ausgeführt!'); loadCompanies() }
+  if (d) { sfx.claim(); if (d.balance !== undefined) setBalance(d.balance); toast('✔ Firmen-Aktion ausgeführt!'); if (current === 'company_hq') loadCompanyHq(); else loadCompanies() }
 }
 async function claimCashbackPot() {
   sfx.click()
@@ -5515,7 +5529,150 @@ async function offerB2b(cid) {
   if (!(pr >= 500)) return
   sfx.click()
   const d = await call('b2b_offer_create', { cid, price_in: pr })
-  if (d) { sfx.claim(); toast('🤝 B2B-Lieferpaket im Marktplatz eingestellt!'); loadCompanies() }
+  if (d) { sfx.claim(); toast('🤝 B2B-Lieferpaket im Marktplatz eingestellt!'); if (current === 'company_hq') loadCompanyHq(); else loadCompanies() }
+}
+
+/* ================= DEDICATED SCREEN: MEIN CEO-HQ ================= */
+VIEWS.company_hq = () => '<div id="hq_box" class="space-y-4 text-zinc-400">Lade CEO-Kommandozentrale...</div>'
+PAGEINIT.company_hq = () => loadCompanyHq()
+
+async function loadCompanyHq() {
+  const d = await call('company_list', {}), box = $('hq_box')
+  if (!d || !box) return
+  const myComp = (d.companies || []).find(c => ME && c.owner_id === ME.id)
+  if (!myComp) {
+    box.innerHTML = `<div class="glass rounded-2xl p-8 text-center space-y-3 border border-yellow-500/40">
+      <div class="text-4xl">🏛️</div>
+      <div class="text-lg font-black text-white">Du besitzt noch keine Firma!</div>
+      <div class="text-xs text-zinc-400">Gründe im Arbeitsmarkt ein Business (von Tier 1 Kiosk ab 10.000 FC bis Tier 5 Imperium für 10 Mio. FC).</div>
+      <button onclick="sfx.click();show('companies')" class="btn bg-yellow-500 text-black font-black text-xs px-5 py-2" style="width:auto">💼 Zu Jobs &amp; Gründung</button>
+    </div>`
+    return
+  }
+  const t = BIZ_TIERS[myComp.tier || 1] || BIZ_TIERS[1]
+  const ind = INDUSTRIES[myComp.industry] || INDUSTRIES.cases
+  const dem = Number((d.demand || {})[myComp.industry] || 100)
+  const b2bMult = (myComp.b2b_boost_charges || 0) > 0 ? 2 : 1
+  const maxSt = t.maxSt + (myComp.eff_level || 0) * 20
+  const grossPerPt = Math.floor(t.baseVal * (dem / 100) * b2bMult)
+  const netPerPt = Math.floor(grossPerPt * 0.92) - Number(myComp.wage_per_task) - Math.floor(t.matCost / 10)
+  const effCost = ((myComp.eff_level || 0) + 1) * (t.matCost * 2)
+
+  box.innerHTML = `
+    <div class="glass rounded-2xl p-5 border-2 border-yellow-400/60 bg-gradient-to-br from-yellow-950/20 via-zinc-900 to-zinc-950">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-3">
+          <span class="text-4xl">${t.icon}</span>
+          <div>
+            <div class="text-[11px] font-black uppercase text-yellow-400">Tier ${myComp.tier || 1}: ${t.name} · ${ind.icon} ${ind.name}</div>
+            <div class="text-2xl font-black text-white">${esc(myComp.name)}</div>
+            <div class="text-xs text-zinc-400">⭐ ${myComp.rating} · Schichten gesamt: <b>${myComp.total_tasks}</b> · Ausgezahlte Löhne: <b class="text-emerald-300">${Number(myComp.total_wages_paid||0).toLocaleString('de-DE')} FC</b></div>
+          </div>
+        </div>
+        <div class="flex gap-2">
+          <button onclick="sfx.click();show('companies')" class="btn bg-zinc-800 text-xs px-3 py-2" style="width:auto">💼 Arbeitsmarkt</button>
+          <button onclick="loadCompanyHq()" class="btn bg-cyan-700 text-xs font-bold px-3 py-2" style="width:auto">↻ Refresh</button>
+        </div>
+      </div>
+
+      <!-- KENNZAHLEN & LIVE MARGE -->
+      <div class="grid grid-cols-2 sm:grid-cols-6 gap-2 mt-4 text-center">
+        <div class="p-2.5 rounded-xl bg-black/40 border border-zinc-800"><div class="text-[10px] text-zinc-400">Firmen-Konto</div><div class="text-sm font-black font-mono text-emerald-300">${Number(myComp.treasury).toLocaleString('de-DE')} FC</div></div>
+        <div class="p-2.5 rounded-xl bg-black/40 border border-zinc-800"><div class="text-[10px] text-zinc-400">Lager (Waren)</div><div class="text-sm font-black font-mono text-amber-300">${myComp.prod_points} / ${maxSt}</div></div>
+        <div class="p-2.5 rounded-xl bg-black/40 border border-zinc-800"><div class="text-[10px] text-zinc-400">Rohstoffe</div><div class="text-sm font-black font-mono ${myComp.raw_materials>0?'text-cyan-300':'text-red-400'}">${myComp.raw_materials}×</div></div>
+        <div class="p-2.5 rounded-xl bg-black/40 border border-zinc-800"><div class="text-[10px] text-zinc-400">Zustand</div><div class="text-sm font-black font-mono ${myComp.health_pct>=30?'text-emerald-300':'text-red-400'}">${myComp.health_pct}%</div></div>
+        <div class="p-2.5 rounded-xl bg-black/40 border border-zinc-800"><div class="text-[10px] text-zinc-400">Nachfrage</div><div class="text-sm font-black font-mono text-purple-300">${dem}% ${b2bMult>1?'(2× B2B!)':''}</div></div>
+        <div class="p-2.5 rounded-xl bg-black/40 border ${netPerPt>=0?'border-emerald-500/50':'border-red-500/50'}"><div class="text-[10px] text-zinc-400">Marge / Pkt</div><div class="text-sm font-black font-mono ${netPerPt>=0?'text-emerald-400':'text-red-400'}">${netPerPt>=0?'+':''}${netPerPt.toLocaleString('de-DE')} FC</div></div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <!-- FINANZEN, LOHN & BETRIEB -->
+      <div class="glass rounded-2xl p-4 border border-zinc-800 space-y-3">
+        <div class="font-black text-white text-sm">💰 Finanzen, Rohstoffe &amp; Verkauf</div>
+        <div class="text-xs text-zinc-400">Aktueller Stücklohn: <b class="text-white">${Number(myComp.wage_per_task).toLocaleString('de-DE')} FC</b> · Fixkosten (6h): <b class="text-rose-300">${t.upk.toLocaleString('de-DE')} FC</b></div>
+        <div class="grid grid-cols-2 gap-2">
+          <button onclick="manageComp(${myComp.id},'deposit',prompt('Einzahlen ins Firmenkonto:','25000'))" class="btn bg-emerald-700 hover:bg-emerald-600 text-xs font-bold">+ Einzahlen</button>
+          <button onclick="manageComp(${myComp.id},'withdraw',prompt('Abheben (10% Steuer):','25000'))" class="btn bg-zinc-800 hover:bg-zinc-700 text-xs font-bold">- Abheben (10% Steuer)</button>
+          <button onclick="manageComp(${myComp.id},'buy_materials')" class="btn bg-cyan-800 hover:bg-cyan-700 text-xs font-bold">📦 +10 Rohstoffe (${t.matCost.toLocaleString('de-DE')})</button>
+          <button onclick="manageComp(${myComp.id},'repair')" class="btn bg-rose-800 hover:bg-rose-700 text-xs font-bold">🔧 Wartung (${t.repCost.toLocaleString('de-DE')})</button>
+          <button onclick="manageComp(${myComp.id},'set_wage',prompt('Neuer Stücklohn pro Schicht:','${myComp.wage_per_task}'))" class="btn bg-zinc-800 hover:bg-zinc-700 text-xs font-bold">💶 Stücklohn ändern</button>
+          <button onclick="manageComp(${myComp.id},'sell_prod')" class="btn bg-amber-500 hover:bg-amber-400 text-black text-xs font-black">💰 Lager verkaufen (${(myComp.prod_points*grossPerPt).toLocaleString('de-DE')} FC)</button>
+          <button onclick="manageComp(${myComp.id},'craft_product')" class="btn bg-purple-700 hover:bg-purple-600 text-xs font-bold">🎁 Produkt bauen (3 Pkt)</button>
+          <button onclick="offerB2b(${myComp.id})" class="btn bg-indigo-700 hover:bg-indigo-600 text-xs font-bold">🤝 B2B-Paket anbieten (2 Pkt)</button>
+        </div>
+      </div>
+
+      <!-- BÖRSENGANG (IPO), AKTIEN & UPGRADES -->
+      <div class="glass rounded-2xl p-4 border border-cyan-500/40 space-y-3">
+        <div class="font-black text-cyan-300 text-sm">📈 Börsengang (IPO) &amp; Firmen-Upgrades</div>
+        <div class="p-3 rounded-xl bg-black/35 border border-zinc-800 space-y-2 text-xs">
+          <div class="flex justify-between items-center">
+            <span>Aktienverkauf (IPO): <b class="${myComp.ipo_open?'text-emerald-400':'text-red-400'}">${myComp.ipo_open?'🟢 OFFEN (Aktien kaufbar)':'🔒 GESCHLOSSEN'}</b></span>
+            <button onclick="manageComp(${myComp.id},'toggle_ipo')" class="btn ${myComp.ipo_open?'bg-red-700':'bg-emerald-600'} text-xs font-black px-3 py-1" style="width:auto">${myComp.ipo_open?'🔒 Schließen':'📈 IPO Öffnen'}</button>
+          </div>
+          <div class="text-[11px] text-zinc-400">Ausgegeben: <b>${myComp.shares_issued} / ${myComp.max_shares||100}</b> · Kurs: <b class="text-yellow-300">${Number(myComp.share_price).toLocaleString('de-DE')} FC</b> · <b class="text-emerald-300">70% jedes Aktienkaufs gehen direkt auf dein Privatkonto!</b></div>
+          <div class="flex gap-2">
+            <button onclick="manageComp(${myComp.id},'set_share_price',prompt('Neuer Aktienkurs (100 - 1.000.000 FC):','${myComp.share_price}'))" class="flex-1 btn bg-zinc-800 text-xs font-bold py-1.5">🏷️ Aktienkurs setzen</button>
+            ${myComp.dividend_pool >= 100 && myComp.shares_issued > 0 ? `<button onclick="manageComp(${myComp.id},'pay_dividends')" class="flex-1 btn bg-pink-700 text-xs font-bold py-1.5">💸 Dividende (${Number(myComp.dividend_pool).toLocaleString('de-DE')})</button>` : ''}
+          </div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          ${(myComp.tier||1) < 5 ? `<button onclick="if(confirm('Für ${t.upgCost.toLocaleString('de-DE')} FC auf Tier ${(myComp.tier||1)+1} upgraden?'))manageComp(${myComp.id},'upgrade_tier')" class="btn bg-gradient-to-r from-yellow-500 to-amber-500 text-black text-xs font-black py-2">⬆️ Tier ${(myComp.tier||1)+1} Upgrade (${t.upgCost.toLocaleString('de-DE')})</button>` : '<div class="btn bg-yellow-950/40 text-yellow-300 text-xs font-black text-center py-2">👑 Max Tier 5 erreicht!</div>'}
+          <button onclick="manageComp(${myComp.id},'upgrade_eff')" class="btn bg-cyan-800 hover:bg-cyan-700 text-xs font-bold py-2">⚙️ Effizienz Lv.${myComp.eff_level||0}/5 (${effCost.toLocaleString('de-DE')})</button>
+          <button onclick="manageComp(${myComp.id},'marketing')" class="btn bg-pink-700 hover:bg-pink-600 text-xs font-bold py-2 sm:col-span-2">📣 24h Top-Job Marketing (25.000 FC)</button>
+        </div>
+      </div>
+    </div>`
+}
+
+/* ================= DEDICATED SCREEN: MEIN INVENTAR & BUFFS ================= */
+VIEWS.inventory = () => '<div id="inv_box" class="space-y-4 text-zinc-400">Lade dein Inventar...</div>'
+PAGEINIT.inventory = () => loadInventoryPage()
+
+async function loadInventoryPage() {
+  const d = await call('my_inventory', {}), box = $('inv_box')
+  if (!d || !box) return
+  const b = d.buffs || {}, prods = d.products || [], cases = d.cases || []
+  const ownedLux = (d.owned || []).filter(x => x.startsWith('lux:')).map(x => LUXURY_ITEMS.find(i => 'lux:' + i.id === x)).filter(Boolean)
+
+  box.innerHTML = `
+    <div class="glass rounded-2xl p-4 border border-purple-500/40 bg-purple-950/10">
+      <div class="font-black text-purple-300 text-sm mb-2">⚡ Deine Aktiven Buffs (wirken automatisch im Casino!)</div>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+        <div class="p-3 rounded-xl bg-black/40 border ${b.case_discount_uses>0?'border-pink-400':'border-zinc-800'}"><div class="text-2xl">🎟️</div><div class="text-xs font-black text-white">Kisten-Rabatt (-20%)</div><div class="text-sm font-mono font-bold text-pink-300">${b.case_discount_uses||0}× aktiv</div></div>
+        <div class="p-3 rounded-xl bg-black/40 border ${b.vault_shield_uses>0?'border-cyan-400':'border-zinc-800'}"><div class="text-2xl">🛡️</div><div class="text-xs font-black text-white">Tresor-Schild (35%)</div><div class="text-sm font-mono font-bold text-cyan-300">${b.vault_shield_uses||0}× aktiv</div></div>
+        <div class="p-3 rounded-xl bg-black/40 border ${b.quote_token_uses>0?'border-emerald-400':'border-zinc-800'}"><div class="text-2xl">📈</div><div class="text-xs font-black text-white">Quoten-Token (+10%)</div><div class="text-sm font-mono font-bold text-emerald-300">${b.quote_token_uses||0}× aktiv</div></div>
+        <div class="p-3 rounded-xl bg-black/40 border ${b.crypto_boost_uses>0?'border-yellow-400':'border-zinc-800'}"><div class="text-2xl">⚡</div><div class="text-xs font-black text-white">Krypto-Boost (+15%)</div><div class="text-sm font-mono font-bold text-yellow-300">${b.crypto_boost_uses||0}× aktiv</div></div>
+      </div>
+    </div>
+
+    <div class="glass rounded-2xl p-4 border border-zinc-800">
+      <div class="font-black text-white text-sm mb-2">🎁 Firmen-Produkte &amp; Verbrauchbare Items</div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        ${prods.length ? prods.map(p => {
+          const pm = PRODUCT_META[p.product_key] || { icon: '🎁', name: p.product_key, desc: '' }
+          return `<div class="p-3.5 rounded-xl bg-black/35 border border-zinc-700 flex flex-col justify-between gap-2">
+            <div class="flex items-start gap-2.5"><span class="text-3xl">${pm.icon}</span><div><div class="font-black text-white text-sm">${pm.name} (${p.qty}×)</div><div class="text-[11px] text-zinc-400">${pm.desc}</div></div></div>
+            <div class="flex gap-2">
+              <button onclick="useProduct('${p.product_key}').then(()=>loadInventoryPage())" class="flex-1 btn bg-emerald-600 hover:bg-emerald-500 text-xs font-black py-1.5">⚡ Jetzt einlösen</button>
+              <button onclick="sfx.click();mktTab='sell';show('market')" class="btn bg-zinc-800 text-xs font-bold px-3 py-1.5" style="width:auto">🏷️ Verkaufen</button>
+            </div>
+          </div>`
+        }).join('') : '<div class="col-span-full text-xs text-zinc-500">Keine Firmen-Produkte im Inventar. Du kannst sie in deinem CEO-HQ herstellen oder auf dem Marktplatz kaufen!</div>'}
+      </div>
+    </div>
+
+    <div class="glass rounded-2xl p-4 border border-zinc-800">
+      <div class="flex justify-between items-center mb-2"><div class="font-black text-white text-sm">📦 Deine Mystery-Kisten</div><button onclick="sfx.click();show('cases')" class="btn bg-pink-700 text-xs font-bold px-3 py-1" style="width:auto">🔓 Zu Kisten</button></div>
+      <div class="flex flex-wrap gap-2">${cases.length ? cases.map(c => {
+        const co = CASE_LIST.find(x => x.id === c.case_type) || { icon: '📦', name: c.case_type }
+        return `<button onclick="sfx.click();show('cases')" class="px-3 py-2 rounded-xl bg-zinc-900 border border-yellow-500/40 text-xs font-bold text-white hover:border-yellow-400">${co.icon} ${co.name}: <b class="text-yellow-300">${c.qty}×</b></button>`
+      }).join('') : '<div class="text-xs text-zinc-500">Keine Kisten im Inventar.</div>'}</div>
+    </div>
+
+    ${ownedLux.length ? `<div class="glass rounded-2xl p-4 border border-amber-500/30"><div class="font-black text-amber-300 text-sm mb-2">🏎️ Deine VIP Luxusgüter (${ownedLux.length})</div><div class="flex flex-wrap gap-2">${ownedLux.map(l => `<span class="px-3 py-1.5 rounded-xl bg-black/40 border border-amber-500/30 text-xs text-white">${l.icon} ${l.name}</span>`).join('')}</div></div>` : ''}
+  `
 }
 
 function startMiniTask(cid) {
