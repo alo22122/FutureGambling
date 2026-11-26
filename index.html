@@ -4205,16 +4205,67 @@ async function openMysteryCase(cid) {
 }
 
 let crPos = null, crLoop = null, crHist = [1.0]
-function stopCryptoLoop() { if (crLoop) { clearInterval(crLoop); crLoop = null } }
+function stopCryptoLoop() { if (crLoop) { clearInterval(crLoop); crLoop = null } if (crMktLoop) { clearInterval(crMktLoop); crMktLoop = null } }
+let crMktLoop = null, crSelCoin = 'BTC'
+const CR_COINS = {
+  BTC:  { name: 'Bitcoin', icon: '₿', base: 68500, vol: 0.009, col: '#f59e0b', hist: [] },
+  ETH:  { name: 'Ethereum', icon: 'Ξ', base: 3450, vol: 0.014, col: '#8b5cf6', hist: [] },
+  FTC:  { name: 'FutureCoin', icon: '🪙', base: 100, vol: 0.019, col: '#22d3ee', hist: [] },
+  SOL:  { name: 'Solana', icon: '◎', base: 185, vol: 0.025, col: '#10b981', hist: [] },
+  DOGE: { name: 'Dogecoin', icon: '🐕', base: 0.32, vol: 0.036, col: '#facc15', hist: [] },
+  PEPE: { name: 'PepeMeme', icon: '🐸', base: 0.0014, vol: 0.052, col: '#4ade80', hist: [] }
+}
+Object.values(CR_COINS).forEach(c => {
+  let v = c.base
+  c.hist = Array.from({ length: 24 }, () => { v = Math.max(c.base * 0.4, v * (1 + (Math.random() - 0.5) * c.vol)); return v })
+})
+function tickCryptoMarket() {
+  if (current !== 'crypto') { stopCryptoLoop(); return }
+  Object.entries(CR_COINS).forEach(([k, c]) => {
+    const prev = c.hist[c.hist.length - 1]
+    const chg = (Math.random() - 0.495) * c.vol
+    const next = Math.max(c.base * 0.25, prev * (1 + chg))
+    c.hist.push(next); if (c.hist.length > 36) c.hist.shift()
+    const el = $('cr_tick_' + k)
+    if (el) {
+      const pct = ((next - prev) / prev) * 100
+      el.innerHTML = `<span class="font-mono font-bold text-white">${next < 1 ? next.toFixed(4) : next.toLocaleString('de-DE', { maximumFractionDigits: 2 })}</span> <span class="${pct >= 0 ? 'text-emerald-400' : 'text-red-400'}">${pct >= 0 ? '▲' : '▼'} ${Math.abs(pct).toFixed(2)}%</span>`
+    }
+  })
+  if (!crPos) {
+    const sc = CR_COINS[crSelCoin] || CR_COINS.BTC
+    crHist = sc.hist.slice()
+    if ($('cr_mult_disp')) {
+      const p = sc.hist[sc.hist.length - 1], first = sc.hist[0], diff = ((p - first) / first) * 100
+      $('cr_mult_disp').innerHTML = `${sc.icon} ${crSelCoin}: ${p < 1 ? p.toFixed(4) : p.toLocaleString('de-DE', { maximumFractionDigits: 2 })} FC <span class="text-sm ${diff >= 0 ? 'text-emerald-400' : 'text-red-400'}">(${diff >= 0 ? '+' : ''}${diff.toFixed(2)}%)</span>`
+    }
+    drawCryptoChart(true)
+  }
+}
+function selectCryptoCoin(k) {
+  crSelCoin = k
+  if ($('cr_coin')) $('cr_coin').value = k
+  Object.keys(CR_COINS).forEach(ck => {
+    const b = $('cr_pill_' + ck)
+    if (b) b.className = 'p-2 rounded-xl border text-left transition ' + (ck === k ? 'border-cyan-400 bg-cyan-950/30' : 'border-zinc-800 bg-zinc-900/60 hover:border-zinc-600')
+  })
+  tickCryptoMarket()
+}
 VIEWS.crypto = () => `
   <div class="space-y-4">
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+      ${Object.entries(CR_COINS).map(([k, c]) => `<button id="cr_pill_${k}" onclick="sfx.click();selectCryptoCoin('${k}')" class="p-2 rounded-xl border text-left transition ${k === crSelCoin ? 'border-cyan-400 bg-cyan-950/30' : 'border-zinc-800 bg-zinc-900/60 hover:border-zinc-600'}">
+        <div class="text-xs font-black text-white">${c.icon} ${k} <span class="text-[10px] text-zinc-400 font-normal">Vol ${(c.vol*100).toFixed(1)}%</span></div>
+        <div id="cr_tick_${k}" class="text-[11px] mt-0.5 text-zinc-300">–</div>
+      </button>`).join('')}
+    </div>
     <div class="glass rounded-2xl p-4 border border-cyan-500/40 bg-zinc-900/80">
       <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
         <div>
-          <span class="text-xs text-zinc-400 uppercase font-bold">Live Server-Kurs &amp; PnL-Multiplikator</span>
-          <div id="cr_mult_disp" class="text-3xl font-black font-mono text-cyan-300">1,00×</div>
+          <span class="text-xs text-zinc-400 uppercase font-bold">Live Markt-Ticker (läuft immer) &amp; PnL</span>
+          <div id="cr_mult_disp" class="text-2xl sm:text-3xl font-black font-mono text-cyan-300">1,00×</div>
         </div>
-        <div id="cr_status_badge" class="px-3 py-1 rounded-full bg-zinc-800 text-zinc-400 text-xs font-bold">Keine offene Position</div>
+        <div id="cr_status_badge" class="px-3 py-1 rounded-full bg-zinc-800 text-zinc-400 text-xs font-bold">Live-Markt · Keine offene Position</div>
       </div>
       <canvas id="cr_canvas" width="600" height="170" class="w-full h-40 rounded-xl bg-zinc-950 border border-zinc-800"></canvas>
     </div>
@@ -4223,7 +4274,7 @@ VIEWS.crypto = () => `
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div>
           <label class="text-xs text-zinc-400 block mb-1">Coin</label>
-          <select id="cr_coin" class="inp w-full text-xs"><option value="FTC">🪙 FutureCoin (FTC)</option><option value="BTC">₿ Bitcoin (BTC)</option><option value="ETH">Ξ Ethereum (ETH)</option><option value="SOL">◎ Solana (SOL)</option></select>
+          <select id="cr_coin" onchange="selectCryptoCoin(this.value)" class="inp w-full text-xs">${Object.entries(CR_COINS).map(([k, c]) => `<option value="${k}" ${k===crSelCoin?'selected':''}>${c.icon} ${c.name} (${k})</option>`).join('')}</select>
         </div>
         <div>
           <label class="text-xs text-zinc-400 block mb-1">Hebel (2× – 25×)</label>
@@ -4246,7 +4297,9 @@ VIEWS.crypto = () => `
     </div>
   </div>`
 PAGEINIT.crypto = async () => {
-  crHist = [1.0]; drawCryptoChart()
+  stopCryptoLoop()
+  crMktLoop = setInterval(tickCryptoMarket, 1200)
+  tickCryptoMarket()
   const cur = await call('crypto_trade_current', {})
   if (cur && cur.pos_id) {
     crPos = { id: cur.pos_id, bet: Number(cur.bet), coin: cur.coin, side: cur.side, lev: Number(cur.leverage), mult: Number(cur.cur_mult || 1.0) }
@@ -4255,26 +4308,26 @@ PAGEINIT.crypto = async () => {
     if ($('cr_close_controls')) $('cr_close_controls').classList.remove('hidden')
     if ($('cr_status_badge')) $('cr_status_badge').textContent = `${crPos.side.toUpperCase()} ${crPos.coin} · ${crPos.lev}× Hebel (Fortgesetzt)`
     updateCryptoUi()
-    stopCryptoLoop()
     crLoop = setInterval(tickCryptoPos, 1500)
   }
 }
 
-function drawCryptoChart() {
+function drawCryptoChart(isMkt = false) {
   const c = $('cr_canvas'); if (!c || !c.getContext) return
   const ctx = c.getContext('2d'), w = c.width, h = c.height
   ctx.fillStyle = '#09090b'; ctx.fillRect(0, 0, w, h)
   ctx.strokeStyle = '#27272a'; ctx.lineWidth = 1
-  const midY = h * 0.55
+  const midY = h * 0.5
   ctx.beginPath(); ctx.moveTo(0, midY); ctx.lineTo(w, midY); ctx.stroke()
   if (crHist.length < 2) return
-  const minV = Math.min(0.2, ...crHist), maxV = Math.max(1.8, ...crHist)
-  const last = crHist[crHist.length - 1]
-  ctx.strokeStyle = last >= 1.0 ? '#34d399' : '#f87171'
+  const minV = isMkt ? Math.min(...crHist) * 0.995 : Math.min(0.2, ...crHist)
+  const maxV = isMkt ? Math.max(...crHist) * 1.005 : Math.max(1.8, ...crHist)
+  const last = crHist[crHist.length - 1], baseRef = isMkt ? crHist[0] : 1.0
+  ctx.strokeStyle = last >= baseRef ? '#34d399' : '#f87171'
   ctx.lineWidth = 3; ctx.beginPath()
   crHist.forEach((v, i) => {
     const x = (i / Math.max(1, crHist.length - 1)) * (w - 20) + 10
-    const y = h - 15 - ((v - minV) / Math.max(0.1, maxV - minV)) * (h - 30)
+    const y = h - 15 - ((v - minV) / Math.max(0.00001, maxV - minV)) * (h - 30)
     if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y)
   })
   ctx.stroke()
@@ -5458,14 +5511,15 @@ async function loadCompanies() {
           const hasMat = Number(c.raw_materials ?? 15) > 0
           const isHealthy = Number(c.health_pct ?? 100) >= 30
           const canWork = hasBudget && hasMat && isHealthy
-          return `<div class="glass rounded-2xl p-4 border ${isMine ? 'border-yellow-400/70 bg-yellow-950/10' : canWork ? 'border-emerald-500/40' : 'border-zinc-800 opacity-85'} flex flex-col justify-between gap-3">
+  const mt = Number(c.my_tasks || 0), rLbl = mt >= 15 ? '👔 Manager (+25%)' : mt >= 5 ? '👷 Facharbeiter (+10%)' : '🧑‍🔧 Praktikant'
+  return `<div class="glass rounded-2xl p-4 border ${isMine ? 'border-yellow-400/70 bg-yellow-950/10' : canWork ? 'border-emerald-500/40' : 'border-zinc-800 opacity-85'} flex flex-col justify-between gap-3">
             <div>
               <div class="flex items-start justify-between gap-2">
                 <div class="flex items-center gap-2.5">
                   <span class="text-3xl">${ind.icon}</span>
                   <div>
                     <div class="font-black text-white text-base">${esc(c.name)} ${isMine ? '<span class="text-[10px] text-yellow-300">(Deine Firma)</span>' : ''}</div>
-                    <div class="text-[11px] text-zinc-400">${ind.name} · Chef: <b class="text-zinc-200">${esc(c.owner_name)}</b> · ⭐ ${c.rating}</div>
+                    <div class="text-[11px] text-zinc-400">${ind.name} · Chef: <b class="text-zinc-200">${esc(c.owner_name)}</b> · ⭐ ${c.rating} · <span class="text-cyan-300">${rLbl}</span></div>
                   </div>
                 </div>
                 <span class="px-2.5 py-1 rounded-xl text-xs font-black ${hasBudget ? 'bg-emerald-950/70 text-emerald-300 border border-emerald-500/40' : 'bg-red-950/60 text-red-300 border border-red-500/40'}">
@@ -5629,11 +5683,9 @@ async function loadCompanyHq() {
             <span>Aktienverkauf (IPO): <b class="${myComp.ipo_open?'text-emerald-400':'text-red-400'}">${myComp.ipo_open?'🟢 OFFEN (Aktien kaufbar)':'🔒 GESCHLOSSEN'}</b></span>
             <button onclick="manageComp(${myComp.id},'toggle_ipo')" class="btn ${myComp.ipo_open?'bg-red-700':'bg-emerald-600'} text-xs font-black px-3 py-1" style="width:auto">${myComp.ipo_open?'🔒 Schließen':'📈 IPO Öffnen'}</button>
           </div>
-          <div class="text-[11px] text-zinc-400">Ausgegeben: <b>${myComp.shares_issued} / ${myComp.max_shares||100}</b> · Kurs: <b class="text-yellow-300">${Number(myComp.share_price).toLocaleString('de-DE')} FC</b> · <b class="text-emerald-300">100% jedes Aktienkaufs fließen direkt ins Firmenkonto!</b></div>
-          <div class="flex gap-2">
-            <button onclick="manageComp(${myComp.id},'set_share_price',prompt('Neuer Aktienkurs (100 - 1.000.000 FC):','${myComp.share_price}'))" class="flex-1 btn bg-zinc-800 text-xs font-bold py-1.5">🏷️ Aktienkurs setzen</button>
-            ${myComp.dividend_pool >= 100 && myComp.shares_issued > 0 ? `<button onclick="manageComp(${myComp.id},'pay_dividends')" class="flex-1 btn bg-pink-700 text-xs font-bold py-1.5">💸 Dividende (${Number(myComp.dividend_pool).toLocaleString('de-DE')})</button>` : ''}
-          </div>
+          <div class="text-[11px] text-zinc-400">Ausgegeben: <b>${myComp.shares_issued} / ${myComp.max_shares||100}</b> · Kurs (auto): <b class="text-yellow-300">${Number(myComp.share_price).toLocaleString('de-DE')} FC</b> · <b class="text-emerald-300">100% ins Firmenkonto!</b></div>
+          <div class="text-[10px] text-zinc-500">Der Aktienkurs wird automatisch aus Tier, Firmenkonto, Lohn-Umsatz, Zustand, Effizienz &amp; Markt-Nachfrage berechnet.</div>
+          ${myComp.dividend_pool >= 100 && myComp.shares_issued > 0 ? `<button onclick="manageComp(${myComp.id},'pay_dividends')" class="w-full btn bg-pink-700 text-xs font-bold py-1.5">💸 Dividende ausschütten (${Number(myComp.dividend_pool).toLocaleString('de-DE')})</button>` : ''}
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
           ${(myComp.tier||1) < 5 ? `<button onclick="if(confirm('Für ${t.upgCost.toLocaleString('de-DE')} FC auf Tier ${(myComp.tier||1)+1} upgraden?'))manageComp(${myComp.id},'upgrade_tier')" class="btn bg-gradient-to-r from-yellow-500 to-amber-500 text-black text-xs font-black py-2">⬆️ Tier ${(myComp.tier||1)+1} Upgrade (${t.upgCost.toLocaleString('de-DE')})</button>` : '<div class="btn bg-yellow-950/40 text-yellow-300 text-xs font-black text-center py-2">👑 Max Tier 5 erreicht!</div>'}
@@ -5792,8 +5844,10 @@ async function loadMarketPage() {
           ${m.is_auction ? `<div class="flex justify-between"><span>Aktuelles Gebot:</span><b class="text-cyan-300 font-mono">${Number(m.current_bid).toLocaleString('de-DE')} FC ${m.highest_bidder_name ? '(' + esc(m.highest_bidder_name) + ')' : ''}</b></div>` : ''}
         </div>
         <div class="flex gap-2">
-          <button onclick="buyMarketItem(${m.id})" class="flex-1 btn bg-emerald-600 hover:bg-emerald-500 text-xs font-black py-1.5">🛒 Kaufen (${Number(m.buyout_price).toLocaleString('de-DE')} FC)</button>
-          ${m.is_auction ? `<button onclick="bidMarketItem(${m.id}, ${Number(m.current_bid) + 100})" class="btn bg-purple-600 hover:bg-purple-500 text-xs font-bold px-3 py-1.5" style="width:auto">🔨 Bieten</button>` : ''}
+          ${ME && m.seller_id === ME.id
+            ? `<button onclick="cancelMarketItem(${m.id})" class="flex-1 btn bg-red-800 hover:bg-red-700 text-xs font-black py-1.5">❌ Angebot zurückziehen</button>`
+            : `<button onclick="buyMarketItem(${m.id})" class="flex-1 btn bg-emerald-600 hover:bg-emerald-500 text-xs font-black py-1.5">🛒 Kaufen (${Number(m.buyout_price).toLocaleString('de-DE')} FC)</button>
+               ${m.is_auction ? `<button onclick="bidMarketItem(${m.id}, ${Number(m.current_bid) + 100})" class="btn bg-purple-600 hover:bg-purple-500 text-xs font-bold px-3 py-1.5" style="width:auto">🔨 Bieten</button>` : ''}`}
         </div>
       </div>`).join('') : '<div class="col-span-full glass rounded-2xl p-8 text-center text-sm text-zinc-400">Aktuell keine Angebote auf dem Marktplatz.</div>'}</div>`
   } else if (mktTab === 'b2b') {
@@ -5809,7 +5863,9 @@ async function loadMarketPage() {
             <div><div class="font-black text-white text-sm">${ind.icon} ${esc(b.seller_name)} (${ind.name})</div><div class="text-[11px] text-zinc-400">Lieferung: <b>${b.charges}× Ertrags-Boost (2×)</b></div></div>
             <b class="text-yellow-300 font-mono text-sm">${Number(b.price).toLocaleString('de-DE')} FC</b>
           </div>
-          ${validBuyers.length ? `<div class="flex gap-2"><select id="b2b_sel_${b.id}" class="inp text-xs flex-1">${validBuyers.map(mc => `<option value="${mc.id}">${esc(mc.name)} (${Number(mc.treasury).toLocaleString('de-DE')} FC)</option>`).join('')}</select><button onclick="buyB2b(${b.id})" class="btn bg-indigo-600 hover:bg-indigo-500 text-xs font-black px-3" style="width:auto">🤝 Kaufen</button></div>` : '<div class="text-[11px] text-zinc-500">Du brauchst eine eigene Firma einer anderen Branche.</div>'}
+          ${myComps.some(mc => mc.id === b.seller_company_id)
+            ? `<button onclick="cancelB2b(${b.id})" class="btn bg-red-800 hover:bg-red-700 text-xs font-black px-3 py-1.5">❌ B2B-Paket zurückziehen</button>`
+            : validBuyers.length ? `<div class="flex gap-2"><select id="b2b_sel_${b.id}" class="inp text-xs flex-1">${validBuyers.map(mc => `<option value="${mc.id}">${esc(mc.name)} (${Number(mc.treasury).toLocaleString('de-DE')} FC)</option>`).join('')}</select><button onclick="buyB2b(${b.id})" class="btn bg-indigo-600 hover:bg-indigo-500 text-xs font-black px-3" style="width:auto">🤝 Kaufen</button></div>` : '<div class="text-[11px] text-zinc-500">Du brauchst eine eigene Firma einer anderen Branche.</div>'}
         </div>`
       }).join('') : '<div class="col-span-full glass rounded-2xl p-8 text-center text-sm text-zinc-400">Aktuell keine B2B-Lieferpakete im Angebot.</div>'}</div></div>`
   } else if (mktTab === 'bounties') {
@@ -5858,6 +5914,8 @@ async function loadMarketPage() {
   }
 }
 async function buyMarketItem(lid) { sfx.click(); const d = await call('market_buy', { lid }); if (d) { sfx.claim(); setBalance(d.balance); toast('🛒 Gekauft!'); loadMarketPage() } }
+async function cancelMarketItem(lid) { sfx.click(); const d = await call('market_cancel', { lid }); if (d) { sfx.claim(); toast('❌ Angebot zurückgezogen & Item erstattet!'); loadMarketPage() } }
+async function cancelB2b(contractId) { sfx.click(); const d = await call('b2b_offer_cancel', { contract_id: contractId }); if (d) { sfx.claim(); toast('❌ B2B-Paket zurückgezogen (+2 Pkt zurück)!'); loadMarketPage() } }
 async function buyB2b(contractId) {
   const buyerCid = Number(($('b2b_sel_' + contractId) || {}).value)
   if (!buyerCid) return
