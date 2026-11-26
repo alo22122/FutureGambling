@@ -485,6 +485,8 @@ const GAMES = {
   leagues:   { icon: '🏆', name: 'Season-Ligen', desc: 'Bronze bis Titan! Wöchentliche Ranglisten-Belohnungen & Abzeichen.', page: true },
   bank:      { icon: '💳', name: 'Pfandhaus & Kredite', desc: 'Verpfände Luxusgüter für Sofort-Cash oder vergib Kredite mit Zinsen.', page: true },
   vault:     { icon: '💎', name: 'VIP Tresor', desc: 'Sicheres Sparkonto mit 12h Verlust-Schutz und 1% täglichen Zinsen!', page: true },
+  companies: { icon: '🏢', name: 'Firmen & Jobs', desc: 'Gründe deine eigene Firma, arbeite für Stücklohn (0 FC Einsatz!) & nutze den Rettungsschirm.', page: true },
+  market:    { icon: '🛒', name: 'Marktplatz & Bounties', desc: 'P2P-Marktplatz, Auktionen & öffentliches Auftragsbrett (Escrow).', page: true },
   history:   { icon: '📜', name: 'Meine Wetten', desc: 'Dein persönliches Spiel-Historien-Buch: letzte 50 Runden, Gewinnkurve & bester Treffer.', page: true },
   odds:      { icon: '📊', name: 'Chancen & Quoten', desc: 'Alle Gewinnchancen, Multiplikatoren, Jackpot-Quoten & RTPs für jedes Spiel & jeden Slot.', page: true },
   court:     { icon: '⚖️', name: 'Casino-Gericht', desc: 'Öffentliches Tribunal! Stimme über Verdächtige ab (Schuldig vs. Unschuldig).', page: true },
@@ -653,7 +655,7 @@ const NAVGROUPS = [
   ['🃏', 'Tisch & Karten', ['blackjack', 'roulette', 'poker', 'baccarat', 'dragon', 'war', 'sicbo', 'hilo']],
   ['⚡', 'Schnellspiele', ['penalty', 'coinflip', 'dice', 'cyberrace', 'horses', 'bomb', 'darts', 'wheel', 'keno', 'lucky7', 'doors', 'number', 'rps', 'double', 'allin']],
   ['⚔️', 'PvP & Arcade', ['duel', 'chess', 'versus', 'snake', 'typing', 'trivia', 'tetris']],
-  ['💎', 'Bank & Wirtschaft', ['vault', 'stocks', 'bank', 'luxury', 'forbes']],
+  ['💎', 'Bank & Wirtschaft', ['companies', 'market', 'vault', 'stocks', 'bank', 'luxury', 'forbes']],
   ['🌍', 'Community & Ruhm', ['chat', 'hof', 'board', 'leagues', 'clanhq', 'community', 'court', 'votes', 'friends', 'players', 'feed']],
   ['👤', 'Konto & Boni', ['earn', 'bp', 'ach', 'shop', 'stats', 'history', 'odds', 'admin']]
 ]
@@ -769,7 +771,7 @@ const LOBBY_MAP = {
   table: ['blackjack', 'roulette', 'poker', 'baccarat', 'dragon', 'war', 'sicbo', 'hilo'],
   fast: ['penalty', 'coinflip', 'dice', 'cyberrace', 'horses', 'bomb', 'darts', 'wheel', 'keno', 'lucky7', 'doors', 'number', 'rps', 'double', 'allin'],
   pvp: ['duel', 'chess', 'versus', 'snake', 'typing', 'trivia', 'tetris'],
-  eco: ['vault', 'stocks', 'bank', 'luxury', 'forbes', 'hof', 'leagues', 'history', 'earn', 'bp']
+  eco: ['companies', 'market', 'vault', 'stocks', 'bank', 'luxury', 'forbes', 'hof', 'leagues', 'history', 'earn', 'bp']
 }
 const GAME_BADGES = {
   slots: ['🏆 Global Pot', 'text-yellow-300 border-yellow-500/40 bg-yellow-950/30'],
@@ -5283,6 +5285,329 @@ async function admDecideBankLoan(id, approve) {
   sfx.click()
   const d = await call('admin_bank_loan_decide', { loan_id: id, approve })
   if (d) { toast(approve ? '✅ Kredit genehmigt & ausgezahlt!' : '❌ Kredit abgelehnt'); admLoadBankLoans(); loadAdminFullDashboard() }
+}
+
+/* ================= SPIELER-FIRMEN, ARBEITSMARKT & ANTI-BROKE-SYSTEM ================= */
+const INDUSTRIES = {
+  cases:    { icon: '📦', name: 'Kisten-Manufaktur', prod: '🎟️ Kisten-Rabatt-Coupon', pKey: 'case_coupon' },
+  crypto:   { icon: '⛏️', name: 'Krypto-Farm', prod: '⚡ Krypto-Boost-Modul', pKey: 'crypto_boost' },
+  security: { icon: '🛡️', name: 'Sicherheitsdienst', prod: '🛡️ Tresor-Schild', pKey: 'vault_shield' },
+  trading:  { icon: '💼', name: 'Trading-Büro', prod: '📈 Quoten-Token', pKey: 'quote_token' }
+}
+const PRODUCT_META = {
+  case_coupon:  { icon: '🎟️', name: 'Kisten-Rabatt-Coupon' },
+  crypto_boost: { icon: '⚡', name: 'Krypto-Boost-Modul' },
+  vault_shield: { icon: '🛡️', name: 'Tresor-Schild' },
+  quote_token:  { icon: '📈', name: 'Quoten-Token' }
+}
+let compData = null, activeTaskModal = null
+
+VIEWS.companies = () => `
+  <div id="comp_box" class="space-y-4 text-zinc-400">Lade Firmen &amp; Arbeitsmarkt...</div>
+  <div id="task_modal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div id="task_modal_body" class="glass rounded-2xl p-6 max-w-md w-full border-2 border-cyan-500/60 shadow-2xl space-y-4"></div>
+  </div>`
+PAGEINIT.companies = () => loadCompanies()
+
+async function loadCompanies() {
+  const d = await call('company_list', {}), box = $('comp_box')
+  if (!d || !box) return
+  compData = d
+  const isBroke = Number(d.balance || 0) < 100
+  const comps = d.companies || []
+  const prods = d.products || []
+
+  box.innerHTML = `
+    <!-- ANTI-BROKE RETTUNGSSCHIRM & NOTFALL-SCHICHT -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <div class="glass rounded-2xl p-4 border ${isBroke ? 'border-emerald-400 bg-emerald-950/25' : 'border-zinc-800'}">
+        <div class="text-xs font-black text-emerald-300">🛡️ Verlust-Airbag (Rettungsschirm)</div>
+        <div class="text-2xl font-black font-mono text-white my-1">${Number(d.cashback_pot || 0).toLocaleString('de-DE')} FC</div>
+        <div class="text-[11px] text-zinc-400 mb-2">4 % deiner Nettoverluste werden automatisch gespart. Abholbar unter 100 FC!</div>
+        <button onclick="claimCashbackPot()" class="btn ${isBroke && d.cashback_pot >= 10 ? 'bg-emerald-600 hover:bg-emerald-500 text-white' : 'bg-zinc-800 text-zinc-400'} text-xs font-black py-1.5">💸 Rettungsschirm abholen</button>
+      </div>
+      <div class="glass rounded-2xl p-4 border ${isBroke ? 'border-amber-400 bg-amber-950/25' : 'border-zinc-800'}">
+        <div class="text-xs font-black text-amber-300">🆘 Casino-Aushilfe (Notfall-Schicht)</div>
+        <div class="text-lg font-black text-white my-1">+350 FC Sofort-Lohn</div>
+        <div class="text-[11px] text-zinc-400 mb-2">Immer verfügbar bei &lt; 100 FC (25s Cooldown), damit niemand betteln muss!</div>
+        <button onclick="startMiniTask(null)" class="btn ${isBroke ? 'bg-amber-500 hover:bg-amber-400 text-black' : 'bg-zinc-800 text-zinc-400'} text-xs font-black py-1.5">🛠️ Notfall-Schicht starten</button>
+      </div>
+      <div class="glass rounded-2xl p-4 border border-cyan-500/30 bg-cyan-950/10">
+        <div class="text-xs font-black text-cyan-300">🏛️ Staatliche Job-Kasse &amp; Inventar</div>
+        <div class="text-xl font-black font-mono text-yellow-300 my-1">${Number(d.state_job_fund || 0).toLocaleString('de-DE')} FC</div>
+        <div class="text-[11px] text-zinc-400 mb-1.5">Wird durch 5 % Wirtschafts-Steuer gefüllt.</div>
+        <div class="flex flex-wrap gap-1">${prods.length ? prods.map(p => `<span class="px-2 py-0.5 rounded-lg bg-zinc-900 border border-zinc-700 text-[10px] text-white">${(PRODUCT_META[p.product_key]||{}).icon||'📦'} ${(PRODUCT_META[p.product_key]||{}).name||p.product_key}: <b>${p.qty}×</b></span>`).join('') : '<span class="text-[10px] text-zinc-500">Noch keine Firmen-Produkte im Inventar.</span>'}</div>
+      </div>
+    </div>
+
+    <!-- NEUE FIRMA GRÜNDEN -->
+    <div class="glass rounded-2xl p-4 border border-yellow-500/40 bg-yellow-950/10">
+      <div class="font-black text-yellow-300 text-sm mb-2">🏗️ Eigene Firma gründen (25.000 FC Gründung + Start-Firmenkonto)</div>
+      <div class="grid grid-cols-1 sm:grid-cols-5 gap-2">
+        <input id="cmp_name" placeholder="Firmenname (z.B. Apex Crypto)" maxlength="32" class="inp text-xs sm:col-span-2">
+        <select id="cmp_ind" class="inp text-xs">
+          <option value="cases">📦 Kisten-Manufaktur</option>
+          <option value="crypto">⛏️ Krypto-Farm</option>
+          <option value="security">🛡️ Sicherheitsdienst</option>
+          <option value="trading">💼 Trading-Büro</option>
+        </select>
+        <input id="cmp_treas" type="number" min="1000" value="10000" placeholder="Start-Konto FC" class="inp text-xs">
+        <input id="cmp_wage" type="number" min="200" max="50000" value="1000" placeholder="Lohn/Auftrag" class="inp text-xs">
+      </div>
+      <div class="flex justify-between items-center mt-2.5 flex-wrap gap-2">
+        <span class="text-[11px] text-zinc-400">Tipp: Höherer Stücklohn lockt mehr Arbeiter an &amp; erhöht deinen Produktions-Verkaufspreis!</span>
+        <button onclick="createCompany()" class="btn bg-yellow-500 hover:bg-yellow-400 text-black text-xs font-black px-4 py-2" style="width:auto">🏢 Firma gründen</button>
+      </div>
+    </div>
+
+    <!-- FREIER ARBEITSMARKT -->
+    <div>
+      <div class="flex items-center justify-between mb-2">
+        <div class="font-black text-white text-sm">💼 Freier Arbeitsmarkt (${comps.length} Firmen · 0 FC Einsatz zum Arbeiten!)</div>
+        <button onclick="loadCompanies()" class="btn bg-zinc-800 text-xs px-3 py-1" style="width:auto">↻ Aktualisieren</button>
+      </div>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-3.5">
+        ${comps.length ? comps.map(c => {
+          const ind = INDUSTRIES[c.industry] || INDUSTRIES.cases
+          const isMine = ME && c.owner_id === ME.id
+          const hasBudget = Number(c.treasury) >= Number(c.wage_per_task)
+          return `<div class="glass rounded-2xl p-4 border ${isMine ? 'border-yellow-400/70 bg-yellow-950/10' : hasBudget ? 'border-emerald-500/40' : 'border-zinc-800 opacity-80'} flex flex-col justify-between gap-3">
+            <div>
+              <div class="flex items-start justify-between gap-2">
+                <div class="flex items-center gap-2.5">
+                  <span class="text-3xl">${ind.icon}</span>
+                  <div>
+                    <div class="font-black text-white text-base">${esc(c.name)} ${isMine ? '<span class="text-[10px] text-yellow-300">(Deine Firma)</span>' : ''}</div>
+                    <div class="text-[11px] text-zinc-400">${ind.name} · Chef: <b class="text-zinc-200">${esc(c.owner_name)}</b> · ⭐ ${c.rating}</div>
+                  </div>
+                </div>
+                <span class="px-2.5 py-1 rounded-xl text-xs font-black ${hasBudget ? 'bg-emerald-950/70 text-emerald-300 border border-emerald-500/40' : 'bg-red-950/60 text-red-300 border border-red-500/40'}">
+                  ${Number(c.wage_per_task).toLocaleString('de-DE')} FC / Auftrag
+                </span>
+              </div>
+
+              <div class="grid grid-cols-3 gap-2 mt-3 text-center">
+                <div class="rounded-xl bg-black/30 p-2 border border-zinc-800"><div class="text-[10px] text-zinc-400">Firmen-Konto</div><div class="text-xs font-mono font-black text-emerald-300">${Number(c.treasury).toLocaleString('de-DE')} FC</div></div>
+                <div class="rounded-xl bg-black/30 p-2 border border-zinc-800"><div class="text-[10px] text-zinc-400">Bonus-Ziel</div><div class="text-xs font-bold text-amber-300">${c.my_bonus_prog || 0}/${c.bonus_threshold} → +${Number(c.bonus_amount).toLocaleString('de-DE')}</div></div>
+                <div class="rounded-xl bg-black/30 p-2 border border-zinc-800"><div class="text-[10px] text-zinc-400">Aktienkurs</div><div class="text-xs font-mono font-bold text-cyan-300">${Number(c.share_price).toLocaleString('de-DE')} FC (${c.my_shares||0}×)</div></div>
+              </div>
+            </div>
+
+            <div class="space-y-2">
+              <div class="flex flex-wrap gap-1.5">
+                <button onclick="startMiniTask(${c.id})" ${hasBudget ? '' : 'disabled'} class="flex-1 btn ${hasBudget ? 'bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white' : 'bg-zinc-800 text-zinc-500'} text-xs font-black py-2">
+                  ${hasBudget ? `🛠️ Auftrag ausführen (+${Number(c.wage_per_task).toLocaleString('de-DE')} FC)` : '⏳ Firmenkonto leer'}
+                </button>
+                <button onclick="buyCompShare(${c.id}, 1)" class="btn bg-cyan-900/60 hover:bg-cyan-800 text-cyan-200 text-xs font-bold px-3 py-2" style="width:auto">📈 +1 Aktie</button>
+                ${c.my_shares > 0 ? `<button onclick="sellCompShare(${c.id}, 1)" class="btn bg-zinc-800 hover:bg-zinc-700 text-xs font-bold px-3 py-2" style="width:auto">📉 -1</button>` : ''}
+              </div>
+
+              ${isMine ? `
+              <div class="pt-2 border-t border-zinc-800/80 space-y-1.5 bg-black/25 p-2.5 rounded-xl">
+                <div class="text-[11px] font-bold text-yellow-300 flex justify-between">
+                  <span>🏭 Chef-Verwaltung · Waren: <b>${c.prod_points} Pkt</b></span>
+                  <span>Dividenden-Pool: <b>${Number(c.dividend_pool||0).toLocaleString('de-DE')} FC</b></span>
+                </div>
+                <div class="flex flex-wrap gap-1.5">
+                  <button onclick="manageComp(${c.id},'deposit',prompt('Wie viel FC ins Firmenkonto einzahlen?','10000'))" class="btn bg-emerald-800 text-[11px] py-1 px-2" style="width:auto">+ Einzahlen</button>
+                  <button onclick="manageComp(${c.id},'withdraw',prompt('Wie viel FC abheben? (5% Steuer)','5000'))" class="btn bg-zinc-800 text-[11px] py-1 px-2" style="width:auto">- Abheben</button>
+                  <button onclick="manageComp(${c.id},'set_wage',prompt('Neuer Lohn pro Auftrag (200-50.000 FC):','${c.wage_per_task}'))" class="btn bg-cyan-800 text-[11px] py-1 px-2" style="width:auto">💶 Lohn</button>
+                  <button onclick="manageComp(${c.id},'sell_prod')" class="btn bg-amber-600 text-black font-black text-[11px] py-1 px-2" style="width:auto">💰 Waren verkaufen</button>
+                  <button onclick="manageComp(${c.id},'craft_product')" class="btn bg-purple-700 text-[11px] py-1 px-2" style="width:auto">🎁 Produkt (3 Pkt)</button>
+                  ${c.dividend_pool >= 100 && c.shares_issued > 0 ? `<button onclick="manageComp(${c.id},'pay_dividends')" class="btn bg-pink-700 text-[11px] py-1 px-2" style="width:auto">💸 Dividende</button>` : ''}
+                </div>
+              </div>` : ''}
+            </div>
+          </div>`
+        }).join('') : '<div class="col-span-full glass rounded-2xl p-8 text-center text-sm text-zinc-400">Noch keine Firmen gegründet. Sei der erste Gründer!</div>'}
+      </div>
+    </div>`
+}
+
+async function createCompany() {
+  const name = ($('cmp_name')||{}).value||'', ind = ($('cmp_ind')||{}).value||'cases'
+  const tr = Number(($('cmp_treas')||{}).value||0), wg = Number(($('cmp_wage')||{}).value||1000)
+  sfx.click()
+  const d = await call('company_create', { cname: name, cicon: INDUSTRIES[ind].icon, cindustry: ind, init_treasury: tr, wage: wg })
+  if (d) { sfx.claim(); setBalance(d.balance); toast('🏢 Firma gegründet!'); loadCompanies() }
+}
+async function manageComp(cid, act, val = 0) {
+  if (val === null) return
+  sfx.click()
+  const d = await call('company_manage', { cid, act, val: Number(val)||0 })
+  if (d) { sfx.claim(); if (d.balance !== undefined) setBalance(d.balance); toast('✔ Firmen-Aktion ausgeführt!'); loadCompanies() }
+}
+async function claimCashbackPot() {
+  sfx.click()
+  const d = await call('cashback_claim', {})
+  if (d) { sfx.win(); setBalance(d.balance); toast('🛡️ Rettungsschirm: +' + Number(d.amt).toLocaleString('de-DE') + ' FC erhalten!'); loadCompanies() }
+}
+async function buyCompShare(cid, qty) {
+  sfx.click()
+  const d = await call('company_buy_share', { cid, qty })
+  if (d) { sfx.claim(); setBalance(d.balance); toast('📈 Firmen-Anteil gekauft!'); loadCompanies() }
+}
+async function sellCompShare(cid, qty) {
+  sfx.click()
+  const d = await call('company_sell_share', { cid, qty })
+  if (d) { sfx.claim(); setBalance(d.balance); toast('📉 Anteil verkauft (+' + Number(d.payout).toLocaleString('de-DE') + ' FC)!'); loadCompanies() }
+}
+
+function startMiniTask(cid) {
+  const modal = $('task_modal'), body = $('task_modal_body'); if (!modal || !body) return
+  sfx.click()
+  modal.classList.remove('hidden')
+  const mode = Math.random() < 0.5 ? 'clicks' : 'math'
+  if (mode === 'clicks') {
+    let left = 5
+    const renderClicks = () => {
+      body.innerHTML = `
+        <div class="text-sm font-black text-cyan-300">⚡ Aktive Schicht: Reaktions-Check (${left} übrig)</div>
+        <div class="text-xs text-zinc-400">Klicke das aktive Ziel 5× an, um den Auftrag abzuschließen!</div>
+        <div class="h-36 relative bg-black/50 rounded-xl border border-zinc-800 overflow-hidden">
+          <button id="mt_target" style="position:absolute;left:${15 + Math.floor(Math.random()*65)}%;top:${15 + Math.floor(Math.random()*60)}%" class="px-3 py-1.5 rounded-xl bg-emerald-500 text-black font-black text-xs shadow-lg hover:scale-110 transition">🎯 KLICK (${left})</button>
+        </div>
+        <button onclick="$('task_modal').classList.add('hidden')" class="btn bg-zinc-800 text-xs py-1.5">Abbrechen</button>`
+      $('mt_target').onclick = () => {
+        sfx.claim(); left--
+        if (left <= 0) finishMiniTask(cid)
+        else renderClicks()
+      }
+    }
+    renderClicks()
+  } else {
+    const a = 12 + Math.floor(Math.random()*35), b = 7 + Math.floor(Math.random()*25), ans = a + b
+    body.innerHTML = `
+      <div class="text-sm font-black text-cyan-300">🔢 Aktive Schicht: Buchhaltungs-Code</div>
+      <div class="text-xs text-zinc-400">Löse diese kurze Rechnung, um den Auftrag abzuschließen:</div>
+      <div class="text-3xl font-black font-mono text-center text-yellow-300 py-3 bg-black/40 rounded-xl border border-zinc-800">${a} + ${b} = ?</div>
+      <div class="flex gap-2">
+        <input id="mt_ans" type="number" class="inp flex-1 text-center font-mono" placeholder="Ergebnis...">
+        <button id="mt_sub" class="btn bg-emerald-600 text-xs font-black px-4" style="width:auto">✔ Abgeben</button>
+      </div>
+      <button onclick="$('task_modal').classList.add('hidden')" class="btn bg-zinc-800 text-xs py-1.5">Abbrechen</button>`
+    $('mt_sub').onclick = () => {
+      if (Number($('mt_ans').value) === ans) finishMiniTask(cid)
+      else { sfx.lose(); toast('❌ Falsches Ergebnis, versuch es nochmal!') }
+    }
+  }
+}
+async function finishMiniTask(cid) {
+  $('task_modal').classList.add('hidden')
+  if (cid === null) {
+    const d = await call('company_emergency_shift', {})
+    if (d) { sfx.win(); setBalance(d.balance); toast('🆘 Notfall-Schicht erledigt: +' + d.pay + ' FC!'); loadCompanies() }
+    return
+  }
+  const d = await call('company_do_task', { cid, rate_val: 5 })
+  if (d) {
+    sfx.win(); setBalance(d.balance)
+    toast('💸 Schicht erledigt! +' + Number(d.wage).toLocaleString('de-DE') + ' FC Lohn' + (d.bonus > 0 ? ' + ' + Number(d.bonus).toLocaleString('de-DE') + ' FC BONUS!' : ''))
+    loadCompanies()
+  }
+}
+
+/* ================= P2P MARKTPLATZ, AUKTIONEN & AUFTRAGSBRETT ================= */
+let mktTab = 'market'
+VIEWS.market = () => `
+  <div class="space-y-4">
+    <div class="flex gap-2 flex-wrap">
+      <button onclick="sfx.click();mktTab='market';loadMarketPage()" id="mtab_market" class="px-3.5 py-2 rounded-xl text-xs font-black bg-cyan-600 text-white">🛒 P2P Marktplatz &amp; Auktionen</button>
+      <button onclick="sfx.click();mktTab='bounties';loadMarketPage()" id="mtab_bounties" class="px-3.5 py-2 rounded-xl text-xs font-black bg-zinc-800 text-zinc-300">📋 Auftragsbrett (Escrow)</button>
+      <button onclick="sfx.click();mktTab='sell';loadMarketPage()" id="mtab_sell" class="px-3.5 py-2 rounded-xl text-xs font-black bg-zinc-800 text-zinc-300">📦 Item / Kiste verkaufen</button>
+    </div>
+    <div id="mkt_body" class="text-zinc-400">Lade Marktplatz...</div>
+  </div>`
+PAGEINIT.market = () => loadMarketPage()
+
+async function loadMarketPage() {
+  ['market', 'bounties', 'sell'].forEach(t => {
+    const b = $('mtab_' + t)
+    if (b) b.className = 'px-3.5 py-2 rounded-xl text-xs font-black ' + (mktTab === t ? 'bg-cyan-600 text-white' : 'bg-zinc-800 text-zinc-300')
+  })
+  const box = $('mkt_body'); if (!box) return
+  if (mktTab === 'market') {
+    const rows = await call('market_list', {})
+    const list = Array.isArray(rows) ? rows : []
+    box.innerHTML = `<div class="grid grid-cols-1 md:grid-cols-2 gap-3">${list.length ? list.map(m => `
+      <div class="glass rounded-2xl p-4 border ${m.is_auction ? 'border-purple-500/50' : 'border-zinc-800'} flex flex-col justify-between gap-2.5">
+        <div class="flex items-start justify-between">
+          <div class="flex items-center gap-2.5"><span class="text-3xl">${esc(m.item_icon)}</span><div><div class="font-black text-white text-sm">${esc(m.item_name)} (${m.qty}×)</div><div class="text-[11px] text-zinc-400">Verkäufer: <b>${esc(m.seller_name)}</b></div></div></div>
+          <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${m.is_auction ? 'bg-purple-950 text-purple-300 border border-purple-500/40' : 'bg-emerald-950 text-emerald-300 border border-emerald-500/40'}">${m.is_auction ? '🔨 Auktion' : '🏷️ Sofortkauf'}</span>
+        </div>
+        <div class="text-xs bg-black/30 rounded-xl p-2.5 border border-zinc-800 space-y-1">
+          <div class="flex justify-between"><span>Sofortkauf-Preis:</span><b class="text-yellow-300 font-mono">${Number(m.buyout_price).toLocaleString('de-DE')} FC</b></div>
+          ${m.is_auction ? `<div class="flex justify-between"><span>Aktuelles Gebot:</span><b class="text-cyan-300 font-mono">${Number(m.current_bid).toLocaleString('de-DE')} FC ${m.highest_bidder_name ? '(' + esc(m.highest_bidder_name) + ')' : ''}</b></div>` : ''}
+        </div>
+        <div class="flex gap-2">
+          <button onclick="buyMarketItem(${m.id})" class="flex-1 btn bg-emerald-600 hover:bg-emerald-500 text-xs font-black py-1.5">🛒 Kaufen (${Number(m.buyout_price).toLocaleString('de-DE')} FC)</button>
+          ${m.is_auction ? `<button onclick="bidMarketItem(${m.id}, ${Number(m.current_bid) + 100})" class="btn bg-purple-600 hover:bg-purple-500 text-xs font-bold px-3 py-1.5" style="width:auto">🔨 Bieten</button>` : ''}
+        </div>
+      </div>`).join('') : '<div class="col-span-full glass rounded-2xl p-8 text-center text-sm text-zinc-400">Aktuell keine Angebote auf dem Marktplatz.</div>'}</div>`
+  } else if (mktTab === 'bounties') {
+    const [rows, comp] = await Promise.all([call('bounty_list', {}), call('company_list', {}, true)])
+    const list = Array.isArray(rows) ? rows : [], comps = (comp && comp.companies) || []
+    box.innerHTML = `
+      <div class="glass rounded-2xl p-4 border border-amber-500/40 mb-4">
+        <div class="font-black text-amber-300 text-sm mb-2">📋 Neuen Escrow-Auftrag ausschreiben (Geld wird sicher hinterlegt)</div>
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-2">
+          <input id="bn_title" placeholder="z.B. Arbeite 5 Schichten bei mir" class="inp text-xs sm:col-span-2">
+          <select id="bn_cid" class="inp text-xs"><option value="">Beliebige Aufgabe</option>${comps.map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select>
+          <input id="bn_tasks" type="number" min="1" value="5" placeholder="Schichten" class="inp text-xs">
+        </div>
+        <div class="flex gap-2 mt-2">
+          <input id="bn_rew" type="number" min="500" value="5000" placeholder="Belohnung FC" class="inp text-xs w-44">
+          <button onclick="createBounty()" class="btn bg-amber-500 hover:bg-amber-400 text-black text-xs font-black px-4" style="width:auto">📤 Auftrag einstellen</button>
+        </div>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">${list.length ? list.map(b => `
+        <div class="glass rounded-2xl p-4 border border-zinc-800 flex flex-col justify-between gap-2">
+          <div>
+            <div class="flex justify-between items-start"><b class="text-white text-sm">${esc(b.title)}</b><b class="text-emerald-400 font-mono text-sm">+${Number(b.reward).toLocaleString('de-DE')} FC</b></div>
+            <div class="text-[11px] text-zinc-400 mt-1">Von: <b>${esc(b.creator_name)}</b> ${b.company_name ? `· Firma: <b>${esc(b.company_name)}</b> (${b.target_tasks} Schichten nötig)` : ''}</div>
+          </div>
+          <button onclick="claimBounty(${b.id})" class="btn bg-emerald-600 hover:bg-emerald-500 text-xs font-black py-1.5">✅ Auftrag abschließen &amp; kassieren</button>
+        </div>`).join('') : '<div class="col-span-full glass rounded-2xl p-8 text-center text-sm text-zinc-400">Keine offenen Aufträge.</div>'}</div>`
+  } else {
+    const [inv, comp] = await Promise.all([call('case_inventory', {}, true), call('company_list', {}, true)])
+    const cases = Array.isArray(inv) ? inv : [], prods = (comp && comp.products) || []
+    box.innerHTML = `
+      <div class="glass rounded-2xl p-4 border border-cyan-500/40 space-y-3">
+        <div class="font-black text-cyan-300 text-sm">📦 Kiste oder Firmen-Produkt auf dem Marktplatz anbieten (5 % Marktsteuer)</div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <select id="mk_item" class="inp text-xs">
+            ${cases.map(c => { const co = CASE_LIST.find(x => x.id === c.case_type)||{}; return `<option value="case:${c.case_type}:${esc(co.name||c.case_type)}:${co.icon||'📦'}">${co.icon||'📦'} Kiste: ${co.name||c.case_type} (${c.qty}×)</option>` }).join('')}
+            ${prods.map(p => { const pm = PRODUCT_META[p.product_key]||{}; return `<option value="product:${p.product_key}:${esc(pm.name||p.product_key)}:${pm.icon||'🎁'}">${pm.icon||'🎁'} ${pm.name||p.product_key} (${p.qty}×)</option>` }).join('')}
+          </select>
+          <input id="mk_qty" type="number" min="1" value="1" placeholder="Menge" class="inp text-xs">
+          <input id="mk_price" type="number" min="100" value="2500" placeholder="Sofortkauf-Preis FC" class="inp text-xs">
+        </div>
+        <div class="flex items-center gap-3">
+          <label class="text-xs text-zinc-300 flex items-center gap-1.5"><input id="mk_auc" type="checkbox"> Als Auktion einstellen</label>
+          <button onclick="createMarketListing()" class="btn bg-cyan-600 hover:bg-cyan-500 text-xs font-black px-4 py-2" style="width:auto">🏷️ Einstellen</button>
+        </div>
+      </div>`
+  }
+}
+async function buyMarketItem(lid) { sfx.click(); const d = await call('market_buy', { lid }); if (d) { sfx.claim(); setBalance(d.balance); toast('🛒 Gekauft!'); loadMarketPage() } }
+async function bidMarketItem(lid, minBid) {
+  const v = Number(prompt('Dein Gebot in FC (mind. ' + minBid + '):', minBid))
+  if (!(v > 0)) return
+  sfx.click(); const d = await call('market_bid', { lid, bid_amt: v })
+  if (d) { sfx.bet(); setBalance(d.balance); toast('🔨 Gebot platziert!'); loadMarketPage() }
+}
+async function createBounty() {
+  const btitle = ($('bn_title')||{}).value||'', cidRaw = ($('bn_cid')||{}).value||'', t_tasks = Number(($('bn_tasks')||{}).value||5), rew = Number(($('bn_rew')||{}).value||5000)
+  sfx.click(); const d = await call('bounty_create', { btitle, cid: cidRaw ? Number(cidRaw) : null, t_tasks, rew })
+  if (d) { sfx.claim(); setBalance(d.balance); toast('📋 Auftrag eingestellt!'); loadMarketPage() }
+}
+async function claimBounty(bid) { sfx.click(); const d = await call('bounty_claim', { bid }); if (d) { sfx.win(); setBalance(d.balance); toast('🎉 +' + Number(d.reward).toLocaleString('de-DE') + ' FC erhalten!'); loadMarketPage() } }
+async function createMarketListing() {
+  const raw = ($('mk_item')||{}).value||''; if (!raw) return toast('Kein Item im Inventar!')
+  const [itype, ikey, iname, iicon] = raw.split(':')
+  const qty_in = Number(($('mk_qty')||{}).value||1), price = Number(($('mk_price')||{}).value||1000), is_auc = !!($('mk_auc')||{}).checked
+  sfx.click(); const d = await call('market_create', { itype, ikey, iname, iicon, qty_in, is_auc, price })
+  if (d) { sfx.claim(); toast('🏷️ Angebot online!'); mktTab = 'market'; loadMarketPage() }
 }
 
 
