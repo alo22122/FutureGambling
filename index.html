@@ -5377,11 +5377,24 @@ async function loadCompanies() {
         <span class="text-xs text-zinc-400">5 Regeln</span>
       </summary>
       <div class="mt-3 pt-3 border-t border-zinc-800 grid grid-cols-1 md:grid-cols-2 gap-2.5 text-xs text-zinc-300">
-        <div class="p-2.5 rounded-xl bg-black/30 border border-zinc-800"><b class="text-yellow-300">1. Hohe Einstiegshürde:</b> Gründung kostet <b>250.000 FC</b> + mind. <b>50.000 FC</b> Firmenkonto + <b>50.000 FC</b> eigener Spielumsatz. Max. 1 Firma pro Spieler!</div>
-        <div class="p-2.5 rounded-xl bg-black/30 border border-zinc-800"><b class="text-amber-300">2. Rohstoffe &amp; Verschleiß:</b> Jede Schicht verbraucht <b>1 Rohstoff</b> (Nachkauf: 4.000 FC = 10×) &amp; <b>-5 % Zustand</b>. Unter 30 % Zustand steht die Firma still (Wartung: 7.500 FC)!</div>
-        <div class="p-2.5 rounded-xl bg-black/30 border border-zinc-800"><b class="text-emerald-300">3. Markt-Nachfrage (45–145 %):</b> Basiswert ist <b>1.150 FC × Nachfrage%</b>. Zahlst du z. B. 1.000 FC Lohn &amp; verkaufst bei 60 % Nachfrage (690 FC), machst du <b>echtes Minus</b>!</div>
-        <div class="p-2.5 rounded-xl bg-black/30 border border-zinc-800"><b class="text-purple-300">4. B2B-Boom &amp; Steuern:</b> Auf Verkäufe fallen <b>8 % Steuer</b> an (Abheben: 10 %). Kauf dir über <b>B2B-Lieferketten</b> den <b>2× Boost</b> &amp; warte auf Boom (&gt;110 %)!</div>
-        <div class="p-2.5 rounded-xl bg-black/30 border border-zinc-800 md:col-span-2"><b class="text-rose-300">5. Fixkosten &amp; Übernahmen:</b> Alle 6 Stunden fallen <b>4.500 FC</b> Unterhalt an. Und Achtung: Hält ein Aktionär <b>&gt;50 %</b> der Aktien, kann er deine Firma übernehmen!</div>
+        <div class="p-2.5 rounded-xl bg-black/30 border border-zinc-800"><b class="text-yellow-300">1. 5 Unternehmens-Größen:</b> Starte günstig mit einem <b>Tier 1 Kiosk (10k FC)</b> oder gründe direkt ein <b>Tier 5 Imperium (10 Mio. FC)</b> für Millionen-Erträge!</div>
+        <div class="p-2.5 rounded-xl bg-black/30 border border-zinc-800"><b class="text-amber-300">2. Rohstoffe &amp; Verschleiß:</b> Jede Schicht verbraucht <b>1 Rohstoff</b> &amp; senkt den Zustand (unter 30 % steht die Firma still). Kaufe rechtzeitig Rohstoffe &amp; Wartung!</div>
+        <div class="p-2.5 rounded-xl bg-black/30 border border-zinc-800"><b class="text-emerald-300">3. Markt-Nachfrage (45–145 %):</b> Verkaufe nicht im Crash (&lt;75 %), sondern warte auf Boom (&gt;115 %) + nutze <b>B2B-Lieferketten (2× Preis)</b>!</div>
+        <div class="p-2.5 rounded-xl bg-black/30 border border-zinc-800"><b class="text-purple-300">4. IPO &amp; 0% Geldtransfer:</b> Öffne im CEO-HQ deinen Börsengang (<b>100 % ins Firmenkonto</b>) &amp; überweise jederzeit <b>steuerfrei (0 %)</b> auf dein Privatkonto!</div>
+        <div class="p-2.5 rounded-xl bg-black/30 border border-zinc-800 md:col-span-2"><b class="text-rose-300">5. Bank-Rückkauf &amp; Übernahmen:</b> Du kannst deine Firma jederzeit für <b>65 % Gründungswert + 100 % Firmenkonto</b> an die Bank verkaufen. Achtung: Bei offenem IPO droht ab &gt;50 % Aktienmehrheit die Übernahme!</div>
+      </div>
+    </details>
+
+    <details class="glass rounded-2xl p-4 border border-purple-500/40 bg-purple-950/10">
+      <summary class="cursor-pointer font-black text-purple-300 text-sm flex items-center justify-between">
+        <span>🎁 Alle 8 Unternehmens-Arten &amp; welche Boosts sie herstellen (Info)</span>
+        <span class="text-xs text-zinc-400">8 Branchen</span>
+      </summary>
+      <div class="mt-3 pt-3 border-t border-zinc-800 grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+        ${Object.entries(INDUSTRIES).map(([ik, iv]) => `<div class="p-2.5 rounded-xl bg-black/30 border border-zinc-800">
+          <div class="font-black text-white">${iv.icon} ${iv.name} → <span class="text-purple-300">${iv.prod}</span></div>
+          <div class="text-[11px] text-zinc-400 mt-0.5">${iv.perk}</div>
+        </div>`).join('')}
       </div>
     </details>
 
@@ -5557,6 +5570,8 @@ async function loadCompanyHq() {
   const grossPerPt = Math.floor(t.baseVal * (dem / 100) * b2bMult)
   const netPerPt = Math.floor(grossPerPt * 0.92) - Number(myComp.wage_per_task) - Math.floor(t.matCost / 10)
   const effCost = ((myComp.eff_level || 0) + 1) * (t.matCost * 2)
+  const bankSellVal = Math.floor(t.fee * 0.65) + Number(myComp.treasury || 0)
+  const pMeta = PRODUCT_META[ind.pKey] || { desc: ind.perk }
 
   box.innerHTML = `
     <div class="glass rounded-2xl p-5 border-2 border-yellow-400/60 bg-gradient-to-br from-yellow-950/20 via-zinc-900 to-zinc-950">
@@ -5598,8 +5613,11 @@ async function loadCompanyHq() {
           <button onclick="manageComp(${myComp.id},'repair')" class="btn bg-rose-800 hover:bg-rose-700 text-xs font-bold">🔧 Wartung (${t.repCost.toLocaleString('de-DE')})</button>
           <button onclick="manageComp(${myComp.id},'set_wage',prompt('Neuer Stücklohn pro Schicht:','${myComp.wage_per_task}'))" class="btn bg-zinc-800 hover:bg-zinc-700 text-xs font-bold">💶 Stücklohn ändern</button>
           <button onclick="manageComp(${myComp.id},'sell_prod')" class="btn bg-amber-500 hover:bg-amber-400 text-black text-xs font-black">💰 Lager verkaufen (${(myComp.prod_points*grossPerPt).toLocaleString('de-DE')} FC)</button>
-          <button onclick="manageComp(${myComp.id},'craft_product')" class="btn bg-purple-700 hover:bg-purple-600 text-xs font-bold">🎁 Produkt bauen (3 Pkt)</button>
+          <button onclick="manageComp(${myComp.id},'craft_product')" class="btn bg-purple-700 hover:bg-purple-600 text-xs font-bold">🎁 ${ind.prod} (3 Pkt)</button>
           <button onclick="offerB2b(${myComp.id})" class="btn bg-indigo-700 hover:bg-indigo-600 text-xs font-bold">🤝 B2B-Paket anbieten (2 Pkt)</button>
+        </div>
+        <div class="text-[11px] text-purple-200 bg-purple-950/30 border border-purple-500/30 rounded-xl p-2">
+          <b>🎁 Dein Firmen-Boost:</b> ${esc(pMeta.desc)}
         </div>
       </div>
 
@@ -5621,9 +5639,16 @@ async function loadCompanyHq() {
           ${(myComp.tier||1) < 5 ? `<button onclick="if(confirm('Für ${t.upgCost.toLocaleString('de-DE')} FC auf Tier ${(myComp.tier||1)+1} upgraden?'))manageComp(${myComp.id},'upgrade_tier')" class="btn bg-gradient-to-r from-yellow-500 to-amber-500 text-black text-xs font-black py-2">⬆️ Tier ${(myComp.tier||1)+1} Upgrade (${t.upgCost.toLocaleString('de-DE')})</button>` : '<div class="btn bg-yellow-950/40 text-yellow-300 text-xs font-black text-center py-2">👑 Max Tier 5 erreicht!</div>'}
           <button onclick="manageComp(${myComp.id},'upgrade_eff')" class="btn bg-cyan-800 hover:bg-cyan-700 text-xs font-bold py-2">⚙️ Effizienz Lv.${myComp.eff_level||0}/5 (${effCost.toLocaleString('de-DE')})</button>
           <button onclick="manageComp(${myComp.id},'marketing')" class="btn bg-pink-700 hover:bg-pink-600 text-xs font-bold py-2 sm:col-span-2">📣 24h Top-Job Marketing (25.000 FC)</button>
+          <button onclick="sellCompanyToBank(${myComp.id}, ${bankSellVal})" class="btn bg-red-900/70 hover:bg-red-800 text-red-100 text-xs font-black py-2 sm:col-span-2 border border-red-500/40">🏦 Firma an Bank verkaufen (+${bankSellVal.toLocaleString('de-DE')} FC)</button>
         </div>
       </div>
     </div>`
+}
+async function sellCompanyToBank(cid, val) {
+  if (!confirm(`Firma wirklich für ${Number(val).toLocaleString('de-DE')} FC (65% Gründungswert + 100% Firmenkonto) an die Bank verkaufen? Dies ist unwiderruflich!`)) return
+  sfx.click()
+  const d = await call('company_sell_to_bank', { cid })
+  if (d) { sfx.claim(); setBalance(d.balance); toast('🏦 Firma an Bank verkauft! +' + Number(d.payout).toLocaleString('de-DE') + ' FC!'); show('companies') }
 }
 
 /* ================= DEDICATED SCREEN: MEIN INVENTAR & BUFFS ================= */
@@ -5638,12 +5663,16 @@ async function loadInventoryPage() {
 
   box.innerHTML = `
     <div class="glass rounded-2xl p-4 border border-purple-500/40 bg-purple-950/10">
-      <div class="font-black text-purple-300 text-sm mb-2">⚡ Deine Aktiven Buffs (wirken automatisch im Casino!)</div>
+      <div class="font-black text-purple-300 text-sm mb-2">⚡ Deine 8 Aktiven Buffs (wirken automatisch im Casino!)</div>
       <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
-        <div class="p-3 rounded-xl bg-black/40 border ${b.case_discount_uses>0?'border-pink-400':'border-zinc-800'}"><div class="text-2xl">🎟️</div><div class="text-xs font-black text-white">Kisten-Rabatt (-20%)</div><div class="text-sm font-mono font-bold text-pink-300">${b.case_discount_uses||0}× aktiv</div></div>
-        <div class="p-3 rounded-xl bg-black/40 border ${b.vault_shield_uses>0?'border-cyan-400':'border-zinc-800'}"><div class="text-2xl">🛡️</div><div class="text-xs font-black text-white">Tresor-Schild (35%)</div><div class="text-sm font-mono font-bold text-cyan-300">${b.vault_shield_uses||0}× aktiv</div></div>
-        <div class="p-3 rounded-xl bg-black/40 border ${b.quote_token_uses>0?'border-emerald-400':'border-zinc-800'}"><div class="text-2xl">📈</div><div class="text-xs font-black text-white">Quoten-Token (+10%)</div><div class="text-sm font-mono font-bold text-emerald-300">${b.quote_token_uses||0}× aktiv</div></div>
-        <div class="p-3 rounded-xl bg-black/40 border ${b.crypto_boost_uses>0?'border-yellow-400':'border-zinc-800'}"><div class="text-2xl">⚡</div><div class="text-xs font-black text-white">Krypto-Boost (+15%)</div><div class="text-sm font-mono font-bold text-yellow-300">${b.crypto_boost_uses||0}× aktiv</div></div>
+        <div class="p-3 rounded-xl bg-black/40 border ${b.case_discount_uses>0?'border-pink-400':'border-zinc-800'}" title="${esc(PRODUCT_META.case_coupon.desc)}"><div class="text-2xl">🎟️</div><div class="text-xs font-black text-white">Kisten-Rabatt</div><div class="text-[10px] text-zinc-400 mb-1">-20% Kistenkauf</div><div class="text-sm font-mono font-bold text-pink-300">${b.case_discount_uses||0}× aktiv</div></div>
+        <div class="p-3 rounded-xl bg-black/40 border ${b.vault_shield_uses>0?'border-cyan-400':'border-zinc-800'}" title="${esc(PRODUCT_META.vault_shield.desc)}"><div class="text-2xl">🛡️</div><div class="text-xs font-black text-white">Tresor-Schild</div><div class="text-[10px] text-zinc-400 mb-1">35% Verlust-Schutz</div><div class="text-sm font-mono font-bold text-cyan-300">${b.vault_shield_uses||0}× aktiv</div></div>
+        <div class="p-3 rounded-xl bg-black/40 border ${b.quote_token_uses>0?'border-emerald-400':'border-zinc-800'}" title="${esc(PRODUCT_META.quote_token.desc)}"><div class="text-2xl">📈</div><div class="text-xs font-black text-white">Quoten-Token</div><div class="text-[10px] text-zinc-400 mb-1">+10% Gewinn</div><div class="text-sm font-mono font-bold text-emerald-300">${b.quote_token_uses||0}× aktiv</div></div>
+        <div class="p-3 rounded-xl bg-black/40 border ${b.crypto_boost_uses>0?'border-yellow-400':'border-zinc-800'}" title="${esc(PRODUCT_META.crypto_boost.desc)}"><div class="text-2xl">⚡</div><div class="text-xs font-black text-white">Krypto-Boost</div><div class="text-[10px] text-zinc-400 mb-1">+15% Krypto-Profit</div><div class="text-sm font-mono font-bold text-yellow-300">${b.crypto_boost_uses||0}× aktiv</div></div>
+        <div class="p-3 rounded-xl bg-black/40 border ${b.slot_chip_uses>0?'border-emerald-400':'border-zinc-800'}" title="${esc(PRODUCT_META.slot_chip.desc)}"><div class="text-2xl">🍀</div><div class="text-xs font-black text-white">Slot-Glücks-Chip</div><div class="text-[10px] text-zinc-400 mb-1">+25% Slot-Gewinn</div><div class="text-sm font-mono font-bold text-emerald-300">${b.slot_chip_uses||0}× aktiv</div></div>
+        <div class="p-3 rounded-xl bg-black/40 border ${b.table_seal_uses>0?'border-purple-400':'border-zinc-800'}" title="${esc(PRODUCT_META.table_seal.desc)}"><div class="text-2xl">🃏</div><div class="text-xs font-black text-white">Tisch-Siegel</div><div class="text-[10px] text-zinc-400 mb-1">+20% Tischspiele</div><div class="text-sm font-mono font-bold text-purple-300">${b.table_seal_uses||0}× aktiv</div></div>
+        <div class="p-3 rounded-xl bg-black/40 border ${b.rocket_boost_uses>0?'border-orange-400':'border-zinc-800'}" title="${esc(PRODUCT_META.rocket_boost.desc)}"><div class="text-2xl">🔥</div><div class="text-xs font-black text-white">Crash/Limbo-Boost</div><div class="text-[10px] text-zinc-400 mb-1">+20% Crash/Limbo</div><div class="text-sm font-mono font-bold text-orange-300">${b.rocket_boost_uses||0}× aktiv</div></div>
+        <div class="p-3 rounded-xl bg-black/40 border ${b.cashback_boost_uses>0?'border-amber-400':'border-zinc-800'}" title="${esc(PRODUCT_META.cashback_boost.desc)}"><div class="text-2xl">💸</div><div class="text-xs font-black text-white">Doppel-Cashback</div><div class="text-[10px] text-zinc-400 mb-1">8% Rettungsschirm</div><div class="text-sm font-mono font-bold text-amber-300">${b.cashback_boost_uses||0}× aktiv</div></div>
       </div>
     </div>
 
