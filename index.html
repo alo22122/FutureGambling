@@ -655,7 +655,8 @@ const NAVGROUPS = [
   ['🃏', 'Tisch & Karten', ['blackjack', 'roulette', 'poker', 'baccarat', 'dragon', 'war', 'sicbo', 'hilo']],
   ['⚡', 'Schnellspiele', ['penalty', 'coinflip', 'dice', 'cyberrace', 'horses', 'bomb', 'darts', 'wheel', 'keno', 'lucky7', 'doors', 'number', 'rps', 'double', 'allin']],
   ['⚔️', 'PvP & Arcade', ['duel', 'chess', 'versus', 'snake', 'typing', 'trivia', 'tetris']],
-  ['💎', 'Bank & Wirtschaft', ['companies', 'market', 'vault', 'stocks', 'bank', 'luxury', 'forbes']],
+  ['🏢', 'Firmen & Wirtschaft', ['companies', 'market']],
+  ['💎', 'Bank & Wirtschaft', ['vault', 'stocks', 'bank', 'luxury', 'forbes']],
   ['🌍', 'Community & Ruhm', ['chat', 'hof', 'board', 'leagues', 'clanhq', 'community', 'court', 'votes', 'friends', 'players', 'feed']],
   ['👤', 'Konto & Boni', ['earn', 'bp', 'ach', 'shop', 'stats', 'history', 'odds', 'admin']]
 ]
@@ -5352,9 +5353,34 @@ async function loadCompanies() {
       ${d.report.top_employer && d.report.top_employer.name ? `<div class="px-3 py-1 rounded-xl bg-yellow-500/15 border border-yellow-400/50 text-yellow-200 font-bold">🏆 Unternehmer des Tages: ${esc(d.report.top_employer.icon||'🏢')} ${esc(d.report.top_employer.name)} (${esc(d.report.top_employer.owner_name)})</div>` : ''}
     </div>` : ''}
 
+    <!-- TUTORIAL & LIVE MARKT-NACHFRAGE -->
+    <details class="glass rounded-2xl p-4 border border-cyan-500/40 bg-cyan-950/10">
+      <summary class="cursor-pointer font-black text-cyan-300 text-sm flex items-center justify-between">
+        <span>📖 Firmen-Gründer Tutorial: So überlebst du &amp; machst Profit (Klicken zum Öffnen)</span>
+        <span class="text-xs text-zinc-400">5 Regeln</span>
+      </summary>
+      <div class="mt-3 pt-3 border-t border-zinc-800 grid grid-cols-1 md:grid-cols-2 gap-2.5 text-xs text-zinc-300">
+        <div class="p-2.5 rounded-xl bg-black/30 border border-zinc-800"><b class="text-yellow-300">1. Hohe Einstiegshürde:</b> Gründung kostet <b>250.000 FC</b> + mind. <b>50.000 FC</b> Firmenkonto + <b>50.000 FC</b> eigener Spielumsatz. Max. 1 Firma pro Spieler!</div>
+        <div class="p-2.5 rounded-xl bg-black/30 border border-zinc-800"><b class="text-amber-300">2. Rohstoffe &amp; Verschleiß:</b> Jede Schicht verbraucht <b>1 Rohstoff</b> (Nachkauf: 4.000 FC = 10×) &amp; <b>-5 % Zustand</b>. Unter 30 % Zustand steht die Firma still (Wartung: 7.500 FC)!</div>
+        <div class="p-2.5 rounded-xl bg-black/30 border border-zinc-800"><b class="text-emerald-300">3. Markt-Nachfrage (45–145 %):</b> Basiswert ist <b>1.150 FC × Nachfrage%</b>. Zahlst du z. B. 1.000 FC Lohn &amp; verkaufst bei 60 % Nachfrage (690 FC), machst du <b>echtes Minus</b>!</div>
+        <div class="p-2.5 rounded-xl bg-black/30 border border-zinc-800"><b class="text-purple-300">4. B2B-Boom &amp; Steuern:</b> Auf Verkäufe fallen <b>8 % Steuer</b> an (Abheben: 10 %). Kauf dir über <b>B2B-Lieferketten</b> den <b>2× Boost</b> &amp; warte auf Boom (&gt;110 %)!</div>
+        <div class="p-2.5 rounded-xl bg-black/30 border border-zinc-800 md:col-span-2"><b class="text-rose-300">5. Fixkosten &amp; Übernahmen:</b> Alle 6 Stunden fallen <b>4.500 FC</b> Unterhalt an. Und Achtung: Hält ein Aktionär <b>&gt;50 %</b> der Aktien, kann er deine Firma übernehmen!</div>
+      </div>
+    </details>
+
+    ${d.demand ? `
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+      ${Object.entries(INDUSTRIES).map(([ik, iv]) => {
+        const dp = Number(d.demand[ik] || 100)
+        const col = dp >= 115 ? 'text-emerald-400 border-emerald-500/40' : dp <= 75 ? 'text-red-400 border-red-500/40' : 'text-amber-300 border-zinc-700'
+        return `<div class="glass rounded-xl p-2.5 border ${col} text-center"><div class="text-[11px] text-zinc-400">${iv.icon} ${iv.name}</div><div class="text-sm font-black font-mono">${dp} % Nachfrage</div></div>`
+      }).join('')}
+    </div>` : ''}
+
     <!-- NEUE FIRMA GRÜNDEN -->
     <div class="glass rounded-2xl p-4 border border-yellow-500/40 bg-yellow-950/10">
-      <div class="font-black text-yellow-300 text-sm mb-2">🏗️ Eigene Firma gründen (25.000 FC Gründung + Start-Firmenkonto)</div>
+      <div class="font-black text-yellow-300 text-sm mb-1">🏗️ Eigene Firma gründen (250.000 FC Gründung + min. 50.000 FC Start-Konto · ab 50.000 FC Umsatz)</div>
+      <div class="text-[11px] text-zinc-400 mb-2">Dein aktueller Spielumsatz: <b class="text-white">${Number(d.wagered||0).toLocaleString('de-DE')} FC</b></div>
       <div class="grid grid-cols-1 sm:grid-cols-5 gap-2">
         <input id="cmp_name" placeholder="Firmenname (z.B. Apex Crypto)" maxlength="32" class="inp text-xs sm:col-span-2">
         <select id="cmp_ind" class="inp text-xs">
@@ -5363,12 +5389,12 @@ async function loadCompanies() {
           <option value="security">🛡️ Sicherheitsdienst</option>
           <option value="trading">💼 Trading-Büro</option>
         </select>
-        <input id="cmp_treas" type="number" min="1000" value="10000" placeholder="Start-Konto FC" class="inp text-xs">
-        <input id="cmp_wage" type="number" min="200" max="50000" value="1000" placeholder="Lohn/Auftrag" class="inp text-xs">
+        <input id="cmp_treas" type="number" min="50000" value="50000" placeholder="Start-Konto (min. 50k)" class="inp text-xs">
+        <input id="cmp_wage" type="number" min="200" max="50000" value="600" placeholder="Lohn/Auftrag" class="inp text-xs">
       </div>
       <div class="flex justify-between items-center mt-2.5 flex-wrap gap-2">
-        <span class="text-[11px] text-zinc-400">Tipp: Höherer Stücklohn lockt mehr Arbeiter an &amp; erhöht deinen Produktions-Verkaufspreis!</span>
-        <button onclick="createCompany()" class="btn bg-yellow-500 hover:bg-yellow-400 text-black text-xs font-black px-4 py-2" style="width:auto">🏢 Firma gründen</button>
+        <span class="text-[11px] text-zinc-400">Tipp: Kalkuliere Rohstoffe (~400 FC/Schicht) + Wartung (~375 FC/Schicht) + Lohn in deinen Stückpreis ein!</span>
+        <button onclick="createCompany()" class="btn bg-yellow-500 hover:bg-yellow-400 text-black text-xs font-black px-4 py-2" style="width:auto">🏢 Firma gründen (300k+ FC)</button>
       </div>
     </div>
 
@@ -5383,7 +5409,10 @@ async function loadCompanies() {
           const ind = INDUSTRIES[c.industry] || INDUSTRIES.cases
           const isMine = ME && c.owner_id === ME.id
           const hasBudget = Number(c.treasury) >= Number(c.wage_per_task)
-          return `<div class="glass rounded-2xl p-4 border ${isMine ? 'border-yellow-400/70 bg-yellow-950/10' : hasBudget ? 'border-emerald-500/40' : 'border-zinc-800 opacity-80'} flex flex-col justify-between gap-3">
+          const hasMat = Number(c.raw_materials ?? 15) > 0
+          const isHealthy = Number(c.health_pct ?? 100) >= 30
+          const canWork = hasBudget && hasMat && isHealthy
+          return `<div class="glass rounded-2xl p-4 border ${isMine ? 'border-yellow-400/70 bg-yellow-950/10' : canWork ? 'border-emerald-500/40' : 'border-zinc-800 opacity-85'} flex flex-col justify-between gap-3">
             <div>
               <div class="flex items-start justify-between gap-2">
                 <div class="flex items-center gap-2.5">
@@ -5398,17 +5427,19 @@ async function loadCompanies() {
                 </span>
               </div>
 
-              <div class="grid grid-cols-3 gap-2 mt-3 text-center">
-                <div class="rounded-xl bg-black/30 p-2 border border-zinc-800"><div class="text-[10px] text-zinc-400">Firmen-Konto</div><div class="text-xs font-mono font-black text-emerald-300">${Number(c.treasury).toLocaleString('de-DE')} FC</div></div>
-                <div class="rounded-xl bg-black/30 p-2 border border-zinc-800"><div class="text-[10px] text-zinc-400">Bonus-Ziel</div><div class="text-xs font-bold text-amber-300">${c.my_bonus_prog || 0}/${c.bonus_threshold} → +${Number(c.bonus_amount).toLocaleString('de-DE')}</div></div>
-                <div class="rounded-xl bg-black/30 p-2 border border-zinc-800"><div class="text-[10px] text-zinc-400">Aktienkurs</div><div class="text-xs font-mono font-bold text-cyan-300">${Number(c.share_price).toLocaleString('de-DE')} FC (${c.my_shares||0}×)</div></div>
+              <div class="grid grid-cols-2 sm:grid-cols-5 gap-1.5 mt-3 text-center">
+                <div class="rounded-xl bg-black/30 p-2 border border-zinc-800"><div class="text-[10px] text-zinc-400">Konto</div><div class="text-xs font-mono font-black text-emerald-300">${Number(c.treasury).toLocaleString('de-DE')}</div></div>
+                <div class="rounded-xl bg-black/30 p-2 border border-zinc-800"><div class="text-[10px] text-zinc-400">Rohstoffe</div><div class="text-xs font-mono font-black ${hasMat?'text-cyan-300':'text-red-400'}">${c.raw_materials ?? 15}×</div></div>
+                <div class="rounded-xl bg-black/30 p-2 border border-zinc-800"><div class="text-[10px] text-zinc-400">Zustand</div><div class="text-xs font-mono font-black ${isHealthy?'text-emerald-300':'text-red-400'}">${c.health_pct ?? 100}%</div></div>
+                <div class="rounded-xl bg-black/30 p-2 border border-zinc-800"><div class="text-[10px] text-zinc-400">Bonus</div><div class="text-xs font-bold text-amber-300">${c.my_bonus_prog || 0}/${c.bonus_threshold}</div></div>
+                <div class="rounded-xl bg-black/30 p-2 border border-zinc-800"><div class="text-[10px] text-zinc-400">Aktie</div><div class="text-xs font-mono font-bold text-cyan-300">${Number(c.share_price).toLocaleString('de-DE')} (${c.my_shares||0}×)</div></div>
               </div>
             </div>
 
             <div class="space-y-2">
               <div class="flex flex-wrap gap-1.5">
-                <button onclick="startMiniTask(${c.id})" ${hasBudget ? '' : 'disabled'} class="flex-1 btn ${hasBudget ? 'bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white' : 'bg-zinc-800 text-zinc-500'} text-xs font-black py-2">
-                  ${hasBudget ? `🛠️ Auftrag ausführen (+${Number(c.wage_per_task).toLocaleString('de-DE')} FC)` : '⏳ Firmenkonto leer'}
+                <button onclick="startMiniTask(${c.id})" ${canWork ? '' : 'disabled'} class="flex-1 btn ${canWork ? 'bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white' : 'bg-zinc-800 text-zinc-500'} text-xs font-black py-2">
+                  ${canWork ? `🛠️ Auftrag (+${Number(c.wage_per_task).toLocaleString('de-DE')} FC)` : !hasMat ? '⏳ Keine Rohstoffe' : !isHealthy ? '🔧 Defekt (<30%)' : '⏳ Konto leer'}
                 </button>
                 <button onclick="buyCompShare(${c.id}, 1)" class="btn bg-cyan-900/60 hover:bg-cyan-800 text-cyan-200 text-xs font-bold px-3 py-2" style="width:auto">📈 +1 Aktie</button>
                 ${c.my_shares > 0 ? `<button onclick="sellCompShare(${c.id}, 1)" class="btn bg-zinc-800 hover:bg-zinc-700 text-xs font-bold px-3 py-2" style="width:auto">📉 -1</button>` : ''}
@@ -5423,7 +5454,9 @@ async function loadCompanies() {
                 </div>
                 <div class="flex flex-wrap gap-1.5">
                   <button onclick="manageComp(${c.id},'deposit',prompt('Wie viel FC ins Firmenkonto einzahlen?','10000'))" class="btn bg-emerald-800 text-[11px] py-1 px-2" style="width:auto">+ Einzahlen</button>
-                  <button onclick="manageComp(${c.id},'withdraw',prompt('Wie viel FC abheben? (5% Steuer)','5000'))" class="btn bg-zinc-800 text-[11px] py-1 px-2" style="width:auto">- Abheben</button>
+                  <button onclick="manageComp(${c.id},'withdraw',prompt('Wie viel FC abheben? (10% Steuer)','5000'))" class="btn bg-zinc-800 text-[11px] py-1 px-2" style="width:auto">- Abheben</button>
+                  <button onclick="manageComp(${c.id},'buy_materials')" class="btn bg-cyan-900 text-[11px] py-1 px-2" style="width:auto">📦 +10 Rohstoffe (4k)</button>
+                  <button onclick="manageComp(${c.id},'repair')" class="btn bg-rose-800 text-[11px] py-1 px-2" style="width:auto">🔧 Wartung (7,5k)</button>
                   <button onclick="manageComp(${c.id},'set_wage',prompt('Neuer Lohn pro Auftrag (200-50.000 FC):','${c.wage_per_task}'))" class="btn bg-cyan-800 text-[11px] py-1 px-2" style="width:auto">💶 Lohn</button>
                   <button onclick="manageComp(${c.id},'sell_prod')" class="btn bg-amber-600 text-black font-black text-[11px] py-1 px-2" style="width:auto">💰 Waren verkaufen</button>
                   <button onclick="manageComp(${c.id},'craft_product')" class="btn bg-purple-700 text-[11px] py-1 px-2" style="width:auto">🎁 Produkt (3 Pkt)</button>
