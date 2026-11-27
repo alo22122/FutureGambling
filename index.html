@@ -5338,13 +5338,15 @@ async function claimLeagueReward() {
 VIEWS.bank = () => '<div id="bankbox" class="text-zinc-400">Lade Pfandhaus & Kredite...</div>'
 PAGEINIT.bank = async () => {
   await loadProfile()
-  const [d, bankLoans] = await Promise.all([call('loans_list', {}), call('bank_loan_my_list', {}, true)])
+  const [d, bankLoans, p2pPawn] = await Promise.all([call('loans_list', {}), call('bank_loan_my_list', {}, true), call('p2p_pawn_list', {}, true)])
   const box = $('bankbox')
   if (!d || !box) return
   const myLux = (ME.owned || []).filter(x => x.startsWith('lux:')).map(x => LUXURY_ITEMS.find(i => 'lux:' + i.id === x)).filter(Boolean)
   const pawned = (d.pawned || []).map(x => LUXURY_ITEMS.find(i => 'lux:' + i.id === x)).filter(Boolean)
   const loans = d.loans || []
   const bList = Array.isArray(bankLoans) ? bankLoans : []
+  const pawnData = p2pPawn || { loans: [], my_cases: [], my_shares: [], my_lux: [] }
+  window._pawnData = pawnData
 
   box.innerHTML = `
     <!-- CASINO-BANK KREDIT (MIT ADMIN-GENEHMIGUNG) -->
@@ -5394,7 +5396,7 @@ PAGEINIT.bank = async () => {
         </div>
       </div>
     </div>
-    <div class="glass rounded-2xl p-4 border border-zinc-800">
+    <div class="glass rounded-2xl p-4 border border-zinc-800 mb-4">
       <div class="font-black text-white mb-2">📜 Deine offenen Kredite</div>
       ${loans.length ? loans.map(l => `<div class="flex flex-wrap justify-between items-center py-2 border-b border-zinc-800 text-xs gap-2">
         <span>${l.is_lender ? '📤 Verliehen an <b>' + esc(l.borrower_name) + '</b>' : '📥 Geliehen von <b>' + esc(l.lender_name) + '</b>'} · Betrag: <b>${Number(l.principal).toLocaleString('de-DE')}</b> → Rückzahlung: <b class="text-yellow-400">${Number(l.repay_amount).toLocaleString('de-DE')} FC</b> (${l.status})</span>
@@ -5403,7 +5405,74 @@ PAGEINIT.bank = async () => {
           ${l.is_borrower && l.status === 'active' ? `<button onclick="actLoan('loan_repay', ${l.id})" class="btn bg-yellow-500 text-black text-xs font-bold" style="width:auto;padding:.25rem .6rem">💸 Zurückzahlen</button>` : ''}
         </div>
       </div>`).join('') : '<div class="text-xs text-zinc-500">Keine offenen Kredite.</div>'}
+    </div>
+
+    <!-- P2P-PFANDKREDIT-BÖRSE (MIT ESCROW-SICHERHEIT) -->
+    <div class="glass rounded-2xl p-4 border-2 border-purple-500/50 bg-gradient-to-br from-purple-950/20 via-zinc-900 to-zinc-950 space-y-3">
+      <div>
+        <div class="font-black text-purple-300 text-base">🔒 P2P-Pfandkredit-Börse (Kredithai mit Escrow-Sicherheit)</div>
+        <div class="text-xs text-zinc-400">Verpfände Kisten, Firmen-Aktien oder Luxus-Items im Tresor (max. 150% Beleihung, 5–50% Zins). Bei Nichtzahlung geht das Pfand automatisch an den Kreditgeber!</div>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-6 gap-2">
+        <select id="p2p_ctype" onchange="updateP2pCollateralOpts()" class="inp text-xs">
+          <option value="case">📦 Kisten (${(pawnData.my_cases||[]).length})</option>
+          <option value="share">📈 Firmen-Aktien (${(pawnData.my_shares||[]).length})</option>
+          <option value="luxury">💎 Luxus-Item (${(pawnData.my_lux||[]).length})</option>
+        </select>
+        <select id="p2p_cref" class="inp text-xs sm:col-span-2"></select>
+        <input id="p2p_qty" type="number" min="1" value="1" placeholder="Menge" class="inp text-xs">
+        <input id="p2p_amt" type="number" min="1000" value="10000" placeholder="Kredit FC" class="inp text-xs">
+        <div class="flex gap-1">
+          <input id="p2p_int" type="number" min="5" max="50" value="20" title="Zins 5-50%" class="inp text-xs w-16">
+          <select id="p2p_hrs" class="inp text-xs flex-1"><option value="1">1h</option><option value="6">6h</option><option value="24" selected>24h</option><option value="72">72h</option></select>
+        </div>
+      </div>
+      <div class="flex justify-end">
+        <button onclick="createP2pPawn()" class="btn bg-purple-600 hover:bg-purple-500 text-white text-xs font-black px-4 py-2" style="width:auto">🔒 Pfand sperren &amp; Kredit ausschreiben</button>
+      </div>
+      <div class="space-y-1.5 max-h-64 overflow-y-auto">
+        ${(pawnData.loans||[]).length ? (pawnData.loans||[]).map(l => {
+          const badge = l.status==='open'?'🟢 Offen':l.status==='active'?(l.is_overdue?'🔴 Überfällig!':'⏳ Aktiv'):l.status==='repaid'?'✅ Getilgt':l.status==='defaulted'?'⚖️ Gepfändet':'❌ Storniert'
+          return `<div class="p-2.5 rounded-xl bg-black/40 border ${l.is_overdue?'border-red-500/70':'border-zinc-800'} flex flex-wrap items-center justify-between gap-2 text-xs">
+            <div>
+              <div><b class="text-white">${esc(l.borrower_name)}</b> sucht <b class="text-emerald-400 font-mono">${Number(l.principal).toLocaleString('de-DE')} FC</b> (+${l.interest_pct}% → <b class="text-yellow-300">${Number(l.repay_amount).toLocaleString('de-DE')} FC</b> · ${l.duration_hours}h)</div>
+              <div class="text-[11px] text-zinc-400">🔒 Pfand: <b class="text-purple-300">${esc(l.collateral_label)}</b> (Schätzwert: <b class="text-cyan-300">${Number(l.collateral_value).toLocaleString('de-DE')} FC</b>) · Status: <b>${badge}</b></div>
+            </div>
+            <div class="flex gap-1.5">
+              ${l.status==='open' && !l.is_borrower ? `<button onclick="actP2pPawn('fund', ${l.id})" class="btn bg-emerald-600 text-white text-xs font-black px-3 py-1" style="width:auto">💸 Verleihen</button>` : ''}
+              ${l.status==='open' && l.is_borrower ? `<button onclick="actP2pPawn('cancel', ${l.id})" class="btn bg-zinc-700 text-xs font-bold px-2.5 py-1" style="width:auto">❌ Stornieren</button>` : ''}
+              ${l.status==='active' && l.is_borrower ? `<button onclick="actP2pPawn('repay', ${l.id})" class="btn bg-yellow-500 text-black text-xs font-black px-3 py-1" style="width:auto">💸 Tilgen (${Number(l.repay_amount).toLocaleString('de-DE')})</button>` : ''}
+              ${l.status==='active' && l.is_lender && l.is_overdue ? `<button onclick="actP2pPawn('claim_default', ${l.id})" class="btn bg-red-600 text-white text-xs font-black px-3 py-1" style="width:auto">⚖️ Pfand einziehen!</button>` : ''}
+            </div>
+          </div>`
+        }).join('') : '<div class="text-xs text-zinc-500">Noch keine P2P-Pfandkredite auf dem Markt.</div>'}
+      </div>
     </div>`
+  updateP2pCollateralOpts()
+}
+function updateP2pCollateralOpts() {
+  const ct = ($('p2p_ctype') || {}).value || 'case', sel = $('p2p_cref'), pd = window._pawnData || {}
+  if (!sel) return
+  if (ct === 'case') {
+    sel.innerHTML = (pd.my_cases || []).map(c => `<option value="${esc(c.case_type)}">${esc(c.case_type)} (${c.qty}×)</option>`).join('') || '<option value="">Keine Kisten</option>'
+  } else if (ct === 'share') {
+    sel.innerHTML = (pd.my_shares || []).map(s => `<option value="${s.company_id}">${esc(s.name)} (${s.shares}× @ ${s.share_price})</option>`).join('') || '<option value="">Keine Aktien</option>'
+  } else {
+    sel.innerHTML = (pd.my_lux || []).map(x => `<option value="${esc(x)}">${esc(x.replace('lux:',''))}</option>`).join('') || '<option value="">Keine Luxus-Items</option>'
+  }
+}
+async function createP2pPawn() {
+  const ctype = ($('p2p_ctype')||{}).value, cref = ($('p2p_cref')||{}).value, qty = Number(($('p2p_qty')||{}).value||1)
+  const amt = Number(($('p2p_amt')||{}).value||0), ip = Number(($('p2p_int')||{}).value||20), hrs = Number(($('p2p_hrs')||{}).value||24)
+  if (!cref) return toast('Wähle zuerst ein gültiges Pfand aus!')
+  sfx.click()
+  const d = await call('p2p_pawn_create', { p_amt: amt, p_int: ip, p_hours: hrs, p_ctype: ctype, p_cref: cref, p_qty: qty })
+  if (d) { sfx.claim(); toast('🔒 Pfand im Tresor gesperrt & Kredit ausgeschrieben!'); PAGEINIT.bank() }
+}
+async function actP2pPawn(act, lid) {
+  sfx.click()
+  const d = await call('p2p_pawn_action', { act, lid })
+  if (d) { sfx.win(); if (d.balance !== undefined) setBalance(d.balance); toast('✔ Pfandkredit-Aktion ausgeführt!'); PAGEINIT.bank() }
 }
 async function pawnItem(id) { sfx.click(); const d = await call('pawn_luxury', { item_id: id }); if (d) { sfx.claim(); setBalance(d.balance); ME.owned = d.owned; toast('💎 Verpfändet! +' + Number(d.cash).toLocaleString('de-DE') + ' FC'); PAGEINIT.bank() } }
 async function unpawnItem(id) { sfx.click(); const d = await call('unpawn_luxury', { item_id: id }); if (d) { sfx.win(); setBalance(d.balance); ME.owned = d.owned; toast('🔓 Ausgelöst!'); PAGEINIT.bank() } }
