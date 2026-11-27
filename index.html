@@ -488,7 +488,7 @@ const GAMES = {
   stocks:    { icon: '📈', name: 'Spieler-Aktienmarkt', desc: 'Investiere in deine Freunde! Kurse steigen mit Gewinn & Umsatz.', page: true },
   leagues:   { icon: '🏆', name: 'Season-Ligen', desc: 'Bronze bis Titan! Wöchentliche Ranglisten-Belohnungen & Abzeichen.', page: true },
   bank:      { icon: '💳', name: 'Pfandhaus & Kredite', desc: 'Verpfände Luxusgüter für Sofort-Cash oder vergib Kredite mit Zinsen.', page: true },
-  vault:     { icon: '💎', name: 'VIP Tresor', desc: 'Sicheres Sparkonto mit 12h Verlust-Schutz und 1% täglichen Zinsen!', page: true },
+  vault:     { icon: '💎', name: 'VIP Tresor', desc: 'Sicheres Sparkonto mit sofortiger Auszahlung und 2% täglichen Zinsen!', page: true },
   companies:  { icon: '💼', name: 'Jobs & Arbeitsmarkt', desc: 'Arbeite in Spieler-Firmen (0 FC Einsatz!), nutze den Rettungsschirm oder gründe ein Business.', page: true },
   company_hq: { icon: '🏛️', name: 'Mein CEO-HQ', desc: 'Dein eigener Firmen-Screen: Bilanz, Marge, Rohstoffe, Wartung, Tier-Upgrades & Börsengang (IPO).', page: true },
   market:     { icon: '🛒', name: 'Marktplatz & Bounties', desc: 'P2P-Marktplatz, B2B-Lieferketten, Auktionen & öffentliches Auftragsbrett.', page: true },
@@ -796,7 +796,7 @@ const GAME_BADGES = {
   poker: ['Royal Flush 800×', 'text-purple-300 border-purple-500/40 bg-purple-950/30'],
   penalty: ['Tor = 1,85×', 'text-emerald-300 border-emerald-500/40 bg-emerald-950/30'],
   coinflip: ['50/50 · 1,92×', 'text-cyan-300 border-cyan-500/40 bg-cyan-950/30'],
-  vault: ['+1% Zinsen / Tag', 'text-cyan-300 border-cyan-500/40 bg-cyan-950/30'],
+  vault: ['+2% Zinsen / Tag', 'text-cyan-300 border-cyan-500/40 bg-cyan-950/30'],
   luxury: ['8 Status-Trophäen', 'text-yellow-300 border-yellow-500/40 bg-yellow-950/30']
 }
 
@@ -3436,7 +3436,7 @@ const GAME_GUIDES = {
   deal: 'Wähle deinen Glückskoffer aus 12 Koffern (0,01× bis 2,25×) und öffne die anderen. Nach jedem Koffer macht dir der Banker ein Sofort-Angebot!',
   blackjack: 'Komme näher an 21 als der Dealer, ohne dich zu überkaufen (>21). Natürlicher Blackjack zahlt 2,5×, Sieg 2×, Gleichstand gibt den Einsatz zurück.',
   penalty: 'Schieße in eine von 5 Ecken. Hält der Torwart nicht (50 % Trefferquote), erhältst du 1,85× Auszahlung!',
-  vault: 'Schütze deine Coins im VIP-Tresor (optional 12h Auszahlungssperre gegen Tilt) und kassiere täglich +1 % Zinsen (bis 50.000 FC/Tag)!'
+  vault: 'Schütze deine Coins im VIP-Tresor (jederzeit sofort auszahlbar, ohne Wartezeit) und kassiere täglich +2 % Zinsen (bis 100.000 FC/Tag)!'
 }
 let guideOpen = false
 function renderGameGuide(g) {
@@ -7670,18 +7670,17 @@ async function admShadowBan(uid, on, uname) {
 VIEWS.vault = () => '<div id="vaultbox" class="text-zinc-400">Lade VIP Tresor...</div>'
 PAGEINIT.vault = async () => {
   const d = await call('vault_info', {}), box = $('vaultbox'); if (!d || !box) return
-  const hrs = Math.floor(d.secs_locked / 3600), mins = Math.floor((d.secs_locked % 3600) / 60)
   box.innerHTML = `
     <div class="glass rounded-2xl p-5 border-2 border-cyan-500/40 bg-gradient-to-br from-cyan-950/25 via-zinc-900 to-zinc-950 mb-4 text-center">
       <div class="text-4xl mb-1">💎</div>
       <div class="text-xs uppercase font-bold text-cyan-400">Dein Geschützter VIP Tresor</div>
       <div class="text-3xl font-black text-white font-mono my-1">${Number(d.vault).toLocaleString('de-DE')} FC</div>
-      <div class="text-xs text-zinc-400">${d.secs_locked > 0 ? '🔒 Auszahlung gesperrt noch: <b>' + hrs + 'h ' + mins + 'm</b> (12h Impuls-Schutz)' : '🔓 Tresor entsperrt (bereit zur Auszahlung)'}</div>
-      ${d.can_interest ? '<button onclick="claimVaultInterest()" class="btn bg-gradient-to-r from-yellow-500 to-amber-500 text-black font-black mt-3 max-w-xs mx-auto">💰 1% Tageszinsen abholen!</button>' : '<div class="text-xs text-zinc-500 mt-2">1% Tageszinsen ab 100 FC Einlage (1× täglich)</div>'}
+      <div class="text-xs text-zinc-400">🔓 Tresor jederzeit sofort auszahlbar (keine Wartezeit)</div>
+      ${d.can_interest ? '<button onclick="claimVaultInterest()" class="btn bg-gradient-to-r from-yellow-500 to-amber-500 text-black font-black mt-3 max-w-xs mx-auto">💰 2% Tageszinsen abholen!</button>' : '<div class="text-xs text-zinc-500 mt-2">2% Tageszinsen ab 100 FC Einlage (1× täglich, max. 100.000 FC)</div>'}
     </div>
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
       <div class="glass rounded-2xl p-4 border border-zinc-800">
-        <div class="font-bold text-sm mb-2">📥 Einzahlen (Setzt 12h Sperre)</div>
+        <div class="font-bold text-sm mb-2">📥 Einzahlen (Sofort verfügbar)</div>
         <div class="flex gap-2"><input id="v-dep" type="number" min="100" value="1000" class="inp flex-1 text-xs"><button onclick="vaultDep()" class="btn bg-emerald-600 text-xs font-black" style="width:auto">Einzahlen</button></div>
       </div>
       <div class="glass rounded-2xl p-4 border border-zinc-800">
