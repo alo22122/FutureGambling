@@ -6007,7 +6007,7 @@ async function loadCompanies() {
                 ${!isMine ? (c.my_joined
                   ? `<button onclick="leaveCompany(${c.id})" class="btn bg-zinc-800 hover:bg-red-900/60 text-zinc-300 text-xs font-bold px-2.5 py-2" style="width:auto">🚪 Austreten</button>`
                   : `<button onclick="joinCompany(${c.id})" class="btn bg-indigo-700 hover:bg-indigo-600 text-white text-xs font-bold px-2.5 py-2" style="width:auto">🤝 Beitreten</button>`) : ''}
-                ${isMine ? `<button onclick="sfx.click();activeHqCid=${c.id};show('company_hq')" class="btn bg-yellow-500 text-black text-xs font-black px-3 py-2" style="width:auto">🏛️ CEO-HQ</button>` : (c.ipo_open ? `<button onclick="buyCompShare(${c.id}, 1)" class="btn bg-cyan-900/60 hover:bg-cyan-800 text-cyan-200 text-xs font-bold px-3 py-2" style="width:auto">📈 +1 Aktie</button>` : `<span class="px-2.5 py-2 rounded-xl bg-zinc-900 text-zinc-500 text-[11px] border border-zinc-800">🔒 IPO zu</span>`)}
+                ${isMine ? `<button onclick="sfx.click();activeHqCid=${c.id};show('company_hq')" class="btn bg-yellow-500 text-black text-xs font-black px-3 py-2" style="width:auto">🏛️ CEO-HQ</button>` : (c.my_custom_role === 'vorstand' ? `<button onclick="sfx.click();activeHqCid=${c.id};hqTab='ops';show('company_hq')" class="btn bg-amber-500 text-black text-xs font-black px-3 py-2" style="width:auto">👑 Vorstands-HQ</button>` : (c.ipo_open ? `<button onclick="buyCompShare(${c.id}, 1)" class="btn bg-cyan-900/60 hover:bg-cyan-800 text-cyan-200 text-xs font-bold px-3 py-2" style="width:auto">📈 +1 Aktie</button>` : `<span class="px-2.5 py-2 rounded-xl bg-zinc-900 text-zinc-500 text-[11px] border border-zinc-800">🔒 IPO zu</span>`))}
                 ${c.my_shares > 0 ? `<button onclick="sellCompShare(${c.id}, 1)" class="btn bg-zinc-800 hover:bg-zinc-700 text-xs font-bold px-3 py-2" style="width:auto">📉 -1</button><button onclick="sellCompShare(${c.id}, ${c.my_shares})" class="btn bg-rose-800 hover:bg-rose-700 text-xs font-bold px-2.5 py-2" style="width:auto">Alles vk</button>` : ''}
                 ${!isMine ? `<button onclick="openCompanyShort(${c.id}, '${esc(c.name)}')" class="btn bg-rose-900/70 hover:bg-rose-800 text-rose-200 text-xs font-bold px-2.5 py-2" style="width:auto">📉 Shorten</button><button onclick="openCompanyDeriv(${c.id}, 'long', '${esc(c.name)}')" class="btn bg-emerald-900/70 hover:bg-emerald-800 text-emerald-200 text-xs font-bold px-2.5 py-2" style="width:auto">🚀 5× Long</button><button onclick="openCompanyDeriv(${c.id}, 'short', '${esc(c.name)}')" class="btn bg-orange-900/70 hover:bg-orange-800 text-orange-200 text-xs font-bold px-2.5 py-2" style="width:auto">⚡ 5× Short</button><button onclick="triggerScandal(${c.id}, '${esc(c.name)}')" class="btn bg-purple-900/70 hover:bg-purple-800 text-purple-200 text-xs font-bold px-2.5 py-2" style="width:auto">🕵️ Skandal</button>` : ''}
                 ${myComps.length < 5 && !isMine ? `<button onclick="sendMaOffer(${c.id}, '${esc(c.name)}')" class="btn bg-amber-700/80 hover:bg-amber-600 text-xs font-bold px-2.5 py-2" style="width:auto">🤝 M&amp;A</button>` : ''}
@@ -6019,6 +6019,16 @@ async function loadCompanies() {
       </div>
     </div>` : '') + (compTab === 'capital' ? `
     <div class="space-y-4">
+      <!-- INFLATIONS-MONITOR & PRESTIGE-SCHREIN (MONEY SINK) -->
+      <div class="glass rounded-2xl p-4 border-2 border-orange-500/50 bg-gradient-to-br from-orange-950/25 via-zinc-900 to-zinc-950 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <div class="font-black text-orange-300 text-sm">🔥 Anti-Inflations-Schrein &amp; Geldmenge im Umlauf</div>
+          <div class="text-xs text-zinc-300">Gesamt-Umlauf: <b class="text-yellow-300 font-mono">${Number(d.total_supply||0).toLocaleString('de-DE')} FC</b> · Dein Prestige-Level: <b class="text-orange-400">🔥 Lv.${d.prestige_lvl||0}</b></div>
+          <div class="text-[11px] text-zinc-400">Verbrenne überschüssige Coins dauerhaft aus der Wirtschaft für ewiges Prestige!</div>
+        </div>
+        <button onclick="burnForPrestige(${1000000 * Math.pow(3, Math.min(8, Number(d.prestige_lvl||0)))})" class="btn bg-gradient-to-r from-orange-500 to-red-600 text-white text-xs font-black px-4 py-2" style="width:auto">🔥 Prestige Lv.${Number(d.prestige_lvl||0)+1} (${(1000000 * Math.pow(3, Math.min(8, Number(d.prestige_lvl||0)))).toLocaleString('de-DE')} FC verbrennen)</button>
+      </div>
+
       <!-- WIRTSCHAFTS-SENAT (LOBBYISMUS & GESETZE KAUFEN) -->
       <div class="glass rounded-2xl p-4 border-2 border-purple-500/50 bg-gradient-to-br from-purple-950/20 via-zinc-900 to-zinc-950 space-y-2.5">
         <div class="font-black text-purple-300 text-sm">🗳️ Wirtschafts-Senat (Lobbyismus &amp; 24h-Gesetze kaufen)</div>
@@ -6279,6 +6289,12 @@ async function joinAlliance(cid, aid) {
   sfx.click(); const d = await call('alliance_join', { cid, aid })
   if (d) { sfx.claim(); toast('🤝 Allianz beigetreten (-30% Rohstoffe aktiv)!'); loadCompanyHq() }
 }
+async function burnForPrestige(cost) {
+  if (!confirm(`🔥 ${Number(cost).toLocaleString('de-DE')} FC dauerhaft verbrennen, um Prestige-Level aufzusteigen und die Inflation zu senken?`)) return
+  sfx.click()
+  const d = await call('burn_for_prestige', {})
+  if (d) { sfx.jackpot(); setBalance(d.balance); toast('🔥 Prestige Lv.' + d.prestige_lvl + ' erreicht!'); loadCompanies() }
+}
 async function leaveAlliance(cid) {
   sfx.click(); const d = await call('alliance_leave', { cid })
   if (d) { toast('🚪 Allianz verlassen.'); loadCompanyHq() }
@@ -6295,9 +6311,11 @@ PAGEINIT.company_hq = () => loadCompanyHq()
 async function loadCompanyHq() {
   const d = await call('company_list', {}), box = $('hq_box')
   if (!d || !box) return
-  const myComps = (d.companies || []).filter(c => ME && c.owner_id === ME.id)
+  const myComps = (d.companies || []).filter(c => ME && (c.owner_id === ME.id || c.my_custom_role === 'vorstand'))
   const myComp = myComps.find(c => c.id === activeHqCid) || myComps[0] || null
   if (myComp) activeHqCid = myComp.id
+  const isOwner = Boolean(myComp && ME && myComp.owner_id === ME.id)
+  if (!isOwner) hqTab = 'ops'
   if (!myComp) {
     box.innerHTML = `<div class="glass rounded-2xl p-8 text-center space-y-3 border border-yellow-500/40">
       <div class="text-4xl">🏛️</div>
@@ -6318,8 +6336,8 @@ async function loadCompanyHq() {
   const bankSellVal = Math.floor(t.fee * 0.65) + Number(myComp.treasury || 0)
   const pMeta = PRODUCT_META[ind.pKey] || { desc: ind.perk }
   const [emps, extras, alList] = await Promise.all([
-    call('company_employees', { cid: myComp.id }, true),
-    call('company_hq_extras', { cid: myComp.id }, true),
+    isOwner ? call('company_employees', { cid: myComp.id }, true) : Promise.resolve([]),
+    isOwner ? call('company_hq_extras', { cid: myComp.id }, true) : Promise.resolve({ ledger: [], offers: [] }),
     call('alliance_list', {}, true)
   ])
   const empList = Array.isArray(emps) ? emps : []
@@ -6376,35 +6394,35 @@ async function loadCompanyHq() {
     </div>
 
     <div class="flex gap-1.5 flex-wrap">
-      <button onclick="sfx.click();hqTab='ops';loadCompanyHq()" class="px-3.5 py-2 rounded-xl text-xs font-black transition ${hqTab==='ops'?'bg-amber-500 text-black shadow':'bg-zinc-800 text-zinc-300 hover:text-white'}">📊 Betrieb &amp; Verkauf</button>
-      <button onclick="sfx.click();hqTab='staff';loadCompanyHq()" class="px-3.5 py-2 rounded-xl text-xs font-black transition ${hqTab==='staff'?'bg-cyan-600 text-white shadow':'bg-zinc-800 text-zinc-300 hover:text-white'}">👥 Belegschaft (${empList.length})</button>
+      <button onclick="sfx.click();hqTab='ops';loadCompanyHq()" class="px-3.5 py-2 rounded-xl text-xs font-black transition ${hqTab==='ops'?'bg-amber-500 text-black shadow':'bg-zinc-800 text-zinc-300 hover:text-white'}">📊 Betrieb &amp; Verkauf ${!isOwner?'(👑 Vorstand)':''}</button>
+      ${isOwner ? `<button onclick="sfx.click();hqTab='staff';loadCompanyHq()" class="px-3.5 py-2 rounded-xl text-xs font-black transition ${hqTab==='staff'?'bg-cyan-600 text-white shadow':'bg-zinc-800 text-zinc-300 hover:text-white'}">👥 Belegschaft (${empList.length})</button>
       <button onclick="sfx.click();hqTab='ipo';loadCompanyHq()" class="px-3.5 py-2 rounded-xl text-xs font-black transition ${hqTab==='ipo'?'bg-purple-600 text-white shadow':'bg-zinc-800 text-zinc-300 hover:text-white'}">📈 Börse &amp; Upgrades</button>
-      <button onclick="sfx.click();hqTab='ledger';loadCompanyHq()" class="px-3.5 py-2 rounded-xl text-xs font-black transition ${hqTab==='ledger'?'bg-emerald-600 text-white shadow':'bg-zinc-800 text-zinc-300 hover:text-white'}">📒 Kassenbuch &amp; M&amp;A ${offerList.length?`(${offerList.length})`:''}</button>
+      <button onclick="sfx.click();hqTab='ledger';loadCompanyHq()" class="px-3.5 py-2 rounded-xl text-xs font-black transition ${hqTab==='ledger'?'bg-emerald-600 text-white shadow':'bg-zinc-800 text-zinc-300 hover:text-white'}">📒 Kassenbuch &amp; M&amp;A ${offerList.length?`(${offerList.length})`:''}</button>` : ''}
     </div>
 
     ${hqTab === 'ops' ? `
       <!-- FINANZEN, LOHN & BETRIEB -->
       <div class="glass rounded-2xl p-4 border border-zinc-800 space-y-3">
         <div class="font-black text-white text-sm flex items-center justify-between">
-          <span>💰 Finanzen, Rohstoffe &amp; Verkauf</span>
-          <span class="text-[10px] px-2 py-0.5 rounded-full font-bold ${isKmu ? 'bg-emerald-950/70 text-emerald-300 border border-emerald-500/40' : taxPct > 8 ? 'bg-red-950/70 text-red-300 border border-red-500/40' : 'bg-zinc-800 text-zinc-300'}">${isKmu ? '🛡️ KMU 2% Steuer' : taxPct > 8 ? '💣 Kartellamt 14% Steuer' : '🏢 8% Steuer'}</span>
+          <span>💰 Finanzen, Rohstoffe &amp; Verkauf ${!isOwner?'<span class="text-amber-300 text-xs">(👑 Vorstands-Vertretung)</span>':''}</span>
+          <span class="text-[10px] px-2 py-0.5 rounded-full font-bold ${isKmu ? 'bg-emerald-950/70 text-emerald-300 border border-emerald-500/40' : taxPct > 8 ? 'bg-red-950/70 text-red-300 border border-red-500/40' : 'bg-zinc-800 text-zinc-300'}">${isKmu ? '🛡️ KMU 2% Steuer' : taxPct > 8 ? '💣 Anti-Inflation ' + (myComp.tier===5?'20':'16') + '% Steuer' : '🏢 8% Steuer'}</span>
         </div>
         <div class="text-xs text-zinc-400">Aktueller Stücklohn: <b class="text-white">${Number(myComp.wage_per_task).toLocaleString('de-DE')} FC</b> · Fixkosten (6h): <b class="text-rose-300">${t.upk.toLocaleString('de-DE')} FC</b></div>
         <div class="grid grid-cols-2 gap-2">
-          <button onclick="manageComp(${myComp.id},'deposit',prompt('Einzahlen ins Firmenkonto (0% Steuer):','25000'))" class="btn bg-emerald-700 hover:bg-emerald-600 text-xs font-bold">+ Einzahlen (100%)</button>
-          <button onclick="manageComp(${myComp.id},'withdraw',prompt('Abheben aufs Privatkonto (0% Steuer):','${myComp.treasury}'))" class="btn bg-zinc-800 hover:bg-zinc-700 text-xs font-bold">- Abheben (100%)</button>
+          ${isOwner ? `<button onclick="manageComp(${myComp.id},'deposit',prompt('Einzahlen ins Firmenkonto (0% Steuer):','25000'))" class="btn bg-emerald-700 hover:bg-emerald-600 text-xs font-bold">+ Einzahlen (100%)</button>
+          <button onclick="manageComp(${myComp.id},'withdraw',prompt('Abheben aufs Privatkonto (0% Steuer):','${myComp.treasury}'))" class="btn bg-zinc-800 hover:bg-zinc-700 text-xs font-bold">- Abheben (100%)</button>` : ''}
           <button onclick="manageComp(${myComp.id},'buy_materials')" class="btn bg-cyan-800 hover:bg-cyan-700 text-xs font-bold">📦 +10 Rohstoffe (${matPrice.toLocaleString('de-DE')}${isKmu && myComp.alliance_id ? ' -30%' : ''})</button>
           <button onclick="manageComp(${myComp.id},'repair')" class="btn bg-rose-800 hover:bg-rose-700 text-xs font-bold">🔧 Wartung (${t.repCost.toLocaleString('de-DE')})</button>
-          <button onclick="manageComp(${myComp.id},'set_wage',prompt('Neuer Stücklohn pro Schicht:','${myComp.wage_per_task}'))" class="btn bg-zinc-800 hover:bg-zinc-700 text-xs font-bold">💶 Stücklohn ändern</button>
           <button onclick="manageComp(${myComp.id},'sell_prod')" class="btn bg-amber-500 hover:bg-amber-400 text-black text-xs font-black">💰 Lager verkaufen (${(myComp.prod_points*grossPerPt).toLocaleString('de-DE')} FC)</button>
+          <button onclick="startMiniTask(${myComp.id})" class="btn bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black">🛠️ Selbst arbeiten (Schicht)</button>
+          ${isOwner ? `<button onclick="manageComp(${myComp.id},'set_wage',prompt('Neuer Stücklohn pro Schicht:','${myComp.wage_per_task}'))" class="btn bg-zinc-800 hover:bg-zinc-700 text-xs font-bold">💶 Stücklohn ändern</button>
           ${isKmu ? `<button onclick="manageComp(${myComp.id},'sell_rush')" class="btn bg-gradient-to-r from-amber-500 to-orange-500 text-black text-xs font-black">⚡ Eil-Auftrag +50% (2h)</button>` : ''}
           ${isKmu && Number(myComp.treasury) < 25000 ? `<button onclick="claimKmuSubsidy(${myComp.id})" class="btn bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black">🛡️ Start-up-Förderung (+5k)</button>` : ''}
           <button onclick="manageComp(${myComp.id},'craft_product')" class="btn bg-purple-700 hover:bg-purple-600 text-xs font-bold">🎁 ${ind.prod} ${isKmu && !(myComp.robot_level>0) ? '(2× Handarbeit!)' : '(3 Pkt)'}</button>
           <button onclick="manageComp(${myComp.id},'craft_batch')" class="btn bg-purple-900 hover:bg-purple-800 text-xs font-bold">📦 5× Großserie (12 Pkt)</button>
-          <button onclick="startMiniTask(${myComp.id})" class="btn bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black">🛠️ Selbst arbeiten (Schicht)</button>
           <button onclick="offerB2b(${myComp.id})" class="btn bg-indigo-700 hover:bg-indigo-600 text-xs font-bold">🤝 B2B-Paket anbieten (2 Pkt)</button>
           <button onclick="claimPatent(${myComp.id})" class="btn bg-amber-700 hover:bg-amber-600 text-xs font-bold">📜 6h-Patent (50k → +25%)</button>
-          ${!myComp.tax_haven ? `<button onclick="if(confirm('Für 500.000 FC Offshore-Steuerparadies aktivieren? (Halbiert Verkaufssteuer!)'))manageComp(${myComp.id},'tax_haven')" class="btn bg-teal-800 hover:bg-teal-700 text-xs font-bold">🏝️ Steuerparadies (500k)</button>` : '<div class="btn bg-teal-950/60 text-teal-300 text-xs font-black text-center">🏝️ Steuerparadies AKTIV (-50%)</div>'}
+          ${!myComp.tax_haven ? `<button onclick="if(confirm('Für 500.000 FC Offshore-Steuerparadies aktivieren? (Halbiert Verkaufssteuer!)'))manageComp(${myComp.id},'tax_haven')" class="btn bg-teal-800 hover:bg-teal-700 text-xs font-bold">🏝️ Steuerparadies (500k)</button>` : '<div class="btn bg-teal-950/60 text-teal-300 text-xs font-black text-center">🏝️ Steuerparadies AKTIV (-50%)</div>'}` : ''}
         </div>
         <div class="text-[11px] text-purple-200 bg-purple-950/30 border border-purple-500/30 rounded-xl p-2">
           <b>🎁 Dein Firmen-Boost:</b> ${esc(pMeta.desc)}
