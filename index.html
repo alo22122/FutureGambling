@@ -5116,28 +5116,114 @@ async function spinMysteryWheel() {
 VIEWS.stocks = () => `
   <div class="glass rounded-2xl p-4 mb-4 border border-emerald-500/40 bg-gradient-to-r from-emerald-950/20 via-zinc-900 to-cyan-950/20">
     <div class="font-black text-lg text-emerald-400">📈 Aktienmarkt der Spieler</div>
-    <div class="text-xs text-zinc-400">Jeder Spieler ist eine Aktie! Der Kurs steigt, wenn der Spieler viel umsetzt, gewinnt oder eine hohe Streak hat.</div>
+    <div class="text-xs text-zinc-400">Jeder Spieler hat seinen eigenen Live-Aktien-Graph! Klicke auf 📊 Chart oder einen Graph, um Details zu sehen und zu investieren.</div>
   </div>
+  <div id="stock_chart_panel" class="hidden glass rounded-2xl p-4 mb-4 border-2 border-cyan-500/50 bg-zinc-950/80 space-y-3"></div>
   <div id="stocksbox" class="space-y-2.5 text-zinc-400">Lade Börse...</div>`
+
+let stocksCache = [], activeStockId = null
+function getStockSeries(s) {
+  const real = Array.isArray(s.history) ? s.history.map(Number).filter(n => n > 0) : []
+  const cur = Number(s.price || 30)
+  if (real.length >= 16) {
+    const arr = real.slice(-24)
+    if (arr[arr.length - 1] !== cur) arr.push(cur)
+    return arr
+  }
+  const nowSec = Date.now() / 1000, sh = Number(s.seed_hash || 0) % 97
+  const curWave = 1 + 0.18 * Math.sin(nowSec / 900 + sh)
+  const base = cur / Math.max(0.5, curWave)
+  const pts = []
+  for (let i = 19; i >= 1; i--) {
+    const t = nowSec - i * 300
+    pts.push(Math.max(10, Math.floor(base * (1 + 0.18 * Math.sin(t / 900 + sh)))))
+  }
+  return [...pts, ...real, cur].slice(-24)
+}
+function renderStockSpark(pts) {
+  const min = Math.min(...pts), max = Math.max(...pts), span = Math.max(1, max - min)
+  const up = pts[pts.length - 1] >= pts[0], col = up ? '#34d399' : '#f87171'
+  const coords = pts.map((v, i) => `${((i / Math.max(1, pts.length - 1)) * 108 + 2).toFixed(1)},${(30 - ((v - min) / span) * 24).toFixed(1)}`).join(' ')
+  return `<svg width="112" height="34" class="overflow-visible"><polyline fill="none" stroke="${col}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" points="${coords}"/></svg>`
+}
+function openStockChart(id) {
+  activeStockId = id
+  const s = stocksCache.find(x => x.id === id), panel = $('stock_chart_panel')
+  if (!s || !panel) return
+  panel.classList.remove('hidden')
+  const pts = getStockSeries(s), min = Math.min(...pts), max = Math.max(...pts)
+  const chg = pts[0] > 0 ? (((pts[pts.length - 1] - pts[0]) / pts[0]) * 100).toFixed(1) : '0.0'
+  const up = Number(chg) >= 0
+  panel.innerHTML = `
+    <div class="flex flex-wrap items-center justify-between gap-2">
+      <div class="flex items-center gap-2.5">
+        <span class="text-3xl">${esc(s.avatar || '🙂')}</span>
+        <div>
+          <div class="font-black text-white text-base">${esc(s.username)} ${BADGE[s.role] || ''} <span class="text-xs font-mono ${up ? 'text-emerald-400' : 'text-rose-400'}">(${up ? '+' : ''}${chg}%)</span></div>
+          <div class="text-xs text-zinc-400">Aktuell: <b class="text-yellow-300 font-mono">${Number(s.price).toLocaleString('de-DE')} FC</b> · Tief: ${min.toLocaleString('de-DE')} · Hoch: ${max.toLocaleString('de-DE')}</div>
+        </div>
+      </div>
+      <div class="flex gap-1.5">
+        <button onclick="buyStock('${s.id}', '${esc(s.username)}')" class="btn bg-emerald-600 hover:bg-emerald-500 text-xs font-black px-3 py-1.5" style="width:auto">📈 Kaufen</button>
+        ${s.my_shares > 0 ? `<button onclick="sellStock('${s.id}', ${s.my_shares})" class="btn bg-rose-600 hover:bg-rose-500 text-xs font-black px-3 py-1.5" style="width:auto">📉 Verkaufen (${s.my_shares})</button>` : ''}
+        <button onclick="$('stock_chart_panel').classList.add('hidden');activeStockId=null" class="btn bg-zinc-800 text-xs px-2.5 py-1.5" style="width:auto">✕</button>
+      </div>
+    </div>
+    <canvas id="stock_big_cv" width="760" height="200" class="w-full h-44 rounded-xl bg-black/50 border border-zinc-800"></canvas>`
+  const cv = $('stock_big_cv'); if (!cv) return
+  const ctx = cv.getContext('2d'), W = cv.width, H = cv.height, padR = 68, padY = 18
+  const lo = Math.max(0, min * 0.96), hi = max * 1.04, rng = Math.max(1, hi - lo)
+  const yOf = v => H - padY - ((v - lo) / rng) * (H - padY * 2)
+  ctx.clearRect(0, 0, W, H)
+  ctx.strokeStyle = 'rgba(255,255,255,0.06)'; ctx.lineWidth = 1
+  ctx.fillStyle = '#a1a1aa'; ctx.font = '11px monospace'; ctx.textAlign = 'left'
+  for (let g = 0; g <= 4; g++) {
+    const val = lo + (rng * g) / 4, y = yOf(val)
+    ctx.beginPath(); ctx.moveTo(10, y); ctx.lineTo(W - padR, y); ctx.stroke()
+    ctx.fillText(Math.round(val).toLocaleString('de-DE'), W - padR + 6, y + 4)
+  }
+  if (Number(s.my_shares) > 0 && Number(s.avg_price) > 0) {
+    const ey = Math.max(padY, Math.min(H - padY, yOf(Number(s.avg_price))))
+    ctx.save(); ctx.setLineDash([5, 4]); ctx.strokeStyle = '#facc15'; ctx.lineWidth = 1.5
+    ctx.beginPath(); ctx.moveTo(10, ey); ctx.lineTo(W - padR, ey); ctx.stroke(); ctx.restore()
+    ctx.fillStyle = '#facc15'; ctx.fillText('Einstieg ' + Number(s.avg_price).toLocaleString('de-DE'), 16, ey - 5)
+  }
+  ctx.beginPath()
+  pts.forEach((v, i) => {
+    const x = 12 + (i / Math.max(1, pts.length - 1)) * (W - padR - 20), y = yOf(v)
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y)
+  })
+  ctx.strokeStyle = up ? '#34d399' : '#f87171'; ctx.lineWidth = 2.8; ctx.stroke()
+  const lx = 12 + (W - padR - 20), ly = yOf(pts[pts.length - 1])
+  ctx.beginPath(); ctx.arc(lx, ly, 4.5, 0, Math.PI * 2); ctx.fillStyle = up ? '#34d399' : '#f87171'; ctx.fill()
+}
 
 PAGEINIT.stocks = async () => {
   const d = await call('stocks_market', {}), box = $('stocksbox')
   if (!d || !box) return
+  stocksCache = d
+  if (activeStockId) openStockChart(activeStockId)
   box.innerHTML = d.map(s => {
     const val = Number(s.my_shares) * Number(s.price)
     const pnl = Number(s.my_shares) > 0 ? Math.round(((s.price - s.avg_price) / Math.max(1, s.avg_price)) * 100) : 0
-    return `<div class="glass rounded-2xl p-3.5 border border-zinc-800 flex flex-wrap items-center justify-between gap-3">
+    const pts = getStockSeries(s)
+    const chg = pts[0] > 0 ? (((pts[pts.length - 1] - pts[0]) / pts[0]) * 100).toFixed(1) : '0.0'
+    return `<div class="glass rounded-2xl p-3.5 border border-zinc-800 hover:border-cyan-500/40 transition flex flex-wrap items-center justify-between gap-3">
       <div class="flex items-center gap-3">
         <div class="text-2xl">${esc(s.avatar || '🙂')}</div>
         <div>
           <div class="font-black text-sm" style="color:${/^#[0-9a-f]{6}$/i.test(s.color) ? s.color : '#fff'}">${s.online ? '🟢' : '⚪'} ${esc(s.username)} ${BADGE[s.role] || ''}</div>
-          <div class="text-xs text-zinc-400">Kurs: <b class="text-emerald-400 font-mono">${Number(s.price).toLocaleString('de-DE')} FC</b> / Aktie</div>
+          <div class="text-xs text-zinc-400">Kurs: <b class="text-emerald-400 font-mono">${Number(s.price).toLocaleString('de-DE')} FC</b> <span class="text-[11px] font-mono ${Number(chg)>=0?'text-emerald-400':'text-rose-400'}">(${Number(chg)>=0?'+':''}${chg}%)</span></div>
           ${s.my_shares > 0 ? `<div class="text-xs text-cyan-300 mt-0.5">Depot: <b>${s.my_shares} Stk</b> (Wert: ${val.toLocaleString('de-DE')} FC · <span class="${pnl>=0?'text-emerald-400':'text-red-400'}">${pnl>=0?'+':''}${pnl}%</span>)</div>` : ''}
         </div>
       </div>
-      <div class="flex gap-1.5 items-center">
-        <button onclick="buyStock('${s.id}', '${esc(s.username)}')" class="btn bg-emerald-700 hover:bg-emerald-600 text-xs font-bold" style="width:auto;padding:.35rem .7rem">📈 Kaufen</button>
-        ${s.my_shares > 0 ? `<button onclick="sellStock('${s.id}', ${s.my_shares})" class="btn bg-red-700 hover:bg-red-600 text-xs font-bold" style="width:auto;padding:.35rem .7rem">📉 Verkaufen</button>` : ''}
+      <div class="flex items-center gap-3">
+        <div onclick="openStockChart('${s.id}')" class="cursor-pointer p-1 rounded-xl bg-black/40 border border-zinc-800 hover:border-cyan-400/60" title="Großen Graph öffnen">${renderStockSpark(pts)}</div>
+        <div class="flex gap-1.5 items-center">
+          <button onclick="openStockChart('${s.id}')" class="btn bg-cyan-800 hover:bg-cyan-700 text-xs font-bold" style="width:auto;padding:.35rem .6rem">📊 Chart</button>
+          <button onclick="buyStock('${s.id}', '${esc(s.username)}')" class="btn bg-emerald-700 hover:bg-emerald-600 text-xs font-bold" style="width:auto;padding:.35rem .7rem">📈 Kaufen</button>
+          ${s.my_shares > 0 ? `<button onclick="sellStock('${s.id}', ${s.my_shares})" class="btn bg-red-700 hover:bg-red-600 text-xs font-bold" style="width:auto;padding:.35rem .7rem">📉 Verkaufen</button>` : ''}
+        </div>
       </div>
     </div>`
   }).join('')
